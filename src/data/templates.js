@@ -1,0 +1,91 @@
+export const DEMO_GOAL = 'Get 100 registrations for our hackathon';
+
+export const EXAMPLE_GOALS = [
+  DEMO_GOAL,
+  'Find 5 AI internship openings and apply to the best 3',
+  'Launch a community meetup for 50 people next Friday',
+  'Plan and run our product launch next Tuesday',
+];
+
+export const TEMPLATES = [
+  {
+    id: 'deadline-os',
+    name: 'DeadlineOS',
+    category: 'Delivery',
+    tagline: 'Hit the deadlines you would otherwise miss.',
+    goal: 'Submit our grant application before Friday 5 PM',
+    image: '/assets/showcase_card_1.jpg',
+  },
+  {
+    id: 'recovery-os',
+    name: 'RecoveryOS',
+    category: 'Operations',
+    tagline: 'Get a broken process back on track.',
+    goal: "Recover the 30 failed payouts from last night's run",
+    image: '/assets/showcase_card_2.jpg',
+  },
+  {
+    id: 'event-rescue',
+    name: 'EventRescue',
+    category: 'Events',
+    tagline: 'Save an event when plans fall apart.',
+    goal: 'Our venue cancelled. Find a new one for 150 people by Saturday',
+    image: '/assets/showcase_card_3.jpg',
+  },
+  {
+    id: 'refund-pilot',
+    name: 'RefundPilot',
+    category: 'Finance',
+    tagline: 'Claim every refund you are owed.',
+    goal: 'Get refunds for my 3 cancelled flights',
+    image: '/assets/showcase_card_1.jpg',
+  },
+  {
+    id: 'warranty-os',
+    name: 'WarrantyOS',
+    category: 'Support',
+    tagline: 'Never miss a warranty claim.',
+    goal: 'File a warranty claim for my broken laptop screen',
+    image: '/assets/showcase_card_2.jpg',
+  },
+  {
+    id: 'freelance-flow',
+    name: 'FreelanceFlow',
+    category: 'Freelance',
+    tagline: 'Run client admin end to end.',
+    goal: 'Invoice all clients for September and chase overdue payments',
+    image: '/assets/showcase_card_3.jpg',
+  },
+  {
+    id: 'procure-os',
+    name: 'ProcureOS',
+    category: 'Purchasing',
+    tagline: 'Buy the right thing at the right price.',
+    goal: 'Get 3 quotes for 20 office monitors under $250 each',
+    image: '/assets/showcase_card_1.jpg',
+  },
+  {
+    id: 'team-os',
+    name: 'TeamOS',
+    category: 'Teams',
+    tagline: 'Keep the whole team unblocked.',
+    goal: 'Collect weekly updates from the team and send leadership a summary',
+    image: '/assets/showcase_card_2.jpg',
+  },
+  {
+    id: 'campus-os',
+    name: 'CampusOS',
+    category: 'Campus',
+    tagline: 'Handle campus admin for you.',
+    goal: 'Find 5 AI internship openings and apply to the best 3',
+    image: '/assets/showcase_card_3.jpg',
+  },
+  {
+    id: 'launch-os',
+    name: 'LaunchOS',
+    category: 'Launch',
+    tagline: 'Ship a launch across every channel.',
+    goal: DEMO_GOAL,
+    image: '/assets/showcase_card_1.jpg',
+  },
+];

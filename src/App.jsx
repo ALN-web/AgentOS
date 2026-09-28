@@ -1,78 +1,41 @@
-import React, { useState } from 'react';
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import BentoGrid from './components/BentoGrid';
-import Features from './components/Features';
-import Architecture from './components/Architecture';
-import Pricing from './components/Pricing';
-import MissionTemplates from './components/MissionTemplates';
-import CtaDashboard from './components/CtaDashboard';
-import Footer from './components/Footer';
-import LaunchMissionModal from './components/LaunchMissionModal';
-import WatchDemoModal from './components/WatchDemoModal';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { MissionProvider } from './store/MissionStore';
+import NewMissionModal from './components/NewMissionModal';
+import Landing from './landing/Landing';
+import AppLayout from './app/AppLayout';
+import Dashboard from './app/Dashboard';
+import MissionDetail from './app/mission/MissionDetail';
+import Workforce from './app/Workforce';
+import Approvals from './app/Approvals';
+import TemplatesPage from './app/TemplatesPage';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 
 export default function App() {
-  const [missionModalOpen, setMissionModalOpen] = useState(false);
-  const [demoModalOpen, setDemoModalOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
-
-  const handleOpenMission = (template = null) => {
-    setSelectedTemplate(template);
-    setMissionModalOpen(true);
-  };
-
   return (
-    <div className="min-h-screen bg-[#000000] text-white selection:bg-[#eb6920] selection:text-white relative">
-      {/* Background Subtle Grid Effect */}
-      <div className="fixed inset-0 bg-grid opacity-30 pointer-events-none -z-20" />
-
-      {/* Navigation */}
-      <Navbar onOpenMissionModal={() => handleOpenMission(null)} />
-
-      {/* Main Content Layout */}
-      <main>
-        {/* Hero Section */}
-        <Hero
-          onOpenMissionModal={() => handleOpenMission(null)}
-          onOpenDemoModal={() => setDemoModalOpen(true)}
-        />
-
-        {/* Bento Grid (Hero Dashboard - Frame 00:00 - 00:03) */}
-        <BentoGrid onOpenMissionModal={() => handleOpenMission(null)} />
-
-        {/* Reusable Features Section (Frame 00:04 - 00:10) */}
-        <Features />
-
-        {/* Architecture Section: Goal -> Planner -> ... -> Mission Complete */}
-        <Architecture />
-
-        {/* Pricing Plans (Frame 00:11 - 00:13) */}
-        <Pricing onOpenMissionModal={() => handleOpenMission(null)} />
-
-        {/* Mission Templates / Showcase Cards (Frame 00:14 - 00:16) */}
-        <MissionTemplates onSelectTemplate={(template) => handleOpenMission(template)} />
-
-        {/* Pre-Footer CTA with Mini Dashboard (Frame 00:17 - 00:19) */}
-        <CtaDashboard onOpenMissionModal={() => handleOpenMission(null)} />
-      </main>
-
-      {/* Footer (Frame 00:19 - 00:20) */}
-      <Footer />
-
-      {/* Interactive Modals */}
-      <LaunchMissionModal
-        isOpen={missionModalOpen}
-        onClose={() => {
-          setMissionModalOpen(false);
-          setSelectedTemplate(null);
-        }}
-        initialTemplate={selectedTemplate}
-      />
-
-      <WatchDemoModal
-        isOpen={demoModalOpen}
-        onClose={() => setDemoModalOpen(false)}
-      />
-    </div>
+    <BrowserRouter>
+      <MissionProvider>
+        <ScrollToTop />
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/app" element={<AppLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="missions/:id" element={<MissionDetail />} />
+            <Route path="workforce" element={<Workforce />} />
+            <Route path="approvals" element={<Approvals />} />
+            <Route path="templates" element={<TemplatesPage />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        <NewMissionModal />
+      </MissionProvider>
+    </BrowserRouter>
   );
 }
