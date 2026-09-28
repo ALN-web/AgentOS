@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+
+body {
+  background-color: #000000;
+  color: #f3f4f6;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #09080c;
+}
+::-webkit-scrollbar-thumb {
+  background: #25222e;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #eb6920;
+}
+
+/* Glass card styling matching the reference video */
+.glass-card {
+  background: linear-gradient(180deg, rgba(24, 20, 29, 0.75) 0%, rgba(14, 12, 18, 0.85) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 20px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(235, 105, 32, 0.3);
+  box-shadow: 0 15px 40px -10px rgba(235, 105, 32, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Featured card glow */
+.featured-card {
+  background: linear-gradient(180deg, rgba(30, 22, 28, 0.9) 0%, rgba(16, 13, 20, 0.95) 100%);
+  border: 1px solid rgba(235, 105, 32, 0.45);
+  box-shadow: 0 15px 45px -10px rgba(235, 105, 32, 0.25), inset 0 1px 0 0 rgba(255, 151, 36, 0.3);
+}
+
+/* Orange glow button */
+.btn-orange {
+  background: linear-gradient(135deg, #ff8c42 0%, #eb6920 100%);
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(235, 105, 32, 0.45);
+  transition: all 0.25s ease;
+}
+
+.btn-orange:hover {
+  background: linear-gradient(135deg, #ffa266 0%, #f0742f 100%);
+  box-shadow: 0 0 30px rgba(235, 105, 32, 0.7);
+  transform: translateY(-1px);
+}
+
+/* Dark glass button */
+.btn-dark {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  transition: all 0.25s ease;
+}
+
+.btn-dark:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Spotlight light cone */
+.spotlight-cone {
+  background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(235, 105, 32, 0.75) 0%, rgba(235, 105, 32, 0.15) 50%, transparent 80%);
+}
+
+/* Subtle background grid */
+.bg-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
