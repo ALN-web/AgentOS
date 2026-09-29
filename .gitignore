@@ -25,3 +25,8 @@ dist-ssr
 
 # Video extraction temporary frames
 reference_frames/
+
+# Local tooling and secrets
+.claude/
+.env
+.env.*
