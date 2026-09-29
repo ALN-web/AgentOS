@@ -36,6 +36,16 @@ describe('backend API client', () => {
     expect('source' in plain || 'template_id' in plain).toBe(false);
   });
 
+  it('maps backend app fields to the names the Apps UI reads', async () => {
+    const backendApp = {
+      id: 'google-calendar', status: 'connected', account_email: 'me@example.com',
+      granted_scopes: ['calendar.events'], disconnect_warning: 'Stops scheduling.', actions: [],
+    };
+    const fetchImpl = vi.fn(async () => json(200, [backendApp]));
+    const [app] = await createApiClient('/api', { fetchImpl }).listApps();
+    expect(app).toMatchObject({ accountEmail: 'me@example.com', grantedScopes: ['calendar.events'], disconnectWarning: 'Stops scheduling.', account_email: 'me@example.com' });
+  });
+
   it('turns the server error shape into an ApiError with its code', async () => {
     const api = createApiClient('/api', {
       fetchImpl: async () => json(404, { error: { code: 'mission_not_found', message: 'Mission not found.', request_id: 'r1' } }),
