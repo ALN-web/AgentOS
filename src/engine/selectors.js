@@ -102,13 +102,42 @@ export function explainEvent(m, e) {
   const approval = e.type === 'approval' ? [...m.approvals].reverse().find((a) => a.requestedAt <= (e.at ?? Infinity)) || m.approvals[0] : null;
 
   let reason = task?.why?.reason || FALLBACK_REASON;
-  if (e.agent === 'system') reason = 'You launched this mission with a goal. AgentOS tracks it until the outcome is verified.';
-  else if (rec) reason = rec.diagnosis || rec.error;
+  if (e.agent === 'system') {
+    reason = 'You launched this mission with a goal. AgentOS tracks it until the outcome is verified.';
+  } else if (rec) reason = rec.diagnosis || rec.error;
   else if (approval) reason = approval.reason;
   else if (e.type === 'critique') reason = 'The Critic reviews work before it reaches anyone outside the team.';
   else if (e.type === 'verified' || e.type === 'complete') reason = 'The goal only counts as met once the result has been independently checked.';
 
   const evidence = [];
+  if (e.agent === 'system' && m.plan?.intent?.applied_preferences?.length) {
+    m.plan.intent.applied_preferences.forEach(pref => {
+      let val = '';
+      if (pref === 'timezone') {
+        const a = m.plan.assumptions.find(a => a.startsWith('Timezone:'));
+        val = `Used ${a ? a.replace('Timezone: ', '') : 'your'} timezone`;
+      } else if (pref === 'working_hours') {
+        const a = m.plan.assumptions.find(a => a.startsWith('Working hours:'));
+        val = `Used your working hours${a ? ` (${a.replace('Working hours: ', '')})` : ''}`;
+      } else if (pref === 'working_days') {
+        const a = m.plan.assumptions.find(a => a.startsWith('Working days:'));
+        val = `Used your ${a ? a.replace('Working days: ', '') : 'working days'} schedule`;
+      } else if (pref === 'team_group') {
+        const emails = m.plan.intent.recipientEmails ? m.plan.intent.recipientEmails.split(',').length : 0;
+        val = `Resolved "${m.plan.intent.recipient}" to ${emails} stored contacts`;
+      } else if (pref === 'tone') {
+        val = `Applied preferred tone`;
+      } else if (pref === 'signature') {
+        val = `Added your signature`;
+      } else if (pref === 'meeting_length') {
+        const a = m.plan.assumptions.find(a => a.startsWith('Default meeting length:'));
+        val = `Set ${a ? a.replace('Default meeting length: ', '') : 'meeting length'}`;
+      } else {
+        val = `Applied preference: ${pref}`;
+      }
+      evidence.push({ label: 'Preference', value: val });
+    });
+  }
   if (task) evidence.push({ label: 'Task', value: `${task.title} (${task.status})` });
   if (rec) {
     evidence.push({ label: 'Failure', value: rec.error });

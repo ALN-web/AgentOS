@@ -49,6 +49,8 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
     listMissions: () => request('/missions'),
     getMission: (missionId) => request(`/missions/${id(missionId)}`),
     listEvents: (missionId, after = 0) => request(`/missions/${id(missionId)}/events?after=${Number(after) || 0}`),
+    getPreferences: () => request('/preferences'),
+    updatePreferences: (preferences) => request('/preferences', { method: 'PUT', body: preferences }),
   };
 }
 

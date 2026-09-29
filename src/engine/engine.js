@@ -19,8 +19,8 @@ export const ACTIVE_STATUSES = ['planning', 'running', 'awaiting_approval', 'rec
 // earlier run never collide with the current one.
 // `plan` is the MissionPlan from the planner; without one, the demo planner
 // plans the goal with its assumptions.
-export function createMission(goal, { templateId = null, createdAt = Date.now(), demo = false, plan = null } = {}) {
-  const missionPlan = plan || planMission(goal);
+export function createMission(goal, { templateId = null, createdAt = Date.now(), demo = false, plan = null, preferences = {} } = {}) {
+  const missionPlan = plan || planMission(goal, {}, undefined, preferences);
   const { script, metric } = compileScript(missionPlan);
   return {
     id: uid('m'),
@@ -136,8 +136,8 @@ export function setSpeed(m, speed, now) {
 }
 
 // Starts the same mission over from its initial state, keeping its id and speed.
-export function restartMission(m, now) {
-  const fresh = createMission(m.goal, { templateId: m.templateId, createdAt: now, demo: m.demo, plan: m.plan });
+export function restartMission(m, now, preferences = {}) {
+  const fresh = createMission(m.goal, { templateId: m.templateId, createdAt: now, demo: m.demo, plan: m.plan, preferences });
   return { ...fresh, id: m.id, speed: m.speed, nextAt: now + fresh.script[0].delay / m.speed };
 }
 

@@ -21,6 +21,7 @@
       "eventNoun": "hackathon",
       "deliverable": null,
       "recipient": null,
+      "recipientEmails": null,
       "constraints": [],
       "entities": [
         "college",
@@ -38,7 +39,8 @@
       ],
       "questions": [],
       "assumptions": [],
-      "answers": {}
+      "answers": {},
+      "applied_preferences": []
     },
     "tasks": [
       {

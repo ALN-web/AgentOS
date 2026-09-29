@@ -112,6 +112,17 @@ describe('goal understanding', () => {
     expect(b.date).toMatch(/saturday at 7 pm/i);
     expect(b.people).toMatch(/for 8/i);
   });
+  
+  it('asks clarification for unknown group', () => {
+    const i = analyzeGoal('Email the design team about the project', {}, { groups: [{ name: 'my team', emails: ['a@a.com'] }] });
+    expect(i.questions.some(q => q.id === 'group_emails')).toBe(true);
+  });
+  
+  it('resolves known group without clarification', () => {
+    const i = analyzeGoal('Email my team about the project', {}, { groups: [{ name: 'my team', emails: ['a@a.com'] }] });
+    expect(i.questions.some(q => q.id === 'group_emails')).toBe(false);
+    expect(i.applied_preferences).toContain('team_group');
+  });
 });
 
 describe('dynamic planning', () => {
@@ -180,6 +191,37 @@ describe('dynamic planning', () => {
   it('plans are plain data', () => {
     const p = planMission(GOALS[1]);
     expect(JSON.parse(JSON.stringify(p))).toEqual(p);
+  });
+  
+  it('Plan my week respects working hours and days', () => {
+    const prefs = {
+      workingHours: { start: '10:00', end: '16:00' },
+      workingDays: ['Tuesday', 'Wednesday'],
+      timezone: 'UTC',
+      meetingLength: 45
+    };
+    const p = planMission('Plan my week around my deadlines', {}, undefined, prefs);
+    expect(p.assumptions.some(a => a.includes('10:00 - 16:00'))).toBe(true);
+    expect(p.assumptions.some(a => a.includes('Tuesday, Wednesday'))).toBe(true);
+    expect(p.intent.applied_preferences).toContain('working_hours');
+    expect(p.intent.applied_preferences).toContain('working_days');
+  });
+  
+  it('Email my team resolves group and applies signature', () => {
+    const prefs = {
+      groups: [{ name: 'my team', emails: ['alice@example.com', 'bob@example.com'] }],
+      signature: 'Best, Alice',
+      tone: 'Friendly'
+    };
+    const p = planMission('Email my team about the project', {}, undefined, prefs);
+    const commTask = p.tasks.find(t => t.capability === 'communication');
+    expect(commTask).toBeDefined();
+    expect(commTask.payload.to).toContain('alice@example.com');
+    expect(commTask.payload.to).toContain('bob@example.com');
+    expect(commTask.payload.body).toContain('Best, Alice');
+    expect(p.intent.applied_preferences).toContain('team_group');
+    expect(p.intent.applied_preferences).toContain('signature');
+    expect(p.intent.applied_preferences).toContain('tone');
   });
 });
 

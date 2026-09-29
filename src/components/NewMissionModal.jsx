@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Info, Lock, ShieldAlert, Sparkles, Target, X, Mic, Square, AlertCircle } from 'lucide-react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { useMissions } from '../store/MissionStore';
+import { usePreferences } from '../store/PreferencesStore';
 import { EXAMPLE_GOALS } from '../data/templates';
 import { planMission } from '../agentos/planner';
 import { CAPABILITY_BY_ID } from '../agentos/capabilities';
@@ -25,11 +26,11 @@ function Stat({ value, label }) {
 }
 
 // "Mission understood": what AgentOS made of the goal, before anything runs.
-function Understanding({ goal, answers, setAnswers }) {
+function Understanding({ goal, answers, setAnswers, preferences }) {
   const [showPlan, setShowPlan] = useState(false);
   // Questions come from the goal alone, so answering one doesn't hide it mid-typing.
-  const questions = useMemo(() => planMission(goal).intent.questions, [goal]);
-  const plan = useMemo(() => planMission(goal, answers), [goal, answers]);
+  const questions = useMemo(() => planMission(goal, {}, undefined, preferences).intent.questions, [goal, preferences]);
+  const plan = useMemo(() => planMission(goal, answers, undefined, preferences), [goal, answers, preferences]);
   const { intent } = plan;
 
   return (
@@ -125,6 +126,25 @@ function Understanding({ goal, answers, setAnswers }) {
         </div>
       )}
 
+      {intent.applied_preferences && intent.applied_preferences.length > 0 && (
+        <div className="flex items-start gap-2 text-[11px] text-[#eb6920]">
+          <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <span>
+            <span className="font-semibold opacity-80">Using your preferences: </span>
+            {intent.applied_preferences.map(key => {
+              if (key === 'timezone') return preferences?.timezone;
+              if (key === 'working_hours') return `${preferences?.workingHours?.start}–${preferences?.workingHours?.end}`;
+              if (key === 'working_days') return preferences?.workingDays?.length === 5 && !preferences.workingDays.includes('Saturday') && !preferences.workingDays.includes('Sunday') ? 'Monday–Friday' : preferences?.workingDays?.join(', ');
+              if (key === 'meeting_length') return `${preferences?.meetingLength}m meeting`;
+              if (key === 'team_group') return Object.values(preferences?.groups || {}).find(g => g.name.toLowerCase() === intent.recipient?.toLowerCase())?.name || intent.recipient;
+              if (key === 'tone') return `${preferences?.tone} tone`;
+              if (key === 'signature') return 'Signature';
+              return key;
+            }).filter(Boolean).join(' · ')}
+          </span>
+        </div>
+      )}
+
       <div>
         <button
           type="button"
@@ -176,6 +196,7 @@ function Understanding({ goal, answers, setAnswers }) {
 
 export default function NewMissionModal() {
   const { launcher, launch, closeLauncher } = useMissions();
+  const { preferences } = usePreferences();
   const [goal, setGoal] = useState('');
   const [stage, setStage] = useState('input'); // 'input' | 'review'
   const [answers, setAnswers] = useState({});
@@ -220,7 +241,7 @@ export default function NewMissionModal() {
 
   const start = () => {
     if (!ready) return;
-    const id = launch(goal, { plan: planMission(goal.trim(), answers) });
+    const id = launch(goal, { plan: planMission(goal.trim(), answers, undefined, preferences) });
     navigate(`/app/missions/${id}`);
   };
 
@@ -370,7 +391,7 @@ export default function NewMissionModal() {
               ) : (
                 <>
                   <p className="text-sm text-gray-400 mt-1 truncate">“{goal.trim()}”</p>
-                  <Understanding goal={goal.trim()} answers={answers} setAnswers={setAnswers} />
+                  <Understanding goal={goal.trim()} answers={answers} setAnswers={setAnswers} preferences={preferences} />
                   <div className="mt-6 flex items-center justify-between gap-3">
                     <button type="button" onClick={() => setStage('input')} className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white">
                       <ArrowLeft className="w-3.5 h-3.5" />

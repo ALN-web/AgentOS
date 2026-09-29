@@ -21,6 +21,7 @@
         "object": "nd launch"
       },
       "recipient": null,
+      "recipientEmails": null,
       "constraints": [],
       "entities": [
         "launch",
@@ -46,7 +47,8 @@
       "assumptions": [
         "Launch in about two weeks"
       ],
-      "answers": {}
+      "answers": {},
+      "applied_preferences": []
     },
     "tasks": [
       {

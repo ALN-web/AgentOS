@@ -18,6 +18,7 @@
       "eventNoun": "event",
       "deliverable": null,
       "recipient": null,
+      "recipientEmails": null,
       "constraints": [],
       "entities": [
         "dinner",
@@ -38,7 +39,8 @@
       ],
       "questions": [],
       "assumptions": [],
-      "answers": {}
+      "answers": {},
+      "applied_preferences": []
     },
     "tasks": [
       {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { FlaskConical, Inbox, LayoutDashboard, LayoutTemplate, ListChecks, Network, Play, Plus, Sparkles } from 'lucide-react';
+import { FlaskConical, Inbox, LayoutDashboard, LayoutTemplate, ListChecks, Network, Play, Plus, Sparkles, Settings } from 'lucide-react';
 import { Logo } from '../components/ui';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ResetDemoButton from '../components/ResetDemoButton';
@@ -14,6 +14,7 @@ const NAV = [
   { to: '/app/features', label: 'Features', icon: Sparkles },
   { to: '/app/approvals', label: 'Approvals', icon: Inbox, badge: true },
   { to: '/app/templates', label: 'Templates', icon: LayoutTemplate },
+  { to: '/app/settings', label: 'Settings', icon: Settings },
 ];
 
 function NavItems({ pending, compact }) {

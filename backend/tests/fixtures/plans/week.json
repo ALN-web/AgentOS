@@ -21,6 +21,7 @@
         "object": "week around"
       },
       "recipient": null,
+      "recipientEmails": null,
       "constraints": [],
       "entities": [
         "week"
@@ -40,7 +41,8 @@
       ],
       "questions": [],
       "assumptions": [],
-      "answers": {}
+      "answers": {},
+      "applied_preferences": []
     },
     "tasks": [
       {

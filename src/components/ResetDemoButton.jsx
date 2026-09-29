@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RotateCcw } from 'lucide-react';
 import { useMissions } from '../store/MissionStore';
+import { usePreferences } from '../store/PreferencesStore';
 
 // Two-step reset: the first click asks, the second wipes saved demo data.
 export default function ResetDemoButton({ className = '' }) {
   const { resetDemo } = useMissions();
+  const { resetPreferences } = usePreferences();
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
 
@@ -19,6 +21,7 @@ export default function ResetDemoButton({ className = '' }) {
     if (!confirming) return setConfirming(true);
     setConfirming(false);
     resetDemo();
+    resetPreferences();
     navigate('/app');
   };
 
@@ -31,7 +34,7 @@ export default function ResetDemoButton({ className = '' }) {
       } ${className}`}
     >
       <RotateCcw className="w-3 h-3" />
-      {confirming ? 'Click again to erase all demo missions' : 'Reset demo data'}
+      {confirming ? 'Click again to erase all demo data' : 'Reset demo data'}
     </button>
   );
 }
