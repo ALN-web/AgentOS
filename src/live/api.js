@@ -45,7 +45,13 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
   const id = (v) => encodeURIComponent(v);
   return {
     health: () => request('/health'),
-    createMission: (goal, plan) => request('/missions', { method: 'POST', body: { goal, plan } }),
+    // source: 'typed' | 'voice' | 'template' (templateId required for 'template').
+    createMission: (goal, plan, { source, templateId } = {}) =>
+      request('/missions', {
+        method: 'POST',
+        body: { goal, plan, ...(source ? { source } : {}), ...(templateId ? { template_id: templateId } : {}) },
+      }),
+    listCapabilities: () => request('/capabilities'),
     listMissions: () => request('/missions'),
     getMission: (missionId) => request(`/missions/${id(missionId)}`),
     listEvents: (missionId, after = 0) => request(`/missions/${id(missionId)}/events?after=${Number(after) || 0}`),

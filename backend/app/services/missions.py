@@ -33,6 +33,8 @@ def create_mission(db: Session, user: User, data: MissionCreate) -> Mission:
         goal=data.goal,
         mode="live",
         status=MissionStatus.PLANNED,
+        source=data.source.value,
+        template_id=data.template_id,
         # Store exactly what the planner produced, without defaults the schema filled in.
         plan_json=plan.model_dump(mode="json", exclude_unset=True),
         metric_label=plan.metric.label,
@@ -67,7 +69,10 @@ def create_mission(db: Session, user: User, data: MissionCreate) -> Mission:
         for dep in t.deps:
             db.add(TaskDependency(task_id=by_key[t.id].id, depends_on_id=by_key[dep].id))
 
-    append_event(db, mission, EventType.MISSION_CREATED, "planner", {"goal": mission.goal, "tasks": len(plan.tasks)})
+    append_event(
+        db, mission, EventType.MISSION_CREATED, "planner",
+        {"goal": mission.goal, "tasks": len(plan.tasks), "source": mission.source, "template_id": mission.template_id},
+    )
     db.commit()
     return get_mission(db, user, mission.id)
 
