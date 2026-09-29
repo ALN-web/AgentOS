@@ -1,6 +1,28 @@
 # AgentOS Live Mode: assessment and design
 
-Status: **Phase 0 (protect Demo Mode) and Phase 1 (backend foundation) are done.** Everything else below is design, not implemented. Live Mode is not exposed in the UI, and `/api/health` reports `live_mode.available: false`.
+Status:
+- **Done:**
+  - Phase 0: Demo Mode protected.
+  - Phase 1: backend foundation.
+  - Phase 2: database and persistent mission state.
+  - The first part of Phase 3: create, list and read missions and their events, with a frontend client, a dev proxy and a backend status indicator.
+- **Not done:** everything else below is design. Nothing executes yet.
+- **Live Mode stays hidden:** it is not exposed in the UI, and `/api/health` reports `live_mode.available: false`.
+
+### Running frontend and backend together
+
+```bash
+# terminal 1: backend
+cd backend && .venv/Scripts/activate && uvicorn app.main:create_app --factory --reload --port 8000
+# terminal 2: frontend in Live-development mode (proxies /api to :8000)
+npm run dev:live
+```
+
+`npm run dev` and `npm run build` are unchanged Demo Mode: they include no backend URL and make no requests.
+
+### How the two sides stay compatible
+
+`src/live/contract.test.js` checks the frontend planner's output against `backend/tests/fixtures/plans/*.json`, and the backend tests post those same fixtures through the API. If either side changes the plan shape, a test fails. After an intentional planner change, regenerate the fixtures with `UPDATE_CONTRACT=1 npx vitest run src/live/contract.test.js`.
 
 ## 1. What already exists and maps onto the target
 
@@ -63,11 +85,11 @@ docs/live-mode.md           this document
 | Method and path | Purpose |
 |---|---|
 | `GET /health` ✓ | liveness + `live_mode.available` |
-| `POST /missions/analyze` `{goal, answers}` | `{intent, plan}`; nothing is executed |
-| `POST /missions` `{goal, plan?, budget?}` | create a mission (status `planned`) |
-| `GET /missions` · `GET /missions/{id}` | the user's missions only |
+| `POST /missions/analyze` `{goal, answers}` | `{intent, plan}`; nothing is executed (Phase 9) |
+| `POST /missions` `{goal, plan}` ✓ | validates the plan (ids, dependencies, cycles, agents, approval count) and stores it (status `planned`) |
+| `GET /missions` ✓ · `GET /missions/{id}` ✓ | the user's missions only; another user's mission is a 404 |
 | `POST /missions/{id}/start` · `/pause` · `/resume` · `/cancel` | lifecycle |
-| `GET /missions/{id}/events?after={seq}` | event backlog |
+| `GET /missions/{id}/events?after={seq}` ✓ | event backlog |
 | `GET /missions/{id}/stream` | SSE: `MISSION_STARTED`, `TASK_STARTED`, `AGENT_ASSIGNED`, `TOOL_CALLED`, `TOOL_COMPLETED`, `APPROVAL_REQUESTED/GRANTED/REJECTED`, `TASK_FAILED`, `RECOVERY_STARTED`, `PLAN_UPDATED`, `VERIFICATION_STARTED/COMPLETED`, `MISSION_COMPLETED/FAILED` |
 | `POST /approvals/{id}/decision` `{decision, edits?}` | approve / edit / reject; idempotent, refuses anything not pending |
 | `GET /missions/{id}/evidence` | evidence records |
@@ -131,7 +153,7 @@ Goal: *"Organize a hackathon for 100 students in my college."*
 
 ## 8. Roadmap (each phase ends with `npm test`, `npm run build` and backend tests passing)
 
-0 ✓ protect Demo Mode · 1 ✓ backend foundation · 2 database + persistent mission state · 3 mission APIs (analyze/create/list/lifecycle) · 4 Tool Registry (with a fake tool for tests only) · 5 integration framework · 6 OAuth + encrypted credentials · 7 policy engine + approval gateway · 8 agent runtime (event log, budgets) · 9 LLM planner (schema-validated) · 10 real tool execution · 11 verification + evidence · 12 recovery + re-planning (bounded) · 13 SSE · 14 Live Mission Control (frontend live source, Connected Apps, mode indicator shown only when `live_mode.available`) · 15 security hardening (auth, per-user isolation, rate limits, prompt-injection handling) · 16 real hackathon mission · 17 general-purpose validation.
+0 ✓ protect Demo Mode · 1 ✓ backend foundation · 2 ✓ database + persistent mission state · 3 mission APIs (✓ create/list/read/events; analyze and lifecycle to come) · 4 Tool Registry (with a fake tool for tests only) · 5 integration framework · 6 OAuth + encrypted credentials · 7 policy engine + approval gateway · 8 agent runtime (event log, budgets) · 9 LLM planner (schema-validated) · 10 real tool execution · 11 verification + evidence · 12 recovery + re-planning (bounded) · 13 SSE · 14 Live Mission Control (frontend live source, Connected Apps, mode indicator shown only when `live_mode.available`) · 15 security hardening (auth, per-user isolation, rate limits, prompt-injection handling) · 16 real hackathon mission · 17 general-purpose validation.
 
 ## 9. Prerequisites the code cannot provide
 
