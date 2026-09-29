@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { MotionConfig } from 'framer-motion';
 import ErrorBoundary from './components/ErrorBoundary';
+import { ThemeProvider } from './context/ThemeContext';
 import { MissionProvider } from './store/MissionStore';
 import NewMissionModal from './components/NewMissionModal';
 import Landing from './landing/Landing';
@@ -26,9 +27,10 @@ function ScrollToTop() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <MotionConfig reducedMotion="user">
-          <MissionProvider>
+      <ThemeProvider>
+        <BrowserRouter>
+          <MotionConfig reducedMotion="user">
+            <MissionProvider>
             <ScrollToTop />
             <Routes>
               <Route path="/" element={<Landing />} />
@@ -49,6 +51,7 @@ export default function App() {
           </MissionProvider>
         </MotionConfig>
       </BrowserRouter>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

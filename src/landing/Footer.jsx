@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Logo } from '../components/ui';
+import ThemeToggle from '../components/ThemeToggle';
 
 const COLUMNS = [
   {
@@ -66,7 +67,13 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="pt-8 text-xs text-gray-500">© 2026 AgentOS</div>
+        <div className="pt-8 text-xs text-gray-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>© 2026 AgentOS</div>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400 text-xs">Theme:</span>
+            <ThemeToggle size="sm" showLabel />
+          </div>
+        </div>
       </div>
     </footer>
   );

@@ -7,8 +7,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AgentOS — Autonomous AI Workforce</title>
     <meta name="description" content="AgentOS: give it a goal, and a team of AI agents plans, executes, recovers from failure, asks for approval and verifies the outcome. Interactive demo, runs entirely in your browser." />
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('agentos_theme');
+          var isDark = t === 'dark' || (!t && !window.matchMedia('(prefers-color-scheme: light)').matches);
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-[#000000] text-white selection:bg-[#eb6920] selection:text-white antialiased overflow-x-hidden">
+  <body class="bg-slate-50 text-slate-900 dark:bg-[#000000] dark:text-white selection:bg-[#eb6920] selection:text-white antialiased overflow-x-hidden transition-colors duration-200">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

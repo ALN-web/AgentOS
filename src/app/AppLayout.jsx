@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AppWindow, FlaskConical, Inbox, LayoutDashboard, LayoutTemplate, ListChecks, Network, Play, Plus, Sparkles } from 'lucide-react';
 import { Logo } from '../components/ui';
+import ThemeToggle from '../components/ThemeToggle';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ResetDemoButton from '../components/ResetDemoButton';
 import BackendStatus from '../live/BackendStatus';
@@ -52,8 +53,9 @@ export default function AppLayout() {
     <div className="min-h-screen lg:pl-60">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-60 flex-col border-r border-white/5 bg-[#07060a] px-4 py-6">
-        <div className="px-2 mb-8">
+        <div className="px-2 mb-8 flex items-center justify-between">
           <Logo size="md" />
+          <ThemeToggle size="sm" />
         </div>
         <button onClick={tryDemo} className="btn-orange mb-2 w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
           <Play className="w-3.5 h-3.5 fill-current" />
@@ -86,6 +88,7 @@ export default function AppLayout() {
         <div className="px-4 h-14 flex items-center justify-between">
           <Logo size="sm" />
           <div className="flex items-center gap-2">
+            <ThemeToggle size="sm" />
             <button onClick={() => openLauncher()} aria-label="New mission" className="btn-dark w-8 h-8 rounded-lg flex items-center justify-center">
               <Plus className="w-3.5 h-3.5" />
             </button>
