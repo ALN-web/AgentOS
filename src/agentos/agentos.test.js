@@ -51,6 +51,21 @@ describe('goal understanding', () => {
     expect(specific.questions).toEqual([]);
   });
 
+  it('reads quantities past leading adjectives', () => {
+    expect(analyzeGoal('Find 20 suitable internship opportunities.').quantity).toEqual({ n: 20, unit: 'internship opportunities' });
+    expect(analyzeGoal('Find 20 internships suitable for me').quantity).toEqual({ n: 20, unit: 'internships' });
+    expect(planMission('Find 20 suitable internship opportunities.').metric.target).toBe(20);
+    expect(analyzeGoal('Find 20 suitable internship opportunities.').questions.map((q) => q.id)).not.toContain('count');
+  });
+
+  it('adapts event plans to the kind of event', () => {
+    const hack = planMission('Organize a hackathon event in our college.').tasks.map((t) => t.title);
+    const shop = planMission('Plan a technical workshop for 100 students.').tasks.map((t) => t.title);
+    expect(hack).toContain('Set up judging, prizes and mentors');
+    expect(shop).toContain('Prepare speakers and session materials');
+    expect(hack).not.toEqual(shop);
+  });
+
   it('uses answers and states assumptions for anything still unknown', () => {
     const answered = analyzeGoal('Organize a hackathon', { participants: '150', date: 'Nov 14', format: 'Hybrid' });
     expect(answered.quantity).toEqual({ n: 150, unit: 'participants' });

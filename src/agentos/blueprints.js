@@ -14,6 +14,37 @@
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
+// The one part of an event that depends on what kind of event it is.
+function eventSpecific(ev, n) {
+  if (['hackathon', 'competition', 'contest'].includes(ev))
+    return {
+      title: 'Set up judging, prizes and mentors',
+      out: 'Drafted judging criteria, a prize split and a mentor rota for the event.',
+      why: { objective: 'Make the competition fair and worth entering.', reason: 'Clear judging and prizes are what participants ask about first.' },
+      criterion: 'Judging and prizes ready',
+    };
+  if (['workshop', 'bootcamp', 'seminar', 'webinar', 'orientation'].includes(ev))
+    return {
+      title: 'Prepare speakers and session materials',
+      out: `Confirmed the session outline, speaker brief and a setup checklist for ${n} attendees.`,
+      why: { objective: 'Make sure every session has content and a presenter.', reason: 'A workshop is only as good as what is taught in it.' },
+      criterion: 'Speakers and materials ready',
+    };
+  if (['conference', 'summit'].includes(ev))
+    return {
+      title: 'Confirm speakers and the agenda',
+      out: 'Built the agenda and a speaker confirmation list.',
+      why: { objective: 'Lock in who speaks, and when.', reason: 'The agenda is what attendees register for.' },
+      criterion: 'Agenda confirmed',
+    };
+  return {
+    title: 'Plan the activities and logistics',
+    out: 'Planned the activities, food and equipment for the day.',
+    why: { objective: 'Know what happens during the event.', reason: 'Logistics decide whether the day runs smoothly.' },
+    criterion: 'Activities and logistics planned',
+  };
+}
+
 function event(ctx) {
   const ev = ctx.eventNoun;
   const n = ctx.quantity?.n || 100;
@@ -74,13 +105,14 @@ function event(ctx) {
       out: 'Assigned owners for venue, registration desk, food, judging and communications.',
       criterion: 'Tasks assigned',
     },
+    { key: 'specific', type: 'create', deps: ['plan'], ...eventSpecific(ev, n) },
     {
       key: 'monitor', type: 'monitor', title: 'Monitor registrations', deps: ['announce'],
       why: { objective: `Track sign-ups toward ${n}.`, reason: 'Progress is only visible if someone is counting.' },
       out: `Simulated registrations: ${Math.round(n * 0.6)} after two days, trending to ${n}.`,
     },
     {
-      key: 'verify', type: 'verify', title: `Verify ${ev} readiness`, deps: ['team', 'monitor'],
+      key: 'verify', type: 'verify', title: `Verify ${ev} readiness`, deps: ['team', 'specific', 'monitor'],
       why: { objective: 'Confirm every readiness criterion is met.', reason: 'The mission is not done until readiness is checked.' },
     },
   ];

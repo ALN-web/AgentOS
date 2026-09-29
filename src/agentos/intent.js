@@ -61,6 +61,7 @@ const RISKS = [
 ];
 
 const STOP = new Set(['for', 'to', 'and', 'in', 'under', 'by', 'next', 'from', 'at', 'with', 'the', 'our', 'my', 'of', 'on', 'each', 'who', 'that', 'which', 'this', 'a', 'an', 'per', 'suitable', 'relevant', 'matching', 'available', 'near', 'open', 'before', 'within', 'or']);
+const LEADING_ADJ = new Set(['suitable', 'relevant', 'matching', 'available', 'open', 'new', 'good', 'great', 'qualified', 'verified', 'paid', 'unpaid', 'remote', 'local', 'real', 'unique', 'active']);
 const PRIMARY_UNIT = {
   career: /intern|job|opening|opportunit|position|role|compan/i,
   event_management: /student|participant|people|attendee|registration|guest|team/i,
@@ -86,16 +87,21 @@ export function classifyDomain(goal) {
 // Numbers followed by what they count: "100 registrations", "20 office monitors".
 export function extractQuantities(goal) {
   const out = [];
-  const re = /(^|[^$\d.,])(\d[\d,]*)\s+([a-z][a-z-]*(?:\s+[a-z][a-z-]*){0,2})/gi;
+  const re = /(^|[^$\d.,])(\d[\d,]*)\s+([a-z][a-z-]*(?:\s+[a-z][a-z-]*){0,3})/gi;
   let match;
   while ((match = re.exec(goal))) {
     const n = parseInt(match[2].replace(/,/g, ''), 10);
+    const original = match[3].split(/\s+/);
+    // "20 suitable internship opportunities": skip leading adjectives, then
+    // stop at the first word that ends the noun phrase.
+    let start = 0;
+    while (start < original.length - 1 && LEADING_ADJ.has(original[start].toLowerCase())) start++;
     const unitWords = [];
-    for (const w of match[3].toLowerCase().split(/\s+/)) {
-      if (STOP.has(w)) break;
+    for (const w of original.slice(start)) {
+      if (STOP.has(w.toLowerCase())) break;
       unitWords.push(w);
     }
-    if (n > 0 && unitWords.length) out.push({ n, unit: match[3].split(/\s+/).slice(0, unitWords.length).join(' ') });
+    if (n > 0 && unitWords.length) out.push({ n, unit: unitWords.join(' ') });
   }
   return out;
 }
