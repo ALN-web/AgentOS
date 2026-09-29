@@ -4,6 +4,7 @@ import { FlaskConical, Inbox, LayoutDashboard, LayoutTemplate, ListChecks, Netwo
 import { Logo } from '../components/ui';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ResetDemoButton from '../components/ResetDemoButton';
+import BackendStatus from '../live/BackendStatus';
 import { useMissions, usePendingApprovals } from '../store/MissionStore';
 
 const NAV = [
@@ -73,6 +74,9 @@ export default function AppLayout() {
           <div className="mt-2">
             <ResetDemoButton />
           </div>
+        </div>
+        <div className="mt-2">
+          <BackendStatus />
         </div>
       </aside>
 

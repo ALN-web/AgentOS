@@ -1,0 +1,349 @@
+{
+  "goal": "Prepare and launch our new product.",
+  "plan": {
+    "kind": "dynamic",
+    "planner": "demo",
+    "goal": "Prepare and launch our new product",
+    "intent": {
+      "goal": "Prepare and launch our new product",
+      "objective": "Prepare and launch our new product",
+      "domain": "product_launch",
+      "domainLabel": "Product launch",
+      "desiredOutcome": "Launch ready",
+      "quantity": null,
+      "date": null,
+      "format": null,
+      "eventNoun": "event",
+      "deliverable": {
+        "verb": "Prepare",
+        "object": "nd launch"
+      },
+      "recipient": null,
+      "constraints": [],
+      "entities": [
+        "launch",
+        "product"
+      ],
+      "risks": [],
+      "requiredCapabilities": [
+        "planning",
+        "research",
+        "document",
+        "browser",
+        "communication",
+        "monitoring",
+        "verification"
+      ],
+      "questions": [
+        {
+          "id": "date",
+          "question": "What is the launch date?",
+          "placeholder": "e.g. next Tuesday"
+        }
+      ],
+      "assumptions": [
+        "Launch in about two weeks"
+      ],
+      "answers": {}
+    },
+    "tasks": [
+      {
+        "id": "p1",
+        "title": "Understand the launch goals",
+        "type": "analyze",
+        "capability": "planning",
+        "agent": "planner",
+        "deps": [],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Decide what the launch must achieve.",
+          "reason": "Assets and channels follow from the goal."
+        },
+        "out": "Launch. Success: page ready, announcement scheduled, team briefed.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p2",
+        "title": "Research the market and competitors",
+        "type": "research",
+        "capability": "research",
+        "agent": "research",
+        "deps": [
+          "p1"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Position the launch against alternatives.",
+          "reason": "Messaging lands better when it answers “why this one?”."
+        },
+        "out": "Three competitors launched similar features this quarter; none leads with speed. That becomes the angle.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p3",
+        "title": "Create the launch plan and timeline",
+        "type": "create",
+        "capability": "document",
+        "agent": "execution",
+        "deps": [
+          "p1"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Put every launch task on a calendar.",
+          "reason": "Launches slip on the tasks nobody scheduled."
+        },
+        "out": "Timeline: assets T-5 days, page T-2, announcement on the day, follow-up T+2.",
+        "criterion": "Launch plan and timeline complete",
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p4",
+        "title": "Draft the announcement and assets",
+        "type": "draft",
+        "capability": "document",
+        "agent": "execution",
+        "deps": [
+          "p2",
+          "p3"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Prepare everything the launch needs to say.",
+          "reason": "Drafting early leaves time for review."
+        },
+        "out": "Drafted the announcement post, email, and three social snippets.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p5",
+        "title": "Review the launch assets",
+        "type": "compare",
+        "capability": "analysis",
+        "agent": "critic",
+        "deps": [
+          "p4"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Make the message sharp and consistent.",
+          "reason": "Once public, it can’t be taken back."
+        },
+        "out": "Tightened the headline and removed a claim we can’t back up yet.",
+        "criterion": "Assets reviewed",
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p6",
+        "title": "Prepare the launch page",
+        "type": "browse",
+        "capability": "browser",
+        "agent": "browser",
+        "deps": [
+          "p3"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Have somewhere for people to land.",
+          "reason": "Announcements need a working destination."
+        },
+        "out": "Launch page prepared as a scheduled draft (simulated).",
+        "criterion": "Launch page ready",
+        "progress": null,
+        "site": "site.example.com",
+        "siteTitle": "Site editor (simulated)",
+        "steps": [
+          "Opened the site editor",
+          "Created the launch page from the product template",
+          "Added pricing and sign-up button",
+          "Saved as a scheduled draft"
+        ],
+        "payload": null,
+        "fail": true
+      },
+      {
+        "id": "p7",
+        "title": "Schedule the launch announcement",
+        "type": "communicate",
+        "capability": "communication",
+        "agent": "execution",
+        "deps": [
+          "p5",
+          "p6"
+        ],
+        "gated": true,
+        "risk": "medium",
+        "category": "External communication",
+        "why": {
+          "objective": "Tell your audience on launch day.",
+          "reason": "This publishes in your name, so it waits for your approval."
+        },
+        "out": null,
+        "criterion": "Announcement approved and scheduled (simulated)",
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": {
+          "from": "team@product.example",
+          "recipients": 2400,
+          "audience": "newsletter subscribers",
+          "subject": "It’s here: our fastest release yet",
+          "body": "Hi,\n\nToday we are launching our new release. It is faster, simpler, and ready for you to try.\n\nSee what is new: site.example.com/launch"
+        },
+        "fail": false
+      },
+      {
+        "id": "p8",
+        "title": "Monitor launch readiness",
+        "type": "monitor",
+        "capability": "monitoring",
+        "agent": "execution",
+        "deps": [
+          "p7"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Watch for anything that blocks launch day.",
+          "reason": "Problems caught early are cheap to fix."
+        },
+        "out": "All launch tasks on track; no blockers.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p9",
+        "title": "Verify launch readiness",
+        "type": "verify",
+        "capability": "verification",
+        "agent": "verification",
+        "deps": [
+          "p8"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Confirm every launch criterion is met.",
+          "reason": "Ready means checked, not assumed."
+        },
+        "out": null,
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      }
+    ],
+    "criteria": [
+      {
+        "label": "Launch plan and timeline complete",
+        "taskId": "p3"
+      },
+      {
+        "label": "Assets reviewed",
+        "taskId": "p5"
+      },
+      {
+        "label": "Launch page ready",
+        "taskId": "p6"
+      },
+      {
+        "label": "Announcement approved and scheduled (simulated)",
+        "taskId": "p7"
+      }
+    ],
+    "metric": {
+      "kind": "criteria",
+      "label": "Success criteria met",
+      "target": 4
+    },
+    "approvalPoints": 1,
+    "capabilities": [
+      "planning",
+      "research",
+      "document",
+      "analysis",
+      "browser",
+      "communication",
+      "monitoring",
+      "verification",
+      "recovery",
+      "approval"
+    ],
+    "riskLevel": "medium",
+    "assumptions": [
+      "Launch in about two weeks"
+    ],
+    "failure": {
+      "taskId": "p6",
+      "cls": "access_blocked",
+      "site": "site.example.com",
+      "alt": {
+        "id": "p6b",
+        "title": "Prepare the launch page (alternative source)",
+        "type": "browse",
+        "capability": "browser",
+        "agent": "browser",
+        "deps": [
+          "p3"
+        ],
+        "gated": false,
+        "why": {
+          "objective": "Have somewhere for people to land.",
+          "reason": "Replaces “Prepare the launch page”, which failed (access blocked). Switch to a source that offers an export or an API, and cross-check it against a second source."
+        },
+        "countsFor": "p6"
+      }
+    }
+  }
+}

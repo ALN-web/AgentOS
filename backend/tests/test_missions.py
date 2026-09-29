@@ -1,0 +1,146 @@
+import copy
+import json
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import inspect, select
+
+from app.db.models import Agent, Mission, User
+from app.main import create_app
+from tests.conftest import make_settings
+
+FIXTURES = Path(__file__).parent / "fixtures" / "plans"
+PLANS = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted(FIXTURES.glob("*.json"))}
+
+
+def body(name: str) -> dict:
+    fx = PLANS[name]
+    return {"goal": fx["goal"], "plan": copy.deepcopy(fx["plan"])}
+
+
+def test_fixtures_come_from_the_frontend_planner():
+    assert set(PLANS) == {"hero", "hackathon", "internships", "launch", "research"}
+
+
+def test_migrations_create_the_schema_and_seed_agents(app):
+    tables = set(inspect(app.state.engine).get_table_names())
+    assert {
+        "user", "mission", "mission_intent", "task", "task_dependency", "agent", "agent_execution", "tool",
+        "tool_execution", "approval", "evidence", "mission_event", "recovery_attempt", "integration",
+    } <= tables
+    assert "alembic_version" in tables
+    with app.state.session_factory() as db:
+        assert len(db.scalars(select(Agent)).all()) == 8
+
+
+def test_health_reports_the_database(client):
+    assert client.get("/api/health").json()["database"] == "ok"
+
+
+@pytest.mark.parametrize("name", sorted(PLANS))
+def test_frontend_plans_are_accepted_and_stored_faithfully(client, name):
+    req = body(name)
+    res = client.post("/api/missions", json=req)
+    assert res.status_code == 201, res.text
+    m = res.json()
+    plan = req["plan"]
+
+    assert m["status"] == "planned" and m["mode"] == "live"
+    assert m["goal"] == req["goal"]
+    assert m["task_count"] == len(plan["tasks"])
+    assert m["approval_points"] == plan["approvalPoints"]
+    assert m["metric"] == {"label": plan["metric"]["label"], "current": 0, "target": plan["metric"]["target"]}
+    assert m["intent"]["domain"] == plan["intent"]["domain"]
+    assert [t["key"] for t in m["tasks"]] == [t["id"] for t in plan["tasks"]]
+    for got, sent in zip(m["tasks"], plan["tasks"]):
+        assert got["agent"] == sent["agent"]
+        assert got["gated"] == sent["gated"]
+        assert sorted(got["deps"]) == sorted(sent["deps"])
+    # The full plan round-trips, including presentation-only fields.
+    assert m["plan"] == plan
+
+    events = client.get(f"/api/missions/{m['id']}/events").json()
+    assert [(e["seq"], e["type"]) for e in events] == [(1, "MISSION_CREATED")]
+    assert client.get(f"/api/missions/{m['id']}/events", params={"after": 1}).json() == []
+
+
+def test_missions_are_listed_newest_first(client):
+    first = client.post("/api/missions", json=body("research")).json()
+    second = client.post("/api/missions", json=body("launch")).json()
+    ids = [m["id"] for m in client.get("/api/missions").json()]
+    assert ids.index(second["id"]) < ids.index(first["id"])
+
+
+def _mutate(fn):
+    req = body("hackathon")
+    fn(req)
+    return req
+
+
+@pytest.mark.parametrize(
+    "case, mutate",
+    [
+        ("cycle", lambda r: r["plan"]["tasks"][0]["deps"].append(r["plan"]["tasks"][-1]["id"])),
+        ("unknown dependency", lambda r: r["plan"]["tasks"][1]["deps"].append("nope")),
+        ("self dependency", lambda r: r["plan"]["tasks"][1]["deps"].append(r["plan"]["tasks"][1]["id"])),
+        ("duplicate ids", lambda r: r["plan"]["tasks"][1].update(id=r["plan"]["tasks"][0]["id"])),
+        ("unknown agent", lambda r: r["plan"]["tasks"][0].update(agent="hacker")),
+        ("approval count mismatch", lambda r: r["plan"].update(approvalPoints=99)),
+        ("goal mismatch", lambda r: r.update(goal="Something else entirely")),
+        ("empty goal", lambda r: r.update(goal="   ")),
+        ("bad task id", lambda r: r["plan"]["tasks"][0].update(id="../etc")),
+        ("no tasks", lambda r: r["plan"].update(tasks=[], approvalPoints=0, criteria=[])),
+        ("too many tasks", lambda r: r["plan"].update(tasks=r["plan"]["tasks"] * 7)),
+        ("unknown kind", lambda r: r["plan"].update(kind="script")),
+    ],
+)
+def test_invalid_plans_are_rejected(client, case, mutate):
+    res = client.post("/api/missions", json=_mutate(mutate))
+    assert res.status_code == 422, case
+    assert res.json()["error"]["code"] == "validation_error"
+
+
+def test_unknown_missions_are_not_found(client):
+    res = client.get("/api/missions/does-not-exist")
+    assert res.status_code == 404
+    assert res.json()["error"]["code"] == "mission_not_found"
+    assert client.get("/api/missions/does-not-exist/events").status_code == 404
+
+
+def test_users_cannot_see_each_others_missions(app, client):
+    mine = client.post("/api/missions", json=body("research")).json()
+    with app.state.session_factory() as db:
+        other = User(id="other", email="other@example.com")
+        db.add(other)
+        db.commit()
+        # Move the mission to another user: the local user must no longer see it.
+        db.get(Mission, mine["id"]).user_id = "other"
+        db.commit()
+    assert client.get(f"/api/missions/{mine['id']}").status_code == 404
+    assert mine["id"] not in [m["id"] for m in client.get("/api/missions").json()]
+
+
+def test_missions_survive_a_restart(tmp_path):
+    settings = make_settings(tmp_path)
+    app1 = create_app(settings)
+    with TestClient(app1) as c:
+        created = c.post("/api/missions", json=body("hero")).json()
+    app1.state.engine.dispose()
+
+    app2 = create_app(settings)
+    with TestClient(app2) as c:
+        again = c.get(f"/api/missions/{created['id']}").json()
+    app2.state.engine.dispose()
+    assert again["goal"] == created["goal"]
+    assert again["tasks"] == created["tasks"]
+
+
+def test_production_refuses_missions_until_authentication_exists(tmp_path):
+    app = create_app(make_settings(tmp_path, environment="production"))
+    with TestClient(app) as c:
+        res = c.get("/api/missions")
+        assert res.status_code == 503
+        assert res.json()["error"]["code"] == "auth_not_configured"
+        assert c.post("/api/missions", json=body("hero")).status_code == 503
+    app.state.engine.dispose()

@@ -1,0 +1,410 @@
+{
+  "goal": "Organize a hackathon for 100 students in my college.",
+  "plan": {
+    "kind": "dynamic",
+    "planner": "demo",
+    "goal": "Organize a hackathon for 100 students in my college",
+    "intent": {
+      "goal": "Organize a hackathon for 100 students in my college",
+      "objective": "Organize a hackathon for 100 students in my college",
+      "domain": "event_management",
+      "domainLabel": "Event management",
+      "desiredOutcome": "Hackathon ready to run for 100 students",
+      "quantity": {
+        "n": 100,
+        "unit": "students"
+      },
+      "date": null,
+      "format": "in person",
+      "eventNoun": "hackathon",
+      "deliverable": null,
+      "recipient": null,
+      "constraints": [],
+      "entities": [
+        "hackathon",
+        "college",
+        "organize"
+      ],
+      "risks": [],
+      "requiredCapabilities": [
+        "planning",
+        "research",
+        "document",
+        "browser",
+        "communication",
+        "monitoring",
+        "verification"
+      ],
+      "questions": [
+        {
+          "id": "date",
+          "question": "When is it?",
+          "placeholder": "e.g. Nov 14"
+        }
+      ],
+      "assumptions": [
+        "A date about six weeks from now"
+      ],
+      "answers": {}
+    },
+    "tasks": [
+      {
+        "id": "p1",
+        "title": "Understand the hackathon requirements",
+        "type": "analyze",
+        "capability": "planning",
+        "agent": "planner",
+        "deps": [],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Define what a successful hackathon looks like.",
+          "reason": "Every later task is judged against this definition of ready."
+        },
+        "out": "Scope: 100 participants, in person. Ready means venue, plan, registration, promotion and team are all in place.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p2",
+        "title": "Research venue and resources",
+        "type": "research",
+        "capability": "research",
+        "agent": "research",
+        "deps": [
+          "p1"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Find a space that fits 100 people.",
+          "reason": "Capacity and facilities decide what the rest of the plan can promise."
+        },
+        "out": "Found 3 rooms that fit 100 people. The main hall has the best power and Wi-Fi.",
+        "criterion": "Venue and resources identified",
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p3",
+        "title": "Define the hackathon structure and timeline",
+        "type": "create",
+        "capability": "document",
+        "agent": "execution",
+        "deps": [
+          "p1"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Turn the scope into a schedule people can follow.",
+          "reason": "Registration, promotion and the team all hang off the timeline."
+        },
+        "out": "Drafted the run of show and a six-week countdown: promotion, registration close, final briefing.",
+        "criterion": "Event plan and timeline complete",
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p4",
+        "title": "Create the registration workflow",
+        "type": "browse",
+        "capability": "browser",
+        "agent": "browser",
+        "deps": [
+          "p3"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Give participants one place to sign up.",
+          "reason": "Promotion needs a working link before it goes out."
+        },
+        "out": "Registration form creation simulated. Demo link: forms.example.com/register.",
+        "criterion": "Registration workflow ready",
+        "progress": null,
+        "site": "forms.example.com",
+        "siteTitle": "Form builder (simulated)",
+        "steps": [
+          "Opened the form builder",
+          "Created “Hackathon registration”",
+          "Added fields: name, email, team, dietary needs",
+          "Published the form"
+        ],
+        "payload": null,
+        "fail": true
+      },
+      {
+        "id": "p5",
+        "title": "Prepare promotion content",
+        "type": "draft",
+        "capability": "document",
+        "agent": "execution",
+        "deps": [
+          "p3"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Give people a reason to sign up.",
+          "reason": "A clear date, prize or benefit converts far better than a generic invite."
+        },
+        "out": "Drafted an announcement, a poster brief and a reminder for the hackathon.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p6",
+        "title": "Review the promotion plan",
+        "type": "compare",
+        "capability": "analysis",
+        "agent": "critic",
+        "deps": [
+          "p5"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Catch weak spots before anything goes public.",
+          "reason": "Published content can’t be improved after people have seen it."
+        },
+        "out": "The announcement buries the date. Moved it to the first line and added a deadline.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p7",
+        "title": "Publish the hackathon announcement",
+        "type": "communicate",
+        "capability": "communication",
+        "agent": "execution",
+        "deps": [
+          "p4",
+          "p6"
+        ],
+        "gated": true,
+        "risk": "medium",
+        "category": "External communication",
+        "why": {
+          "objective": "Reach the people who should attend.",
+          "reason": "This publishes content in your name, so it waits for your approval."
+        },
+        "out": null,
+        "criterion": "Promotion approved and published (simulated)",
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": {
+          "from": "organisers@college.example",
+          "recipients": 400,
+          "audience": "students and club members",
+          "subject": "Hackathon: registration is open",
+          "body": "Hi all,\n\nOur hackathon is happening. Spots are limited to 100.\n\nRegister here: forms.example.com/register\n\nSee you there!"
+        },
+        "fail": false
+      },
+      {
+        "id": "p8",
+        "title": "Assign tasks to the organising team",
+        "type": "create",
+        "capability": "document",
+        "agent": "execution",
+        "deps": [
+          "p3",
+          "p2"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Make every part of the day someone’s job.",
+          "reason": "Unowned tasks are the ones that get missed."
+        },
+        "out": "Assigned owners for venue, registration desk, food, judging and communications.",
+        "criterion": "Tasks assigned",
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p9",
+        "title": "Set up judging, prizes and mentors",
+        "type": "create",
+        "capability": "document",
+        "agent": "execution",
+        "deps": [
+          "p3"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Make the competition fair and worth entering.",
+          "reason": "Clear judging and prizes are what participants ask about first."
+        },
+        "out": "Drafted judging criteria, a prize split and a mentor rota for the event.",
+        "criterion": "Judging and prizes ready",
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p10",
+        "title": "Monitor registrations",
+        "type": "monitor",
+        "capability": "monitoring",
+        "agent": "execution",
+        "deps": [
+          "p7"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Track sign-ups toward 100.",
+          "reason": "Progress is only visible if someone is counting."
+        },
+        "out": "Simulated registrations: 60 after two days, trending to 100.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p11",
+        "title": "Verify hackathon readiness",
+        "type": "verify",
+        "capability": "verification",
+        "agent": "verification",
+        "deps": [
+          "p8",
+          "p9",
+          "p10"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Confirm every readiness criterion is met.",
+          "reason": "The mission is not done until readiness is checked."
+        },
+        "out": null,
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      }
+    ],
+    "criteria": [
+      {
+        "label": "Venue and resources identified",
+        "taskId": "p2"
+      },
+      {
+        "label": "Event plan and timeline complete",
+        "taskId": "p3"
+      },
+      {
+        "label": "Registration workflow ready",
+        "taskId": "p4"
+      },
+      {
+        "label": "Promotion approved and published (simulated)",
+        "taskId": "p7"
+      },
+      {
+        "label": "Tasks assigned",
+        "taskId": "p8"
+      },
+      {
+        "label": "Judging and prizes ready",
+        "taskId": "p9"
+      }
+    ],
+    "metric": {
+      "kind": "criteria",
+      "label": "Success criteria met",
+      "target": 6
+    },
+    "approvalPoints": 1,
+    "capabilities": [
+      "planning",
+      "research",
+      "document",
+      "browser",
+      "analysis",
+      "communication",
+      "monitoring",
+      "verification",
+      "recovery",
+      "approval"
+    ],
+    "riskLevel": "medium",
+    "assumptions": [
+      "A date about six weeks from now"
+    ],
+    "failure": {
+      "taskId": "p4",
+      "cls": "page_changed",
+      "site": "forms.example.com",
+      "alt": {
+        "id": "p4b",
+        "title": "Create the registration workflow (re-mapped page)",
+        "type": "browse",
+        "capability": "browser",
+        "agent": "browser",
+        "deps": [
+          "p3"
+        ],
+        "gated": false,
+        "why": {
+          "objective": "Give participants one place to sign up.",
+          "reason": "Replaces “Create the registration workflow”, which failed (page changed). Re-locate each field by its visible label, then retry once."
+        },
+        "countsFor": "p4"
+      }
+    }
+  }
+}

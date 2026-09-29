@@ -30,3 +30,12 @@ reference_frames/
 .claude/
 .env
 .env.*
+
+# Backend (Python)
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.db
+*.sqlite3
+!.env.live
