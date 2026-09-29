@@ -1,0 +1,185 @@
+{
+  "goal": "Plan my week around my deadlines",
+  "plan": {
+    "kind": "dynamic",
+    "planner": "demo",
+    "goal": "Plan my week around my deadlines",
+    "intent": {
+      "goal": "Plan my week around my deadlines",
+      "objective": "Plan my week around my deadlines",
+      "domain": "personal",
+      "domainLabel": "Everyday life",
+      "desiredOutcome": "Goal completed and verified",
+      "quantity": null,
+      "people": null,
+      "place": null,
+      "date": null,
+      "format": null,
+      "eventNoun": "event",
+      "deliverable": {
+        "verb": "Plan",
+        "object": "week around"
+      },
+      "recipient": null,
+      "constraints": [],
+      "entities": [
+        "week"
+      ],
+      "risks": [],
+      "requiredCapabilities": [
+        "planning",
+        "analysis",
+        "search",
+        "research",
+        "document",
+        "calendar",
+        "email",
+        "reminders",
+        "communication",
+        "verification"
+      ],
+      "questions": [],
+      "assumptions": [],
+      "answers": {}
+    },
+    "tasks": [
+      {
+        "id": "p1",
+        "title": "Review deadlines",
+        "type": "analyze",
+        "capability": "planning",
+        "agent": "planner",
+        "deps": [],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Know what is due.",
+          "reason": "Priorities depend on deadlines."
+        },
+        "out": "Listed all deadlines.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p2",
+        "title": "Review available schedule",
+        "type": "search",
+        "capability": "search",
+        "agent": "browser",
+        "deps": [],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Know your free time.",
+          "reason": "Tasks need time slots."
+        },
+        "out": "Found available blocks.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p3",
+        "title": "Build weekly plan",
+        "type": "create",
+        "capability": "document",
+        "agent": "execution",
+        "deps": [
+          "p1",
+          "p2"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Create the plan.",
+          "reason": "This is the main outcome."
+        },
+        "out": "Drafted the weekly plan.",
+        "criterion": "Plan created",
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p4",
+        "title": "Verify schedule",
+        "type": "verify",
+        "capability": "verification",
+        "agent": "verification",
+        "deps": [
+          "p3"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Confirm the plan works.",
+          "reason": "Done means verified."
+        },
+        "out": null,
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      }
+    ],
+    "criteria": [
+      {
+        "label": "Plan created",
+        "taskId": "p3"
+      }
+    ],
+    "metric": {
+      "kind": "criteria",
+      "label": "Success criteria met",
+      "target": 1
+    },
+    "approvalPoints": 0,
+    "capabilities": [
+      "planning",
+      "search",
+      "document",
+      "verification",
+      "recovery"
+    ],
+    "riskLevel": "low",
+    "assumptions": [],
+    "failure": {
+      "taskId": "p2",
+      "cls": "access_blocked",
+      "site": "The source",
+      "alt": {
+        "id": "p2b",
+        "title": "Review available schedule (alternative source)",
+        "type": "search",
+        "capability": "research",
+        "agent": "research",
+        "deps": [],
+        "gated": false,
+        "why": {
+          "objective": "Know your free time.",
+          "reason": "Replaces “Review available schedule”, which failed (access blocked). Switch to a source that offers an export or an API, and cross-check it against a second source."
+        },
+        "countsFor": "p2"
+      }
+    }
+  }
+}

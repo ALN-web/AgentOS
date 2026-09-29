@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Shuffle,
   UserCheck,
+  Calendar,
 } from 'lucide-react';
 
 // The capability catalogue behind /app/features. Add a feature by adding an entry.
@@ -32,6 +33,15 @@ export const FEATURES = [
     points: ['Structured intent from free text', 'Asks only for missing critical details', 'Unfamiliar goals still get a plan'],
     note: 'Demo Mode plans with deterministic goal analysis in your browser. An LLM planner can return the same plan shape later.',
     see: { launcher: true, label: 'Try any goal' },
+  },
+  {
+    id: 'everyday-apps',
+    icon: Calendar,
+    title: 'Everyday Apps',
+    tagline: 'Email, calendar, and beyond.',
+    description: 'AgentOS integrates with everyday tools to read your schedule, draft emails, and handle daily admin, keeping you in the loop for anything important.',
+    points: ['Drafts and reads email', 'Manages calendar events', 'Sets reminders for tasks'],
+    see: { launcher: true, goal: 'Plan my week around my deadlines', label: 'Plan my week' },
   },
   {
     id: 'planning',

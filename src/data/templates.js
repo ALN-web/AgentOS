@@ -2,6 +2,12 @@ export const DEMO_GOAL = 'Get 100 registrations for our college hackathon';
 
 // Suggestions only: the launcher accepts any goal.
 export const EXAMPLE_GOALS = [
+  'Plan my week around my deadlines',
+  'Reply to the emails that need me today',
+  'Organise a birthday dinner for 8 on Saturday',
+  "Remind me to pay my bills before they're due",
+  'Book a dentist appointment next week',
+  'Plan a weekend trip to Goa for 4 friends under ₹20,000',
   DEMO_GOAL,
   'Organize a hackathon in our college',
   'Plan a technical workshop for 100 students',
@@ -12,6 +18,38 @@ export const EXAMPLE_GOALS = [
 ];
 
 export const TEMPLATES = [
+  {
+    id: 'inbox-os',
+    name: 'InboxOS',
+    category: 'Everyday',
+    tagline: 'Clear your inbox in seconds.',
+    goal: 'Reply to the emails that need me today',
+    image: '/assets/showcase_card_1.jpg',
+  },
+  {
+    id: 'week-os',
+    name: 'WeekOS',
+    category: 'Everyday',
+    tagline: 'Plan your week automatically.',
+    goal: 'Plan my week around my deadlines',
+    image: '/assets/showcase_card_2.jpg',
+  },
+  {
+    id: 'bills-os',
+    name: 'BillsOS',
+    category: 'Everyday',
+    tagline: 'Never miss a payment.',
+    goal: "Remind me to pay my bills before they're due",
+    image: '/assets/showcase_card_3.jpg',
+  },
+  {
+    id: 'plans-os',
+    name: 'PlansOS',
+    category: 'Everyday',
+    tagline: 'Organise your social life.',
+    goal: 'Organise a birthday dinner for 8 on Saturday',
+    image: '/assets/showcase_card_1.jpg',
+  },
   {
     id: 'deadline-os',
     name: 'DeadlineOS',

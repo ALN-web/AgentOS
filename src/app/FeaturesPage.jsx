@@ -15,7 +15,7 @@ export default function FeaturesPage() {
 
   const see = (target) => {
     if (target.to) return navigate(target.to);
-    if (target.launcher) return openLauncher('');
+    if (target.launcher) return openLauncher(target.goal || '');
     if (target.replay) {
       const completed = missions.filter((m) => m.status === 'completed');
       const done = completed.find((m) => /registration/i.test(m.goal)) || completed[0];

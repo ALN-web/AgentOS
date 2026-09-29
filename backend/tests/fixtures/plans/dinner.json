@@ -1,0 +1,215 @@
+{
+  "goal": "Organise a birthday dinner for 8 on Saturday",
+  "plan": {
+    "kind": "dynamic",
+    "planner": "demo",
+    "goal": "Organise a birthday dinner for 8 on Saturday",
+    "intent": {
+      "goal": "Organise a birthday dinner for 8 on Saturday",
+      "objective": "Organise a birthday dinner for 8 on Saturday",
+      "domain": "personal",
+      "domainLabel": "Everyday life",
+      "desiredOutcome": "Goal completed and verified",
+      "quantity": null,
+      "people": "for 8 on",
+      "place": null,
+      "date": "Saturday",
+      "format": null,
+      "eventNoun": "event",
+      "deliverable": null,
+      "recipient": null,
+      "constraints": [],
+      "entities": [
+        "dinner",
+        "birthday"
+      ],
+      "risks": [],
+      "requiredCapabilities": [
+        "planning",
+        "analysis",
+        "search",
+        "research",
+        "document",
+        "calendar",
+        "email",
+        "reminders",
+        "communication",
+        "verification"
+      ],
+      "questions": [],
+      "assumptions": [],
+      "answers": {}
+    },
+    "tasks": [
+      {
+        "id": "p1",
+        "title": "Find suitable time",
+        "type": "search",
+        "capability": "search",
+        "agent": "browser",
+        "deps": [],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Find availability.",
+          "reason": "Need a time that works."
+        },
+        "out": "Identified Saturday evening.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p2",
+        "title": "Prepare invitation",
+        "type": "draft",
+        "capability": "document",
+        "agent": "execution",
+        "deps": [
+          "p1"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Draft details.",
+          "reason": "People need to know when and where."
+        },
+        "out": "Drafted the invite.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p3",
+        "title": "Create calendar event",
+        "type": "schedule",
+        "capability": "calendar",
+        "agent": "execution",
+        "deps": [
+          "p2"
+        ],
+        "gated": true,
+        "risk": "medium",
+        "why": {
+          "objective": "Block the time.",
+          "reason": "This updates your calendar."
+        },
+        "out": null,
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": {
+          "subject": "Dinner"
+        },
+        "fail": false
+      },
+      {
+        "id": "p4",
+        "title": "Send invitation",
+        "type": "communicate",
+        "capability": "communication",
+        "agent": "execution",
+        "deps": [
+          "p3"
+        ],
+        "gated": true,
+        "risk": "medium",
+        "category": "External communication",
+        "why": {
+          "objective": "Invite the guests.",
+          "reason": "This sends emails in your name."
+        },
+        "out": null,
+        "criterion": "Invitation sent",
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": {
+          "subject": "Dinner Invitation"
+        },
+        "fail": false
+      },
+      {
+        "id": "p5",
+        "title": "Verify",
+        "type": "verify",
+        "capability": "verification",
+        "agent": "verification",
+        "deps": [
+          "p4"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Confirm it is done.",
+          "reason": "Check everything is sorted."
+        },
+        "out": null,
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      }
+    ],
+    "criteria": [
+      {
+        "label": "Invitation sent",
+        "taskId": "p4"
+      }
+    ],
+    "metric": {
+      "kind": "criteria",
+      "label": "Success criteria met",
+      "target": 1
+    },
+    "approvalPoints": 2,
+    "capabilities": [
+      "planning",
+      "search",
+      "document",
+      "calendar",
+      "communication",
+      "verification",
+      "recovery",
+      "approval"
+    ],
+    "riskLevel": "medium",
+    "assumptions": [],
+    "failure": {
+      "taskId": "p1",
+      "cls": "access_blocked",
+      "site": "The source",
+      "alt": {
+        "id": "p1b",
+        "title": "Find suitable time (alternative source)",
+        "type": "search",
+        "capability": "research",
+        "agent": "research",
+        "deps": [],
+        "gated": false,
+        "why": {
+          "objective": "Find availability.",
+          "reason": "Replaces “Find suitable time”, which failed (access blocked). Switch to a source that offers an export or an API, and cross-check it against a second source."
+        },
+        "countsFor": "p1"
+      }
+    }
+  }
+}

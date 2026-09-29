@@ -495,6 +495,76 @@ function general(ctx) {
   ];
 }
 
+function personal(ctx) {
+  const g = ctx.goal.toLowerCase();
+  
+  if (g.includes('dinner') || g.includes('birthday')) {
+    return [
+      { key: 'time', type: 'search', title: 'Find suitable time', deps: [], why: { objective: 'Find availability.', reason: 'Need a time that works.' }, out: 'Identified Saturday evening.' },
+      { key: 'invite', type: 'draft', title: 'Prepare invitation', deps: ['time'], why: { objective: 'Draft details.', reason: 'People need to know when and where.' }, out: 'Drafted the invite.' },
+      { key: 'cal', type: 'schedule', title: 'Create calendar event', deps: ['invite'], why: { objective: 'Block the time.', reason: 'This updates your calendar.' }, payload: { subject: 'Dinner' } },
+      { key: 'send', type: 'communicate', title: 'Send invitation', deps: ['cal'], why: { objective: 'Invite the guests.', reason: 'This sends emails in your name.' }, payload: { subject: 'Dinner Invitation' }, criterion: 'Invitation sent' },
+      { key: 'verify', type: 'verify', title: 'Verify', deps: ['send'], why: { objective: 'Confirm it is done.', reason: 'Check everything is sorted.' } }
+    ];
+  }
+  
+  if (/\bweek\b/.test(g) && g.includes('deadline')) {
+    return [
+      { key: 'deadlines', type: 'analyze', title: 'Review deadlines', deps: [], why: { objective: 'Know what is due.', reason: 'Priorities depend on deadlines.' }, out: 'Listed all deadlines.' },
+      { key: 'schedule', type: 'search', title: 'Review available schedule', deps: [], why: { objective: 'Know your free time.', reason: 'Tasks need time slots.' }, out: 'Found available blocks.' },
+      { key: 'build', type: 'create', title: 'Build weekly plan', deps: ['deadlines', 'schedule'], why: { objective: 'Create the plan.', reason: 'This is the main outcome.' }, out: 'Drafted the weekly plan.', criterion: 'Plan created' },
+      { key: 'verify', type: 'verify', title: 'Verify schedule', deps: ['build'], why: { objective: 'Confirm the plan works.', reason: 'Done means verified.' } }
+    ];
+  }
+  
+  if (g.includes('email') || g.includes('reply')) {
+    return [
+      { key: 'identify', type: 'search', title: 'Identify emails needing response', deps: [], why: { objective: 'Find urgent emails.', reason: 'Need to know what to reply to.' }, out: 'Found the emails.' },
+      { key: 'prepare', type: 'draft', title: 'Prepare replies', deps: ['identify'], why: { objective: 'Draft responses.', reason: 'Drafts can be reviewed before sending.' }, out: 'Drafted replies.' },
+      { key: 'send', type: 'communicate', title: 'Send replies', deps: ['prepare'], why: { objective: 'Send the emails.', reason: 'This emails people in your name.' }, payload: { subject: 'Replies' }, criterion: 'Replies sent' },
+      { key: 'verify', type: 'verify', title: 'Verify', deps: ['send'], why: { objective: 'Confirm inbox is sorted.', reason: 'Done means verified.' } }
+    ];
+  }
+  
+  if (g.includes('bill') || (g.includes('remind') && g.includes('pay'))) {
+    return [
+      { key: 'identify', type: 'search', title: 'Identify upcoming bills', deps: [], why: { objective: 'Find what needs paying.', reason: 'Cannot remind without knowing.' }, out: 'Found upcoming bills.' },
+      { key: 'determine', type: 'create', title: 'Determine reminder times', deps: ['identify'], why: { objective: 'Schedule reminders.', reason: 'Needs a specific date.' }, out: 'Determined reminder times.' },
+      { key: 'remind', type: 'remind', title: 'Create reminders', deps: ['determine'], why: { objective: 'Set reminders.', reason: 'This sets reminders in your app.' }, payload: { subject: 'Pay bills' }, criterion: 'Reminders created' },
+      { key: 'verify', type: 'verify', title: 'Verify', deps: ['remind'], why: { objective: 'Confirm done.', reason: 'Done means verified.' } }
+    ];
+  }
+  
+  if (g.includes('dentist') || g.includes('appointment')) {
+    return [
+      { key: 'find', type: 'search', title: 'Find suitable slots', deps: [], why: { objective: 'Find appointment times.', reason: 'Need a time.' }, out: 'Found available slots.' },
+      { key: 'prepare', type: 'draft', title: 'Prepare booking', deps: ['find'], why: { objective: 'Draft booking details.', reason: 'Need to fill the form.' }, out: 'Drafted booking.' },
+      { key: 'book', type: 'submit', title: 'Book appointment', deps: ['prepare'], why: { objective: 'Submit booking.', reason: 'This books the appointment externally.' }, payload: { subject: 'Booking' }, criterion: 'Appointment booked' },
+      { key: 'verify', type: 'verify', title: 'Verify', deps: ['book'], why: { objective: 'Confirm done.', reason: 'Done means verified.' } }
+    ];
+  }
+  
+  if (g.includes('trip') || g.includes('goa')) {
+    return [
+      { key: 'research', type: 'research', title: 'Research options', deps: [], why: { objective: 'Find flights and stays.', reason: 'Need options to compare.' }, out: 'Found options.' },
+      { key: 'compare', type: 'compare', title: 'Compare options', deps: ['research'], why: { objective: 'Find the best fit.', reason: 'Need to pick one.' }, out: 'Compared options.' },
+      { key: 'build', type: 'create', title: 'Build trip plan', deps: ['compare'], why: { objective: 'Create itinerary.', reason: 'Need a plan.' }, out: 'Drafted trip plan.' },
+      { key: 'book', type: 'purchase', title: 'Book trip', deps: ['build'], why: { objective: 'Pay for trip.', reason: 'This spends money and makes bookings.' }, payload: { subject: 'Trip' }, criterion: 'Trip booked' },
+      { key: 'verify', type: 'verify', title: 'Verify', deps: ['book'], why: { objective: 'Confirm done.', reason: 'Done means verified.' } }
+    ];
+  }
+
+  return [
+    { key: 'understand', type: 'analyze', title: 'Understand the request', deps: [], why: { objective: 'Understand the goal.', reason: 'Start here.' }, out: 'Understood.' },
+    { key: 'check', type: 'search', title: 'Check availability / relevant information', deps: ['understand'], why: { objective: 'Check context.', reason: 'Need information.' }, out: 'Checked context.' },
+    { key: 'options', type: 'research', title: 'Find options', deps: ['check'], why: { objective: 'Find options.', reason: 'Need choices.' }, out: 'Found options.' },
+    { key: 'draft', type: 'draft', title: 'Prepare a draft/action', deps: ['options'], why: { objective: 'Draft action.', reason: 'Prepare.' }, out: 'Drafted.' },
+    { key: 'execute', type: 'communicate', title: 'Execute the action', deps: ['draft'], why: { objective: 'Execute.', reason: 'External action.' }, payload: { subject: 'Action' } },
+    { key: 'followup', type: 'remind', title: 'Set reminder / follow-up when applicable', deps: ['execute'], why: { objective: 'Follow up.', reason: 'Don\'t forget.' }, payload: { subject: 'Follow-up' } },
+    { key: 'verify', type: 'verify', title: 'Verify outcome', deps: ['followup'], why: { objective: 'Confirm done.', reason: 'Done means verified.' } }
+  ];
+}
+
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export const BLUEPRINTS = {
@@ -505,6 +575,7 @@ export const BLUEPRINTS = {
   procurement,
   outreach,
   operations,
+  personal,
   general,
 };
 
