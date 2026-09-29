@@ -15,6 +15,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { AgentIcon, EmptyState, agentName, formatClock, formatTime } from '../../components/ui';
+import { AppBadge, appForEvent } from '../../components/AppIcon';
 import { AGENT_BY_ID } from '../../data/agents';
 
 const TYPE = {
@@ -39,7 +40,7 @@ const ROW = {
   complete: 'border-emerald-500/40 bg-emerald-500/[0.08]',
 };
 
-export default function ActivityFeed({ events, onSelect, selectedId }) {
+export default function ActivityFeed({ events, tasks = [], onSelect, selectedId }) {
   const scroller = useRef(null);
 
   useEffect(() => {
@@ -65,6 +66,8 @@ export default function ActivityFeed({ events, onSelect, selectedId }) {
         const last = i === events.length - 1;
         const selected = e.id === selectedId;
         const Row = onSelect ? 'button' : 'div';
+        const appId = appForEvent(e, tasks);
+
         return (
           <motion.li
             key={e.id}
@@ -98,7 +101,7 @@ export default function ActivityFeed({ events, onSelect, selectedId }) {
               >
                 <AgentIcon id={e.agent} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-0.5 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5 min-w-0 flex-wrap">
                     <span className="text-[11px] font-semibold truncate" style={{ color }}>
                       {agentName(e.agent)}
                     </span>
@@ -107,6 +110,9 @@ export default function ActivityFeed({ events, onSelect, selectedId }) {
                         <TypeIcon className="w-2.5 h-2.5" />
                         {type.tag}
                       </span>
+                    )}
+                    {appId && (
+                      <AppBadge appId={appId} size="sm" />
                     )}
                     {onSelect && (
                       <span className="ml-auto hidden sm:inline-flex items-center gap-0.5 text-[10px] text-gray-600 group-hover:text-[#eb6920] transition-colors shrink-0">

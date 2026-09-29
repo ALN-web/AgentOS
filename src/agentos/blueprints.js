@@ -500,20 +500,102 @@ function personal(ctx) {
   
   if (g.includes('dinner') || g.includes('birthday')) {
     return [
-      { key: 'time', type: 'search', title: 'Find suitable time', deps: [], why: { objective: 'Find availability.', reason: 'Need a time that works.' }, out: 'Identified Saturday evening.' },
-      { key: 'invite', type: 'draft', title: 'Prepare invitation', deps: ['time'], why: { objective: 'Draft details.', reason: 'People need to know when and where.' }, out: 'Drafted the invite.' },
-      { key: 'cal', type: 'schedule', title: 'Create calendar event', deps: ['invite'], why: { objective: 'Block the time.', reason: 'This updates your calendar.' }, payload: { subject: 'Dinner' } },
-      { key: 'send', type: 'communicate', title: 'Send invitation', deps: ['cal'], why: { objective: 'Invite the guests.', reason: 'This sends emails in your name.' }, payload: { subject: 'Dinner Invitation' }, criterion: 'Invitation sent' },
-      { key: 'verify', type: 'verify', title: 'Verify', deps: ['send'], why: { objective: 'Confirm it is done.', reason: 'Check everything is sorted.' } }
+      {
+        key: 'time',
+        type: 'search',
+        title: 'Find suitable time slot',
+        deps: [],
+        app: 'google-calendar',
+        why: { objective: 'Find availability in Google Calendar.', reason: 'Need a free time slot that works across schedules.' },
+        out: 'Identified Saturday 7:00 PM — 9:30 PM slot in Google Calendar.',
+      },
+      {
+        key: 'cal',
+        type: 'schedule',
+        title: 'Create calendar event',
+        deps: ['time'],
+        app: 'google-calendar',
+        inputs: { start: 'time.output.start', end: 'time.output.end' },
+        why: { objective: 'Create event in Google Calendar.', reason: 'Blocks the slot and creates a calendar event link.' },
+        payload: { subject: 'Birthday Dinner for 8' },
+        out: 'Created Google Calendar event: https://calendar.google.com/calendar/event?eid=MjAyNi... (link generated).',
+        criterion: 'Calendar event created in Google Calendar',
+      },
+      {
+        key: 'invite',
+        type: 'draft',
+        title: 'Prepare invitation in Gmail',
+        deps: ['cal'],
+        app: 'gmail',
+        inputs: { event_link: 'cal.output.html_link' },
+        why: { objective: 'Draft invitation email in Gmail using the calendar event link.', reason: 'Attendees need the Google Calendar link to RSVP.' },
+        out: 'Drafted invitation in Gmail including Google Calendar event link.',
+      },
+      {
+        key: 'send',
+        type: 'communicate',
+        title: 'Send invitation via Gmail',
+        deps: ['invite'],
+        app: 'gmail',
+        inputs: { draft_id: 'invite.output.draft_id', event_link: 'cal.output.html_link' },
+        why: { objective: 'Send invitation emails to friends via Gmail.', reason: 'This sends external emails in your name and requires approval.' },
+        payload: {
+          to: '8 friends',
+          subject: 'Birthday Dinner Celebration — Saturday 7 PM',
+          body: 'Hey everyone!\n\nExcited to celebrate my birthday this Saturday! Details & RSVP link from Google Calendar: https://calendar.google.com/calendar/event?eid=MjAyNi...\n\nSee you there!',
+        },
+        criterion: 'Invitation sent to friends via Gmail',
+      },
+      {
+        key: 'verify',
+        type: 'verify',
+        title: 'Verify event and email',
+        deps: ['send', 'cal'],
+        why: { objective: 'Verify both the Google Calendar entry and Gmail delivery.', reason: 'Ensures the event is on calendar and all invitations are sent.' },
+        out: 'Verified Google Calendar event and confirmed all 8 Gmail invitations dispatched.',
+      },
     ];
   }
   
   if (/\bweek\b/.test(g) && g.includes('deadline')) {
     return [
-      { key: 'deadlines', type: 'analyze', title: 'Review deadlines', deps: [], why: { objective: 'Know what is due.', reason: 'Priorities depend on deadlines.' }, out: 'Listed all deadlines.' },
-      { key: 'schedule', type: 'search', title: 'Review available schedule', deps: [], why: { objective: 'Know your free time.', reason: 'Tasks need time slots.' }, out: 'Found available blocks.' },
-      { key: 'build', type: 'create', title: 'Build weekly plan', deps: ['deadlines', 'schedule'], why: { objective: 'Create the plan.', reason: 'This is the main outcome.' }, out: 'Drafted the weekly plan.', criterion: 'Plan created' },
-      { key: 'verify', type: 'verify', title: 'Verify schedule', deps: ['build'], why: { objective: 'Confirm the plan works.', reason: 'Done means verified.' } }
+      {
+        key: 'deadlines',
+        type: 'analyze',
+        title: 'Review deadlines',
+        deps: [],
+        app: 'google-calendar',
+        why: { objective: 'Inspect upcoming deadlines.', reason: 'Priorities depend on deadlines.' },
+        out: 'Listed 4 project deadlines from calendar.',
+      },
+      {
+        key: 'schedule',
+        type: 'search',
+        title: 'Review available schedule',
+        deps: [],
+        app: 'google-calendar',
+        why: { objective: 'Check free blocks in Google Calendar.', reason: 'Focus blocks need open calendar slots.' },
+        out: 'Found 6 available focus blocks.',
+      },
+      {
+        key: 'build',
+        type: 'create',
+        title: 'Build weekly plan in Google Drive',
+        deps: ['deadlines', 'schedule'],
+        app: 'google-drive',
+        inputs: { free_slots: 'schedule.output.slots' },
+        why: { objective: 'Draft structured weekly schedule document.', reason: 'This saves the plan to your cloud documents.' },
+        out: 'Created "Weekly Focus Plan" in Google Drive.',
+        criterion: 'Plan created in Google Drive',
+      },
+      {
+        key: 'verify',
+        type: 'verify',
+        title: 'Verify schedule',
+        deps: ['build'],
+        why: { objective: 'Confirm the schedule is balanced and feasible.', reason: 'Done means verified.' },
+        out: 'Verified schedule balance.',
+      },
     ];
   }
   

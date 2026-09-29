@@ -3,11 +3,91 @@ import { Background, Handle, Position, ReactFlow } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Check, Clock, GitMerge, Loader2, Lock, ShieldAlert, SkipForward, Target, Timer, X } from 'lucide-react';
 import { AgentIcon, agentName, formatDuration } from '../../components/ui';
+import { AppBadge, appForTask, getAppMeta } from '../../components/AppIcon';
 import { taskDuration } from '../../engine/selectors';
 
-const NODE_W = 204;
-const COL_GAP = 240;
-const ROW_GAP = 104;
+const NODE_W = 210;
+const COL_GAP = 270;
+const ROW_GAP = 112;
+
+export function getDataFlowLabel(src, target) {
+  if (!src || !target) return null;
+
+  // 1. Direct inputs mapping from blueprint / compiler
+  if (target.inputs && typeof target.inputs === 'object') {
+    for (const [key, ref] of Object.entries(target.inputs)) {
+      if (typeof ref === 'string') {
+        const matchesSrc =
+          ref.startsWith(src.id) ||
+          (src.blueprintStepId && ref.startsWith(src.blueprintStepId)) ||
+          ref.includes(src.id);
+        if (matchesSrc) {
+          return humanizeDataKey(key);
+        }
+      }
+    }
+  }
+
+  // 2. Cross-app specific flow labels
+  const sApp = src.app || appForTask(src);
+  const tApp = target.app || appForTask(target);
+
+  if (sApp === 'google-calendar' && tApp === 'gmail') {
+    return 'event link';
+  }
+  if (sApp === 'google-calendar' && tApp === 'google-calendar') {
+    if (src.title?.toLowerCase().includes('slot') || src.title?.toLowerCase().includes('time')) {
+      return 'time slot';
+    }
+    if (target.title?.toLowerCase().includes('reminder')) {
+      return 'event ID';
+    }
+  }
+  if (sApp === 'google-drive' && tApp === 'google-calendar') {
+    return 'plan details';
+  }
+  if (sApp === 'google-calendar' && tApp === 'google-drive') {
+    return 'schedule';
+  }
+  if (sApp === 'gmail' && tApp === 'google-calendar') {
+    return 'availability';
+  }
+
+  // 3. Meaningful domain flow labels for demo / marketing / personal
+  const sTitle = (src.title || '').toLowerCase();
+  const tTitle = (target.title || '').toLowerCase();
+  if (sTitle.includes('time') && (tTitle.includes('event') || tTitle.includes('calendar'))) {
+    return 'time slot';
+  }
+  if ((sTitle.includes('event') || sTitle.includes('calendar')) && (tTitle.includes('invite') || tTitle.includes('invitation'))) {
+    return 'event link';
+  }
+  if (tTitle.includes('reminder') && (sTitle.includes('event') || sTitle.includes('calendar'))) {
+    return 'event ID';
+  }
+
+  return null;
+}
+
+function humanizeDataKey(k) {
+  const map = {
+    event_link: 'event link',
+    time_slot: 'time slot',
+    event_id: 'event ID',
+    draft_id: 'draft',
+    start: 'time slot',
+    free_slots: 'free blocks',
+    attendees: 'guest list',
+    attendee_list: 'guest list',
+    draft_plan: 'draft plan',
+    focus_blocks: 'focus blocks',
+    summary: 'summary',
+    schedule: 'schedule',
+    document_id: 'document',
+    doc_link: 'doc link',
+  };
+  return map[k] || k.replace(/_/g, ' ');
+}
 
 const STATUS_STYLE = {
   pending: { label: 'Queued', box: 'border-white/10 bg-[#0f0d15]', icon: Clock, iconCls: 'text-gray-500', chip: 'text-gray-400 bg-white/[0.04] border-white/10' },
@@ -42,6 +122,8 @@ function TaskNode({ data }) {
   const Icon = style.icon;
   const current = task.status === 'running' || task.status === 'awaiting';
   const gate = task.gated && task.status === 'pending';
+  const appMeta = getAppMeta(appForTask(task));
+
   return (
     <div
       className={`relative rounded-2xl border px-3 py-2.5 transition-all duration-500 ${style.box} ${gate ? '!border-dashed !border-amber-400/50' : ''} ${
@@ -59,11 +141,22 @@ function TaskNode({ data }) {
         <AgentIcon id={task.agent} size="sm" />
         <div className="min-w-0 flex-1">
           <div className={`text-[11px] leading-tight font-semibold text-white line-clamp-2 ${task.status === 'skipped' ? 'line-through' : ''}`}>{task.title}</div>
-          <div className="text-[10px] text-gray-500 truncate">{agentName(task.agent)}</div>
+          <div className="text-[10px] text-gray-500 truncate flex items-center gap-1 mt-0.5">
+            <span>{agentName(task.agent)}</span>
+            {appMeta && (
+              <>
+                <span className="text-gray-600">·</span>
+                <span className={`inline-flex items-center gap-0.5 font-medium ${appMeta.text}`}>
+                  <appMeta.icon className="w-2.5 h-2.5 shrink-0" />
+                  {appMeta.shortName}
+                </span>
+              </>
+            )}
+          </div>
         </div>
         <Icon className={`w-3.5 h-3.5 shrink-0 ${style.iconCls}`} />
       </div>
-      <div className="mt-2 flex items-center gap-1.5 text-[9px] font-semibold">
+      <div className="mt-2 flex items-center gap-1.5 text-[9px] font-semibold flex-wrap">
         <span className={`px-1.5 py-0.5 rounded-md border ${gate ? 'text-amber-300 bg-amber-400/10 border-amber-400/30' : style.chip}`}>
           {gate ? (
             <span className="inline-flex items-center gap-1">
@@ -74,6 +167,9 @@ function TaskNode({ data }) {
             style.label
           )}
         </span>
+        {appMeta && (
+          <AppBadge appId={appMeta.id} size="sm" />
+        )}
         {duration != null && (
           <span className="inline-flex items-center gap-0.5 text-gray-500 font-mono">
             <Timer className="w-2.5 h-2.5" />
@@ -159,7 +255,35 @@ export default function TaskGraph({ tasks, goal, clock, onSelect }) {
               const src = byId[d];
               const live = t.status === 'running' || t.status === 'awaiting';
               const color = t.status === 'failed' ? '#ef4444' : src.status === 'done' ? '#eb6920' : 'rgba(255,255,255,0.15)';
-              return { id: `${d}-${t.id}`, source: d, target: t.id, animated: live, style: edgeStyle(color, src.status === 'done' ? 0.8 : 1) };
+              const flowLabel = getDataFlowLabel(src, t);
+              return {
+                id: `${d}-${t.id}`,
+                source: d,
+                target: t.id,
+                animated: live,
+                style: edgeStyle(color, src.status === 'done' ? 0.8 : 1),
+                ...(flowLabel
+                  ? {
+                      label: flowLabel,
+                      labelStyle: {
+                        fill: '#ff9a5c',
+                        fontSize: 9,
+                        fontWeight: 700,
+                        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+                      },
+                      labelBgStyle: {
+                        fill: '#150f0b',
+                        fillOpacity: 0.95,
+                        stroke: 'rgba(235, 105, 32, 0.45)',
+                        strokeWidth: 1,
+                        rx: 5,
+                        ry: 5,
+                      },
+                      labelBgPadding: [6, 2],
+                      labelBgBorderRadius: 5,
+                    }
+                  : {}),
+              };
             })
         ),
       ],

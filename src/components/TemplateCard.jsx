@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
+import { AppBadge } from './AppIcon';
 
 export default function TemplateCard({ template, onSelect, height = 'h-[380px]' }) {
   return (
@@ -16,11 +17,16 @@ export default function TemplateCard({ template, onSelect, height = 'h-[380px]' 
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
       </div>
 
-      <div className="relative p-5 flex justify-between items-start">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-white/80 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/10">
-          {template.category}
-        </span>
-        <span className="w-10 h-10 rounded-2xl bg-black/50 backdrop-blur-md border border-white/15 flex items-center justify-center text-white group-hover:bg-[#eb6920] group-hover:border-transparent group-hover:shadow-[0_0_15px_rgba(235,105,32,0.6)] transition-all">
+      <div className="relative p-5 flex justify-between items-start gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-white/80 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/10">
+            {template.category}
+          </span>
+          {template.apps?.map((appId) => (
+            <AppBadge key={appId} appId={appId} size="sm" className="bg-black/60 backdrop-blur-md" />
+          ))}
+        </div>
+        <span className="w-10 h-10 rounded-2xl bg-black/50 backdrop-blur-md border border-white/15 flex items-center justify-center text-white group-hover:bg-[#eb6920] group-hover:border-transparent group-hover:shadow-[0_0_15px_rgba(235,105,32,0.6)] transition-all shrink-0">
           <ArrowUpRight className="w-4 h-4" />
         </span>
       </div>
