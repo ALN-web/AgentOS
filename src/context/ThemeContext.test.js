@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getInitialTheme, applyTheme, THEME_STORAGE_KEY } from './ThemeContext';
+import { getInitialTheme, applyTheme, THEME_STORAGE_KEY } from './themeUtils';
 
 describe('Theme helpers', () => {
   it('has consistent storage key', () => {
