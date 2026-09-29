@@ -2,7 +2,7 @@
 //
 // Each mission carries a `script`: an ordered list of steps. A step is either
 //   { delay, run(mission) => mission }                   — a pure state update, or
-//   { delay, approval, approve(edited) => steps, reject() => steps }  — a pause for a human.
+//   { delay, approval, approve({ edited, payload }) => steps, reject() => steps }  — a pause for a human.
 // The provider calls `advance` on a timer; approval branches are spliced into the
 // script when the user decides. All functions here are pure so React can call
 // them freely (StrictMode double-invocation included).
@@ -87,7 +87,9 @@ export function resolveApproval(m, approvalId, decision, edits, now) {
   if (!approval || approval.status !== 'pending') return m;
   const step = m.script[approval.stepIndex];
   const edited = decision === 'edit';
-  const branch = decision === 'reject' ? step.reject() : step.approve(edited);
+  // An edit changes what actually happens next: the branch runs with the edited payload.
+  const payload = edited ? { ...approval.payload, ...edits } : approval.payload;
+  const branch = decision === 'reject' ? step.reject() : step.approve({ edited, payload });
   const script = [
     ...m.script.slice(0, approval.stepIndex + 1),
     ...branch,
@@ -99,7 +101,8 @@ export function resolveApproval(m, approvalId, decision, edits, now) {
       ? {
           ...a,
           status: decision === 'reject' ? 'rejected' : edited ? 'edited' : 'approved',
-          payload: edited ? { ...a.payload, ...edits } : a.payload,
+          payload,
+          original: edited ? a.payload : undefined,
           resolvedAt: now,
         }
       : a

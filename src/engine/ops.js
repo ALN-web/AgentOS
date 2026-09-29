@@ -23,11 +23,13 @@ export const ops = {
     browser: { ...m.browser, steps: [...m.browser.steps, { text: val(text, m), status, t: m.clock }] },
   }),
   check: (label, status = 'done') => (m) => ({ ...m, checks: [...m.checks, { label: val(label, m), status }] }),
+  // Each stage records when it was reached (diagnosingAt, resolvedAt, ...).
   recovery: (patch) => (m) => {
+    const stamped = patch.status ? { ...patch, [`${patch.status}At`]: m.clock } : patch;
     const exists = m.recoveries.some((r) => r.id === patch.id);
     const recoveries = exists
-      ? m.recoveries.map((r) => (r.id === patch.id ? { ...r, ...patch } : r))
-      : [...m.recoveries, { startedAt: m.clock, ...patch }];
+      ? m.recoveries.map((r) => (r.id === patch.id ? { ...r, ...stamped } : r))
+      : [...m.recoveries, { startedAt: m.clock, ...stamped }];
     return { ...m, recoveries };
   },
 };

@@ -83,3 +83,72 @@ export function taskForEvent(m, e) {
   const inFlight = (t) => t.startedAt != null && t.startedAt <= e.t && (t.finishedAt == null || t.finishedAt >= e.t);
   return m.tasks.find((t) => t.agent === e.agent && inFlight(t)) || m.tasks.find(inFlight) || null;
 }
+
+// ---------------------------------------------------------------------------
+// Explainability. Every field comes from mission state or from the scripted
+// `why` on a task; nothing here is generated.
+
+const FALLBACK_REASON = 'Part of the plan the Planner built for this goal.';
+
+function recoveryAt(m, t) {
+  return [...m.recoveries].reverse().find((r) => r.startedAt <= t) || null;
+}
+
+export function explainEvent(m, e) {
+  const i = m.events.findIndex((x) => x.id === e.id);
+  const task = taskForEvent(m, e);
+  const rec = ['failure', 'recovery', 'recovered'].includes(e.type) ? recoveryAt(m, e.t) : null;
+  const approval = e.type === 'approval' ? [...m.approvals].reverse().find((a) => a.requestedAt <= (e.at ?? Infinity)) || m.approvals[0] : null;
+
+  let reason = task?.why?.reason || FALLBACK_REASON;
+  if (e.agent === 'system') reason = 'You launched this mission with a goal. AgentOS tracks it until the outcome is verified.';
+  else if (rec) reason = rec.diagnosis || rec.error;
+  else if (approval) reason = approval.reason;
+  else if (e.type === 'critique') reason = 'The Critic reviews work before it reaches anyone outside the team.';
+  else if (e.type === 'verified' || e.type === 'complete') reason = 'The goal only counts as met once the result has been independently checked.';
+
+  const evidence = [];
+  if (task) evidence.push({ label: 'Task', value: `${task.title} (${task.status})` });
+  if (rec) {
+    evidence.push({ label: 'Failure', value: rec.error });
+    if (rec.plan) evidence.push({ label: 'New plan', value: rec.plan });
+  }
+  if (approval) evidence.push({ label: 'Approval', value: `${approval.title} · ${approval.status}` });
+  m.events.slice(Math.max(0, i - 2), i).forEach((p) => evidence.push({ label: 'Before this', value: p.text, agent: p.agent }));
+
+  const next = m.events[i + 1];
+  return {
+    agent: e.agent,
+    kind: 'event',
+    action: e.text,
+    objective: task?.why?.objective || (task ? task.title : `Move the mission toward: ${m.goal}`),
+    reason,
+    evidence,
+    next: next ? { agent: next.agent, text: next.text } : null,
+    at: e.at,
+    t: e.t,
+  };
+}
+
+export function explainTask(m, task) {
+  const related = m.events.filter((e) => taskForEvent(m, e)?.id === task.id).slice(-3);
+  const deps = task.deps.map((d) => m.tasks.find((t) => t.id === d)).filter(Boolean);
+  const unlocks = m.tasks.filter((t) => t.deps.includes(task.id));
+  const duration = taskDuration(task, m.clock);
+  const evidence = [
+    { label: 'Status', value: task.status + (duration != null ? ` · ${Math.round(duration / 1000)}s` : '') },
+    ...(deps.length ? [{ label: 'Waited for', value: deps.map((d) => d.title).join(', ') }] : []),
+    ...(task.gated ? [{ label: 'Checkpoint', value: 'Needs human approval before it runs' }] : []),
+    ...related.map((e) => ({ label: 'Log', value: e.text, agent: e.agent })),
+  ];
+  return {
+    agent: task.agent,
+    kind: 'task',
+    action: task.title,
+    objective: task.why?.objective || task.title,
+    reason: task.why?.reason || FALLBACK_REASON,
+    evidence,
+    next: unlocks.length ? { agent: unlocks[0].agent, text: unlocks.map((t) => t.title).join(' · ') } : null,
+    t: task.startedAt,
+  };
+}
