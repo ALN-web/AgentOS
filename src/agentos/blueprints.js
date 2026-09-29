@@ -97,7 +97,7 @@ function event(ctx) {
         subject: `${cap(ev)}${when}: registration is open`,
         body: `Hi all,\n\nOur ${ev} is happening${when}. Spots are limited to ${n}.\n\nRegister here: forms.example.com/register\n\nSee you there!`,
       },
-      criterion: 'Promotion approved and published',
+      criterion: 'Promotion approved and published (simulated)',
     },
     {
       key: 'team', type: 'create', title: 'Assign tasks to the organising team', deps: ['plan', 'venue'],
@@ -146,7 +146,7 @@ function career(ctx) {
     },
     {
       key: 'check', type: 'research', title: 'Check each listing is still open', deps: ['filter'],
-      why: { objective: 'Make sure every opportunity is real and current.', reason: 'Closed or duplicate listings waste applications.' },
+      why: { objective: 'Make sure every opportunity is genuine and current.', reason: 'Closed or duplicate listings waste applications.' },
       out: `${matched - n} listings had closed. ${n} verified as open.`, progress: 1,
     },
     {
@@ -173,7 +173,7 @@ function career(ctx) {
           subject: `Application: ${field || 'internship'} role`,
           body: 'Hello,\n\nPlease find my application attached. I would love to contribute to your team.\n\nBest regards',
         },
-        criterion: 'Applications submitted (with approval)',
+        criterion: 'Applications submitted with approval (simulated)',
       },
       {
         key: 'track', type: 'monitor', title: 'Track application status', deps: ['submit'],
@@ -184,7 +184,7 @@ function career(ctx) {
   }
   steps.push({
     key: 'verify', type: 'verify', title: `Verify ${n} ${unit}`, deps: [apply ? 'track' : 'materials'],
-    why: { objective: 'Confirm the target was met with real, open listings.', reason: 'A count only matters if every item was checked.' },
+    why: { objective: 'Confirm the target was met with valid, open listings.', reason: 'A count only matters if every item was checked.' },
   });
   return steps;
 }
@@ -195,7 +195,7 @@ function launch(ctx) {
     {
       key: 'goals', type: 'analyze', title: 'Understand the launch goals', deps: [],
       why: { objective: 'Decide what the launch must achieve.', reason: 'Assets and channels follow from the goal.' },
-      out: `Launch${when}. Success: page live, announcement scheduled, team briefed.`,
+      out: `Launch${when}. Success: page ready, announcement scheduled, team briefed.`,
     },
     {
       key: 'market', type: 'research', title: 'Research the market and competitors', deps: ['goals'],
@@ -236,7 +236,7 @@ function launch(ctx) {
         subject: 'It’s here: our fastest release yet',
         body: 'Hi,\n\nToday we are launching our new release. It is faster, simpler, and ready for you to try.\n\nSee what is new: site.example.com/launch',
       },
-      criterion: 'Announcement approved and scheduled',
+      criterion: 'Announcement approved and scheduled (simulated)',
     },
     {
       key: 'watch', type: 'monitor', title: 'Monitor launch readiness', deps: ['announce'],
@@ -324,7 +324,7 @@ function procurement(ctx) {
         subject: `Quote request: ${n ? `${n} ${unit}` : unit}`,
         body: `Hello,\n\nPlease send a quote for ${n ? `${n} ${unit}` : unit}${budget ? ` (${budget})` : ''}, including delivery time and warranty.\n\nThank you`,
       },
-      criterion: 'Quotes requested (with approval)',
+      criterion: 'Quotes requested with approval (simulated)',
     },
     {
       key: 'collect', type: 'monitor', title: 'Collect and compare quotes', deps: ['quotes'],
@@ -338,7 +338,7 @@ function procurement(ctx) {
       key: 'order', type: 'purchase', title: 'Place the order', deps: ['collect'],
       why: { objective: 'Buy the chosen option.', reason: 'Spending money always waits for your approval.' },
       payload: { from: 'purchasing@company.example', to: 'Selected vendor', subject: `Order: ${n ? `${n} ${unit}` : unit}`, body: 'Please process this order as quoted.' },
-      criterion: 'Order placed (with approval)',
+      criterion: 'Order placed with approval (simulated)',
     });
   }
   steps.push({
@@ -389,7 +389,7 @@ function outreach(ctx) {
         subject: 'You’re invited: join us',
         body: 'Hi,\n\nWe would love to have you. It takes 30 seconds to sign up: forms.example.com/join\n\nThanks!',
       },
-      criterion: 'Outreach approved and sent',
+      criterion: 'Outreach approved and sent (simulated)',
     },
     {
       key: 'monitor', type: 'monitor', title: `Monitor ${unit}`, deps: ['send'],
@@ -438,7 +438,7 @@ function operations(ctx) {
         subject: `Your ${docs === 'invoices' ? 'invoice' : 'document'} for this period`,
         body: 'Hello,\n\nPlease find this period’s invoice attached. Payment terms are 14 days.\n\nThank you',
       },
-      criterion: `${cap(docs)} sent (with approval)`,
+      criterion: `${cap(docs)} sent with approval (simulated)`,
     },
     {
       key: 'follow', type: 'monitor', title: 'Follow up on outstanding items', deps: ['send'],

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ArrowLeft, Clapperboard, GitBranch, MessagesSquare, Pause, Play, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useMission, useMissions } from '../../store/MissionStore';
 import { EmptyState } from '../../components/ui';
@@ -125,13 +125,12 @@ export default function MissionDetail() {
   // sit at the top of the page on narrow screens and in the side column on wide ones.
   const attention = (
     <>
-      <AnimatePresence>
-        {pending.map((a) => (
-          <motion.div key={a.id} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }}>
-            <ApprovalCard approval={a} readOnly={replaying} />
-          </motion.div>
-        ))}
-      </AnimatePresence>
+      {/* No exit animation: once decided, the pending card and its buttons go immediately. */}
+      {pending.map((a) => (
+        <motion.div key={a.id} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
+          <ApprovalCard approval={a} readOnly={replaying} />
+        </motion.div>
+      ))}
       {recoveries.map((r) => (
         <RecoveryCard key={r.id} recovery={r} events={view.events} />
       ))}

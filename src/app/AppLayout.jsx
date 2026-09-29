@@ -31,8 +31,8 @@ function NavItems({ pending, compact }) {
       {label}
       {badge && pending > 0 && (
         <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-amber-400 text-black text-[10px] font-bold flex items-center justify-center">
-          <span className="sr-only"> waiting</span>
           {pending}
+          <span className="sr-only"> waiting</span>
         </span>
       )}
     </NavLink>

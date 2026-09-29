@@ -6,15 +6,15 @@ import { AgentIcon, ProgressBar, StatusPill, agentName } from '../components/ui'
 import { useMissions } from '../store/MissionStore';
 import { DEMO_GOAL } from '../data/templates';
 
-// A looping, condensed replay of the demo mission.
+// A looping, condensed preview of the (simulated) demo mission.
 const PREVIEW = [
   { agent: 'planner', text: 'Plan ready: 7 tasks, 2 running in parallel.', count: 0, status: 'running' },
-  { agent: 'research', text: 'Found 480 past attendees and 3 student clubs.', count: 0, status: 'running' },
-  { agent: 'browser', text: 'Registration form is live.', count: 0, status: 'running' },
-  { agent: 'approval', text: 'You approved the email to 480 people.', count: 41, status: 'running' },
+  { agent: 'research', text: 'Found 480 past attendees and 3 student clubs (demo data).', count: 0, status: 'running' },
+  { agent: 'browser', text: 'Registration form creation simulated.', count: 0, status: 'running' },
+  { agent: 'approval', text: 'You approved the simulated email to 480 people.', count: 41, status: 'running' },
   { agent: 'browser', text: 'Discord rejected the post: links are blocked.', count: 41, status: 'recovering', tone: 'fail' },
-  { agent: 'recovery', text: 'Posted a QR-code image instead. Pinned.', count: 76, status: 'running', tone: 'fix' },
-  { agent: 'verification', text: '104 unique, valid registrations. Goal met.', count: 104, status: 'completed', tone: 'ok' },
+  { agent: 'recovery', text: 'Recovered: posts a QR-code image instead.', count: 76, status: 'running', tone: 'fix' },
+  { agent: 'verification', text: '104 unique registrations verified (simulated).', count: 104, status: 'completed', tone: 'ok' },
 ];
 
 function MissionPreview() {

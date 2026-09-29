@@ -43,8 +43,8 @@ export const HERO_TASKS = [
     why: { objective: 'Reach students who have never attended.', reason: 'Email only covers past attendees. The clubs’ Discord servers reach new people.' },
   },
   {
-    id: 't7', title: 'Verify 100 real sign-ups', agent: 'verification', deps: ['t5', 't6'],
-    why: { objective: 'Confirm the target with real, unique sign-ups.', reason: 'Raw form responses include duplicates and bad emails. Only verified sign-ups count toward the goal.' },
+    id: 't7', title: 'Verify 100 unique sign-ups', agent: 'verification', deps: ['t5', 't6'],
+    why: { objective: 'Confirm the target with valid, unique sign-ups.', reason: 'Raw form responses include duplicates and bad emails. Only verified sign-ups count toward the goal.' },
   },
 ];
 
@@ -152,7 +152,7 @@ function registrations(goal) {
       s(1400, say('planner', 'Adding a follow-up: remind the 60 people who opened the form but didn’t submit.', 'plan'),
         addTask({
           id: 't8', title: 'Remind unfinished sign-ups', agent: 'execution', deps: ['t7'], status: 'running',
-          why: { objective: 'Close the gap to 100.', reason: 'Verification found too few real sign-ups. People who started the form but didn’t finish are the cheapest to convert.' },
+          why: { objective: 'Close the gap to 100.', reason: 'Verification found too few valid sign-ups. People who started the form but didn’t finish are the cheapest to convert.' },
         })),
       s(1800, say('execution', 'Reminder simulated for the 60 people who started the form.', 'action'), task('t8', { status: 'done' }), metricSet(104)),
       s(1300, task('t7', { status: 'running' }), check('Re-counted after the reminder')),
