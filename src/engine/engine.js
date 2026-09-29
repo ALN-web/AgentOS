@@ -55,7 +55,12 @@ function applyStep(m, now) {
     };
     return { ...m, approvals: [...m.approvals, approval], status: 'awaiting_approval', updatedAt: now };
   }
-  const out = step.run({ ...m, clock: m.clock + step.delay });
+  const ran = step.run({ ...m, clock: m.clock + step.delay });
+  // Stamp new events with the wall-clock time they happened.
+  const out =
+    ran.events.length > m.events.length
+      ? { ...ran, events: ran.events.map((e, i) => (i < m.events.length || e.at ? e : { ...e, at: now })) }
+      : ran;
   const cursor = m.cursor + 1;
   const next = m.script[cursor];
   return {

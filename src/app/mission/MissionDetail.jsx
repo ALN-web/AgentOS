@@ -1,11 +1,11 @@
 import React from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, GitBranch, MessagesSquare, Pause, Play, RotateCcw, Timer } from 'lucide-react';
+import { ArrowLeft, GitBranch, MessagesSquare, Pause, Play, RotateCcw } from 'lucide-react';
 import { useMission, useMissions } from '../../store/MissionStore';
-import { ProgressRing, StatusPill, formatClock } from '../../components/ui';
 import ApprovalCard from '../../components/ApprovalCard';
 import TaskGraph from './TaskGraph';
+import MissionControl from './MissionControl';
 import ActivityFeed from './ActivityFeed';
 import BrowserPanel from './BrowserPanel';
 import RecoveryCard from './RecoveryCard';
@@ -49,7 +49,6 @@ export default function MissionDetail() {
   const done = m.status === 'completed';
   const pending = m.approvals.filter((a) => a.status === 'pending');
   const browserTask = m.tasks.find((t) => t.agent === 'browser' && t.status === 'running');
-  const doneTasks = m.tasks.filter((t) => t.status === 'done').length;
   const recoveries = [...m.recoveries].reverse();
 
   // Approvals and recoveries are the moments the audience should see, so they
@@ -76,30 +75,10 @@ export default function MissionDetail() {
         All missions
       </Link>
 
-      {/* Header */}
-      <div className="glass-card rounded-2xl p-5 sm:p-6 mb-4 flex flex-col md:flex-row md:items-center gap-6">
-        <ProgressRing value={m.metric.current} target={m.metric.target} size={104}>
-          <span className="text-2xl font-extrabold text-white tabular-nums leading-none">{m.metric.current}</span>
-          <span className="text-[10px] text-gray-500 mt-1">of {m.metric.target}</span>
-        </ProgressRing>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <StatusPill status={m.status} paused={m.paused} />
-            <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 font-mono">
-              <Timer className="w-3 h-3" />
-              {formatClock(m.clock)}
-            </span>
-            <span className="text-[11px] text-gray-500">
-              · {doneTasks}/{m.tasks.length} tasks · {m.recoveries.length} recovered
-            </span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">{m.goal}</h1>
-          <p className="text-xs text-gray-500 mt-1">{m.metric.label}</p>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          {done ? (
+      <MissionControl
+        m={m}
+        controls={
+          done ? (
             <button
               onClick={() => navigate(`/app/missions/${launch(m.goal)}`)}
               className="btn-dark px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5"
@@ -109,11 +88,12 @@ export default function MissionDetail() {
             </button>
           ) : (
             <>
-              <div className="flex rounded-xl border border-white/10 overflow-hidden">
+              <div className="flex rounded-xl border border-white/10 overflow-hidden" role="group" aria-label="Mission speed">
                 {SPEEDS.map((s) => (
                   <button
                     key={s}
                     onClick={() => setSpeed(m.id, s)}
+                    aria-pressed={m.speed === s}
                     className={`px-2.5 py-2 text-xs font-semibold transition-colors ${
                       m.speed === s ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'
                     }`}
@@ -130,23 +110,29 @@ export default function MissionDetail() {
                 {m.paused ? <Play className="w-3.5 h-3.5 fill-current" /> : <Pause className="w-3.5 h-3.5" />}
               </button>
             </>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
 
       {(pending.length > 0 || recoveries.length > 0) && <div className="xl:hidden flex flex-col gap-4 mb-4">{attention}</div>}
 
+      <Panel
+        icon={GitBranch}
+        title="Mission plan"
+        right={<span className="text-[11px] text-gray-500">{m.tasks.length} tasks</span>}
+        className="h-[360px] sm:h-[400px] mb-4"
+      >
+        <TaskGraph tasks={m.tasks} goal={m.goal} clock={m.clock} />
+      </Panel>
+
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-        {/* Left: graph + activity */}
+        {/* Left: activity */}
         <div className="xl:col-span-8 flex flex-col gap-4">
-          <Panel icon={GitBranch} title="Task graph" className="h-[340px]">
-            <TaskGraph tasks={m.tasks} />
-          </Panel>
           <Panel
             icon={MessagesSquare}
             title="Agent activity"
             right={<span className="text-[11px] text-gray-500">{m.events.length} events</span>}
-            className="h-[480px]"
+            className="h-[560px]"
           >
             <div className="h-full p-4">
               <ActivityFeed events={m.events} />

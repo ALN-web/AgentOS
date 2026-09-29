@@ -1,30 +1,45 @@
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { AgentIcon, agentName, formatClock } from '../../components/ui';
+import {
+  BadgeCheck,
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  Flag,
+  GitBranch,
+  MessagesSquare,
+  PenLine,
+  RotateCcw,
+  ShieldAlert,
+  XCircle,
+  Zap,
+} from 'lucide-react';
+import { AgentIcon, EmptyState, agentName, formatClock, formatTime } from '../../components/ui';
 import { AGENT_BY_ID } from '../../data/agents';
 
-const TYPE_STYLE = {
+const TYPE = {
+  plan: { tag: 'Plan', icon: GitBranch, cls: 'text-violet-300 border-violet-400/25 bg-violet-400/10' },
+  action: { tag: 'Action', icon: Check, cls: 'text-emerald-300 border-emerald-400/25 bg-emerald-400/10' },
+  critique: { tag: 'Review', icon: PenLine, cls: 'text-pink-300 border-pink-400/25 bg-pink-400/10' },
+  failure: { tag: 'Failure', icon: XCircle, cls: 'text-red-300 border-red-400/30 bg-red-400/10' },
+  recovery: { tag: 'Recovery', icon: RotateCcw, cls: 'text-[#ff9a5c] border-[#eb6920]/30 bg-[#eb6920]/10' },
+  recovered: { tag: 'Recovered', icon: CheckCircle2, cls: 'text-[#ff9a5c] border-[#eb6920]/40 bg-[#eb6920]/15' },
+  approval: { tag: 'Approval', icon: ShieldAlert, cls: 'text-amber-300 border-amber-400/30 bg-amber-400/10' },
+  verified: { tag: 'Verified', icon: BadgeCheck, cls: 'text-emerald-300 border-emerald-400/30 bg-emerald-400/10' },
+  complete: { tag: 'Complete', icon: Flag, cls: 'text-emerald-300 border-emerald-400/40 bg-emerald-400/15' },
+  system: { tag: 'System', icon: Zap, cls: 'text-gray-400 border-white/10 bg-white/[0.04]' },
+};
+
+const ROW = {
   failure: 'border-red-500/30 bg-red-500/[0.06]',
-  recovery: 'border-[#eb6920]/30 bg-[#eb6920]/[0.05]',
-  recovered: 'border-[#eb6920]/50 bg-[#eb6920]/[0.1]',
-  approval: 'border-amber-400/25 bg-amber-400/[0.05]',
-  verified: 'border-emerald-500/30 bg-emerald-500/[0.06]',
-  complete: 'border-emerald-500/40 bg-emerald-500/[0.1]',
+  recovery: 'border-[#eb6920]/25 bg-[#eb6920]/[0.04]',
+  recovered: 'border-[#eb6920]/45 bg-[#eb6920]/[0.08]',
+  approval: 'border-amber-400/25 bg-amber-400/[0.04]',
+  verified: 'border-emerald-500/25 bg-emerald-500/[0.05]',
+  complete: 'border-emerald-500/40 bg-emerald-500/[0.08]',
 };
 
-const TYPE_TAG = {
-  plan: 'Plan',
-  action: 'Action',
-  critique: 'Review',
-  failure: 'Failure',
-  recovery: 'Recovery',
-  recovered: 'Recovered',
-  approval: 'Approval',
-  verified: 'Verified',
-  complete: 'Complete',
-};
-
-export default function ActivityFeed({ events }) {
+export default function ActivityFeed({ events, onSelect, selectedId }) {
   const scroller = useRef(null);
 
   useEffect(() => {
@@ -32,34 +47,81 @@ export default function ActivityFeed({ events }) {
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [events.length]);
 
+  if (events.length === 0) {
+    return (
+      <EmptyState icon={MessagesSquare} title="No activity yet" className="h-full">
+        Agent messages and actions appear here as the mission runs.
+      </EmptyState>
+    );
+  }
+
   return (
-    <div ref={scroller} className="h-full overflow-y-auto pr-1 space-y-2">
-      {events.map((e) => {
-        const color = AGENT_BY_ID[e.agent]?.color || '#9ca3af';
+    <ol ref={scroller} className="h-full overflow-y-auto pr-1 relative" aria-label="Agent activity timeline">
+      {events.map((e, i) => {
+        const agent = AGENT_BY_ID[e.agent];
+        const color = agent?.color || '#9ca3af';
+        const type = TYPE[e.type];
+        const TypeIcon = type?.icon;
+        const last = i === events.length - 1;
+        const selected = e.id === selectedId;
+        const Row = onSelect ? 'button' : 'div';
         return (
-          <motion.div
+          <motion.li
             key={e.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className={`flex gap-3 p-3 rounded-xl border ${TYPE_STYLE[e.type] || 'border-white/5 bg-white/[0.02]'}`}
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="grid grid-cols-[64px_20px_minmax(0,1fr)] sm:grid-cols-[76px_24px_minmax(0,1fr)] gap-x-2"
           >
-            <AgentIcon id={e.agent} size="sm" />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[11px] font-semibold" style={{ color }}>
-                  {agentName(e.agent)}
-                </span>
-                {TYPE_TAG[e.type] && (
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">{TYPE_TAG[e.type]}</span>
-                )}
-                <span className="ml-auto text-[10px] font-mono text-gray-600">{formatClock(e.t)}</span>
-              </div>
-              <p className="text-[13px] text-gray-200 leading-relaxed">{e.text}</p>
+            {/* Time */}
+            <div className="pt-3 text-right">
+              <div className="text-[10px] sm:text-[11px] font-mono text-gray-400 tabular-nums">{formatTime(e.at)}</div>
+              <div className="text-[9px] font-mono text-gray-600 tabular-nums">T+{formatClock(e.t)}</div>
             </div>
-          </motion.div>
+
+            {/* Rail */}
+            <div className="relative flex justify-center">
+              <span className={`absolute top-0 w-px bg-white/[0.08] ${last ? 'h-4' : 'bottom-0'}`} />
+              <span
+                className="relative mt-3.5 w-2.5 h-2.5 rounded-full ring-4 ring-[#0e0c12]"
+                style={{ background: color, boxShadow: last ? `0 0 10px ${color}` : 'none' }}
+              />
+            </div>
+
+            {/* Event */}
+            <div className="pb-2">
+              <Row
+                {...(onSelect ? { type: 'button', onClick: () => onSelect(e), 'aria-label': `Explain: ${e.text}` } : {})}
+                className={`group w-full text-left flex gap-3 p-3 rounded-xl border transition-colors ${ROW[e.type] || 'border-white/5 bg-white/[0.02]'} ${
+                  onSelect ? 'hover:border-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#eb6920]/60' : ''
+                } ${selected ? '!border-[#eb6920]/60' : ''}`}
+              >
+                <AgentIcon id={e.agent} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5 min-w-0">
+                    <span className="text-[11px] font-semibold truncate" style={{ color }}>
+                      {agentName(e.agent)}
+                    </span>
+                    {type && (
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[9px] font-bold uppercase tracking-wider shrink-0 ${type.cls}`}>
+                        <TypeIcon className="w-2.5 h-2.5" />
+                        {type.tag}
+                      </span>
+                    )}
+                    {onSelect && (
+                      <span className="ml-auto hidden sm:inline-flex items-center gap-0.5 text-[10px] text-gray-600 group-hover:text-[#eb6920] transition-colors shrink-0">
+                        Why?
+                        <ChevronRight className="w-3 h-3" />
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[13px] text-gray-200 leading-relaxed">{e.text}</p>
+                </div>
+              </Row>
+            </div>
+          </motion.li>
         );
       })}
-    </div>
+    </ol>
   );
 }
