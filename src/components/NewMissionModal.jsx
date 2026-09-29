@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Info, Lock, ShieldAlert, Sparkles, Target, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Info, Lock, ShieldAlert, Sparkles, Target, X, Mic, Square, AlertCircle } from 'lucide-react';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { useMissions } from '../store/MissionStore';
 import { EXAMPLE_GOALS } from '../data/templates';
 import { planMission } from '../agentos/planner';
@@ -181,6 +182,17 @@ export default function NewMissionModal() {
   const inputRef = useRef(null);
   const navigate = useNavigate();
 
+  const handleSpeechResult = useCallback((transcript) => {
+    setGoal((prev) => {
+      const trimmed = prev.trim();
+      return trimmed ? `${trimmed} ${transcript}` : transcript;
+    });
+  }, []);
+
+  const { supported: speechSupported, listening: speechListening, error: speechError, interimText, start: startSpeech, stop: stopSpeech } = useSpeechRecognition({
+    onResult: handleSpeechResult
+  });
+
   useEffect(() => {
     if (launcher.open) {
       setGoal(launcher.goal);
@@ -256,18 +268,68 @@ export default function NewMissionModal() {
               {stage === 'input' ? (
                 <>
                   <p className="text-sm text-gray-400 mt-1">Describe the outcome in your own words. AgentOS works out the plan.</p>
-                  <textarea
-                    ref={inputRef}
-                    rows={3}
-                    value={goal}
-                    onChange={(e) => setGoal(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) analyze(e);
-                    }}
-                    aria-label="Mission goal"
-                    placeholder="e.g. Organize a hackathon in our college"
-                    className="mt-5 w-full bg-black/60 border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#eb6920]/60 resize-none"
-                  />
+                  <div className="relative mt-5">
+                    <textarea
+                      ref={inputRef}
+                      rows={3}
+                      value={goal}
+                      onChange={(e) => setGoal(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) analyze(e);
+                      }}
+                      aria-label="Mission goal"
+                      placeholder="e.g. Organize a hackathon in our college"
+                      className={`w-full bg-black/60 border rounded-2xl p-4 pr-14 text-sm text-white placeholder-gray-500 focus:outline-none resize-none transition-colors ${
+                        speechListening ? 'border-[#eb6920]/60 ring-1 ring-[#eb6920]/30' : 'border-white/10 focus:border-[#eb6920]/60'
+                      }`}
+                    />
+                    
+                    {speechSupported && (
+                      <div className="absolute right-3 bottom-3 flex items-center">
+                        {speechListening ? (
+                          <button
+                            type="button"
+                            onClick={stopSpeech}
+                            aria-label="Stop voice input"
+                            className="p-2 rounded-full bg-[#eb6920]/20 text-[#eb6920] hover:bg-[#eb6920]/30 transition-colors animate-pulse"
+                            title="Stop recording"
+                          >
+                            <Square className="w-4 h-4 fill-current" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={startSpeech}
+                            aria-label="Start voice input"
+                            className="p-2 rounded-full bg-white/[0.05] text-gray-400 hover:text-white hover:bg-white/[0.1] transition-colors"
+                            title="Start voice input"
+                          >
+                            <Mic className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {interimText && (
+                    <div className="mt-2 flex items-start gap-2 text-xs text-gray-400 px-1">
+                      <Mic className="w-3.5 h-3.5 text-[#eb6920] shrink-0 mt-0.5 animate-pulse" />
+                      <span className="italic truncate">{interimText}</span>
+                    </div>
+                  )}
+
+                  {speechError && (
+                    <div className="mt-2 flex items-center gap-1.5 text-xs text-red-400 px-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>{speechError === 'not-allowed' ? 'Microphone permission denied.' : 'Voice recognition error.'}</span>
+                    </div>
+                  )}
+
+                  {speechSupported && (
+                     <div className="mt-2 text-[10px] text-gray-600 px-1">
+                       Voice input uses your browser's native speech recognition.
+                     </div>
+                  )}
                   <div className="mt-3">
                     <div className="text-[10px] text-gray-500 mb-1.5">Examples, or type anything:</div>
                     <div className="flex flex-wrap gap-2">
