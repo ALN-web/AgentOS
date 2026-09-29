@@ -53,7 +53,7 @@ export default function AppLayout() {
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-60 flex-col border-r border-white/5 bg-[#07060a] px-4 py-6">
         <div className="px-2 mb-8">
-          <Logo size="sm" />
+          <Logo size="md" />
         </div>
         <button onClick={tryDemo} className="btn-orange mb-2 w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
           <Play className="w-3.5 h-3.5 fill-current" />
