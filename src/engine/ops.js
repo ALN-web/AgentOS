@@ -5,7 +5,7 @@ const val = (x, m) => (typeof x === 'function' ? x(m) : x);
 export const ops = {
   say: (agent, text, type = 'message') => (m) => ({
     ...m,
-    events: [...m.events, { id: `${m.id}_e${m.events.length}`, t: m.clock, agent, type, text: val(text, m) }],
+    events: [...m.events, { id: `${m.runId}_e${m.events.length}`, t: m.clock, agent, type, text: val(text, m) }],
   }),
   status: (status) => (m) => ({ ...m, status }),
   addTask: (task) => (m) =>

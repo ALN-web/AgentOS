@@ -1,12 +1,14 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   advance,
   createMission,
   resolveApproval,
+  restartMission,
   runInstantly,
   setSpeed as setMissionSpeed,
   togglePause as toggleMissionPause,
 } from '../engine/engine';
+import { DEMO_GOAL } from '../data/templates';
 
 const MissionContext = createContext(null);
 
@@ -29,6 +31,9 @@ function seedMissions() {
 export function MissionProvider({ children }) {
   const [missions, setMissions] = useState(seedMissions);
   const [launcher, setLauncher] = useState({ open: false, goal: '' });
+  // Latest missions for event handlers, so a double click can't act on stale state.
+  const latest = useRef(missions);
+  latest.current = missions;
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -59,6 +64,26 @@ export function MissionProvider({ children }) {
       },
       decide(missionId, approvalId, decision, edits) {
         update(missionId, (m, now) => resolveApproval(m, approvalId, decision, edits, now));
+      },
+      // "Try Demo Mission": there is only ever one demo run. If it is in
+      // progress, go back to it; if it finished, start it over.
+      startDemo() {
+        const existing = latest.current.find((m) => m.demo);
+        if (existing && existing.status !== 'completed') return existing.id;
+        if (existing) {
+          const restarted = restartMission(existing, Date.now());
+          latest.current = latest.current.map((m) => (m.id === existing.id ? restarted : m));
+          setMissions((ms) => ms.map((m) => (m.id === existing.id ? restarted : m)));
+          return existing.id;
+        }
+        const m = createMission(DEMO_GOAL, { demo: true });
+        latest.current = [m, ...latest.current];
+        setMissions((ms) => [m, ...ms]);
+        setLauncher({ open: false, goal: '' });
+        return m.id;
+      },
+      restart(missionId) {
+        update(missionId, (m, now) => restartMission(m, now));
       },
       setSpeed(missionId, speed) {
         update(missionId, (m, now) => setMissionSpeed(m, speed, now));
