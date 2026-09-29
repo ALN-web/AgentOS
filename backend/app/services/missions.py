@@ -20,9 +20,12 @@ def ensure_reference_data(db: Session) -> None:
 
 def append_event(db: Session, mission: Mission, type_: EventType, agent: str | None = None, payload: dict | None = None) -> MissionEvent:
     """Add the next event for a mission. `seq` is unique per mission (enforced by the schema)."""
-    last = db.scalar(select(func.max(MissionEvent.seq)).where(MissionEvent.mission_id == mission.id)) or 0
+    db_last = db.scalar(select(func.max(MissionEvent.seq)).where(MissionEvent.mission_id == mission.id)) or 0
+    pending_seqs = [obj.seq for obj in db.new if isinstance(obj, MissionEvent) and obj.mission_id == mission.id]
+    last = max([db_last] + pending_seqs)
     event = MissionEvent(mission_id=mission.id, seq=last + 1, type=str(type_), agent=agent, payload_json=payload or {})
     db.add(event)
+    db.flush()
     return event
 
 
@@ -33,6 +36,8 @@ def create_mission(db: Session, user: User, data: MissionCreate) -> Mission:
         goal=data.goal,
         mode="live",
         status=MissionStatus.PLANNED,
+        source=data.source.value,
+        template_id=data.template_id,
         # Store exactly what the planner produced, without defaults the schema filled in.
         plan_json=plan.model_dump(mode="json", exclude_unset=True),
         metric_label=plan.metric.label,
@@ -57,6 +62,8 @@ def create_mission(db: Session, user: User, data: MissionCreate) -> Mission:
             status=TaskStatus.PENDING,
             gated=t.gated,
             criterion=t.criterion,
+            inputs=t.inputs or {},
+            output=None,
         )
         mission.tasks.append(task)
         by_key[t.id] = task
@@ -67,7 +74,10 @@ def create_mission(db: Session, user: User, data: MissionCreate) -> Mission:
         for dep in t.deps:
             db.add(TaskDependency(task_id=by_key[t.id].id, depends_on_id=by_key[dep].id))
 
-    append_event(db, mission, EventType.MISSION_CREATED, "planner", {"goal": mission.goal, "tasks": len(plan.tasks)})
+    append_event(
+        db, mission, EventType.MISSION_CREATED, "planner",
+        {"goal": mission.goal, "tasks": len(plan.tasks), "source": mission.source, "template_id": mission.template_id},
+    )
     db.commit()
     return get_mission(db, user, mission.id)
 

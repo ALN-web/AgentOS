@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Menu, X } from 'lucide-react';
 import { Logo } from '../components/ui';
+import ThemeToggle from '../components/ThemeToggle';
 import { useMissions } from '../store/MissionStore';
 
 const NAV_LINKS = [
@@ -30,15 +31,18 @@ export default function Navbar() {
       <div className="max-w-[1240px] mx-auto px-6 h-20 flex items-center justify-between">
         <Logo />
 
-        <div className="hidden md:flex items-center gap-8">
-          {NAV_LINKS.map((link) => (
-            <a key={link.name} href={link.href} className="text-[13.5px] font-medium text-gray-300 hover:text-white transition-colors">
-              {link.name}
-            </a>
-          ))}
-          <Link to="/app" className="text-[13.5px] font-medium text-gray-300 hover:text-white transition-colors">
-            Console
-          </Link>
+        <div className="hidden md:flex items-center gap-6">
+          <div className="flex items-center gap-8">
+            {NAV_LINKS.map((link) => (
+              <a key={link.name} href={link.href} className="text-[13.5px] font-medium text-gray-300 hover:text-white transition-colors">
+                {link.name}
+              </a>
+            ))}
+            <Link to="/app" className="text-[13.5px] font-medium text-gray-300 hover:text-white transition-colors">
+              Console
+            </Link>
+          </div>
+          <ThemeToggle />
         </div>
 
         <button
@@ -49,13 +53,16 @@ export default function Navbar() {
           <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
         </button>
 
-        <button
-          onClick={() => setOpen(!open)}
-          aria-label="Menu"
-          className="md:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
-        >
-          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        <div className="flex items-center gap-2 md:hidden">
+          <ThemeToggle size="sm" />
+          <button
+            onClick={() => setOpen(!open)}
+            aria-label="Menu"
+            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
 
       {open && (
@@ -68,6 +75,10 @@ export default function Navbar() {
           <Link to="/app" className="text-base text-gray-300 hover:text-white py-2.5 border-b border-white/5">
             Console
           </Link>
+          <div className="flex items-center justify-between py-2.5 border-b border-white/5">
+            <span className="text-base text-gray-300">Theme</span>
+            <ThemeToggle showLabel />
+          </div>
           <button
             onClick={() => {
               setOpen(false);

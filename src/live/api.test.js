@@ -25,6 +25,27 @@ describe('backend API client', () => {
     expect(JSON.parse(init.body)).toEqual({ goal, plan: JSON.parse(JSON.stringify(plan)) });
   });
 
+  it('sends how the mission was requested only when given', async () => {
+    const fetchImpl = vi.fn(async () => json(201, { id: 'm2' }));
+    const api = createApiClient('/api', { fetchImpl });
+    const goal = 'Plan my week around my deadlines';
+    await api.createMission(goal, planMission(goal), { source: 'template', templateId: 'week-os' });
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toMatchObject({ source: 'template', template_id: 'week-os' });
+    await api.createMission(goal, planMission(goal));
+    const plain = JSON.parse(fetchImpl.mock.calls[1][1].body);
+    expect('source' in plain || 'template_id' in plain).toBe(false);
+  });
+
+  it('maps backend app fields to the names the Apps UI reads', async () => {
+    const backendApp = {
+      id: 'google-calendar', status: 'connected', account_email: 'me@example.com',
+      granted_scopes: ['calendar.events'], disconnect_warning: 'Stops scheduling.', actions: [],
+    };
+    const fetchImpl = vi.fn(async () => json(200, [backendApp]));
+    const [app] = await createApiClient('/api', { fetchImpl }).listApps();
+    expect(app).toMatchObject({ accountEmail: 'me@example.com', grantedScopes: ['calendar.events'], disconnectWarning: 'Stops scheduling.', account_email: 'me@example.com' });
+  });
+
   it('turns the server error shape into an ApiError with its code', async () => {
     const api = createApiClient('/api', {
       fetchImpl: async () => json(404, { error: { code: 'mission_not_found', message: 'Mission not found.', request_id: 'r1' } }),
@@ -62,4 +83,30 @@ describe('backend API client', () => {
     await api.listEvents('a/b?c', 'nonsense');
     expect(fetchImpl.mock.calls[0][0]).toBe('/api/missions/a%2Fb%3Fc/events?after=0');
   });
+
+  it('handles app endpoints: list, update permissions, activity, and disconnect', async () => {
+    const fetchImpl = vi.fn(async (url, init) => {
+      if (url === '/api/apps' && (!init || init.method === 'GET')) return json(200, [{ id: 'google-calendar' }]);
+      if (url === '/api/apps/google-calendar/permissions' && init?.method === 'PATCH') return json(200, { ok: true });
+      if (url === '/api/apps/google-calendar/activity?limit=10') return json(200, [{ id: 'act-1' }]);
+      if (url === '/api/apps/google-calendar' && init?.method === 'DELETE') return json(200, { disconnected: true });
+      return json(404, {});
+    });
+    const api = createApiClient('/api', { fetchImpl });
+
+    const apps = await api.listApps();
+    expect(apps).toEqual([{ id: 'google-calendar' }]);
+
+    const updateRes = await api.updateAppPermissions('google-calendar', { 'calendar.create_event': 'ask' });
+    expect(updateRes).toEqual({ ok: true });
+    expect(JSON.parse(fetchImpl.mock.calls[1][1].body)).toEqual({ actions: { 'calendar.create_event': 'ask' } });
+
+    const activity = await api.getAppActivity('google-calendar', 10);
+    expect(activity).toEqual([{ id: 'act-1' }]);
+
+    const discRes = await api.disconnectApp('google-calendar');
+    expect(discRes).toEqual({ disconnected: true });
+    expect(fetchImpl.mock.calls[3][1].method).toBe('DELETE');
+  });
 });
+

@@ -50,9 +50,23 @@ class Integration(Base):
     provider: Mapped[str] = mapped_column(String(40))
     scopes: Mapped[list] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(20), default="connected")
+    account_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     encrypted_token: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class AppPermission(Base):
+    """What the agent may do for one action in one app, per user: allowed | ask | off."""
+
+    __tablename__ = "app_permission"
+    __table_args__ = (UniqueConstraint("user_id", "app_id", "action_id"),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), index=True)
+    app_id: Mapped[str] = mapped_column(String(40))
+    action_id: Mapped[str] = mapped_column(String(60))
+    mode: Mapped[str] = mapped_column(String(10))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
@@ -81,6 +95,9 @@ class Mission(Base):
     goal: Mapped[str] = mapped_column(String(500))
     mode: Mapped[str] = mapped_column(String(10), default="live")
     status: Mapped[str] = mapped_column(String(20), default="planned")
+    # How the mission was requested: typed, voice or template (see #17).
+    source: Mapped[str] = mapped_column(String(10), default="typed", server_default="typed")
+    template_id: Mapped[str | None] = mapped_column(String(60), nullable=True)
     plan_json: Mapped[dict] = mapped_column(JSON)
     metric_label: Mapped[str] = mapped_column(String(120))
     metric_current: Mapped[int] = mapped_column(Integer, default=0)
@@ -123,6 +140,8 @@ class Task(Base):
     gated: Mapped[bool] = mapped_column(Boolean, default=False)
     criterion: Mapped[str | None] = mapped_column(String(300), nullable=True)
     replaced_by_key: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    inputs: Mapped[dict] = mapped_column(JSON, default=dict)
+    output: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

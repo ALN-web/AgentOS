@@ -7,6 +7,7 @@ from app.api.deps import current_user
 from app.db.models import Mission, User
 from app.db.session import get_db
 from app.schemas.mission import EventOut, IntentOut, Metric, MissionCreate, MissionDetail, MissionSummary, TaskOut
+from app.schemas.plan import redact_dict
 from app.services import missions as svc
 
 router = APIRouter(prefix="/missions", tags=["missions"])
@@ -18,6 +19,8 @@ def _summary(m: Mission) -> dict:
         goal=m.goal,
         mode=m.mode,
         status=m.status,
+        source=m.source,
+        template_id=m.template_id,
         metric=Metric(label=m.metric_label, current=m.metric_current, target=m.metric_target),
         task_count=len(m.tasks),
         approval_points=sum(1 for t in m.tasks if t.gated),
@@ -41,6 +44,8 @@ def _detail(m: Mission) -> MissionDetail:
                 gated=t.gated,
                 criterion=t.criterion,
                 deps=[d.depends_on.key for d in t.dependencies],
+                inputs=redact_dict(t.inputs or {}),
+                output_summary=redact_dict(t.output) if t.output else None,
             )
             for t in m.tasks
         ],
@@ -75,3 +80,14 @@ def list_events(
         EventOut(seq=e.seq, type=e.type, agent=e.agent, payload=e.payload_json, created_at=e.created_at)
         for e in svc.list_events(db, user, mission_id, after, limit)
     ]
+
+
+@router.post("/{mission_id}/start", response_model=MissionDetail)
+def start_mission(
+    mission_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    from app.services.runner import run_mission
+    return _detail(run_mission(db, user, mission_id))
+

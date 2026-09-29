@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { MotionConfig } from 'framer-motion';
 import ErrorBoundary from './components/ErrorBoundary';
+import { ThemeProvider } from './context/ThemeContext';
 import { MissionProvider } from './store/MissionStore';
 import { PreferencesProvider } from './store/PreferencesStore';
 import NewMissionModal from './components/NewMissionModal';
@@ -15,6 +16,7 @@ import TemplatesPage from './app/TemplatesPage';
 import Missions from './app/Missions';
 import FeaturesPage from './app/FeaturesPage';
 import SettingsPage from './app/SettingsPage';
+import ConnectedApps from './app/ConnectedApps';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -27,17 +29,19 @@ function ScrollToTop() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <MotionConfig reducedMotion="user">
-          <PreferencesProvider>
-            <MissionProvider>
-              <ScrollToTop />
+      <ThemeProvider>
+        <BrowserRouter>
+          <MotionConfig reducedMotion="user">
+            <PreferencesProvider>
+              <MissionProvider>
+                <ScrollToTop />
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/app" element={<AppLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="missions" element={<Missions />} />
                 <Route path="missions/:id" element={<MissionDetail />} />
+                <Route path="apps" element={<ConnectedApps />} />
                 <Route path="features" element={<FeaturesPage />} />
                 <Route path="workforce" element={<Workforce />} />
                 <Route path="approvals" element={<Approvals />} />
@@ -52,6 +56,7 @@ export default function App() {
           </PreferencesProvider>
         </MotionConfig>
       </BrowserRouter>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

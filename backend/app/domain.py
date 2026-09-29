@@ -14,6 +14,12 @@ class MissionStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class MissionSource(StrEnum):
+    TYPED = "typed"
+    VOICE = "voice"
+    TEMPLATE = "template"
+
+
 class TaskStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"

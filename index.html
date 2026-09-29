@@ -2,12 +2,28 @@
 <html lang="en" class="dark scroll-smooth">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23eb6920'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Ccircle cx='12' cy='4' r='2' fill='%23eb6920'/%3E%3Ccircle cx='12' cy='20' r='2' fill='%23eb6920'/%3E%3Ccircle cx='4' cy='12' r='2' fill='%23eb6920'/%3E%3Ccircle cx='20' cy='12' r='2' fill='%23eb6920'/%3E%3C/svg%3E" />
+    <link rel="icon" type="image/jpeg" href="/assets/agentos-logo.jpeg" />
+    <link rel="apple-touch-icon" href="/assets/agentos-logo.jpeg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AgentOS — Autonomous AI Workforce</title>
     <meta name="description" content="AgentOS: give it a goal, and a team of AI agents plans, executes, recovers from failure, asks for approval and verifies the outcome. Interactive demo, runs entirely in your browser." />
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('agentos_theme');
+          var isDark = t === 'dark' || (!t && !window.matchMedia('(prefers-color-scheme: light)').matches);
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-[#000000] text-white selection:bg-[#eb6920] selection:text-white antialiased overflow-x-hidden">
+  <body class="bg-slate-50 text-slate-900 dark:bg-[#000000] dark:text-white selection:bg-[#eb6920] selection:text-white antialiased overflow-x-hidden transition-colors duration-200">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
