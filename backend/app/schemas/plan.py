@@ -9,6 +9,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.capabilities import CAPABILITY_BY_ID, TASK_TYPES
 from app.domain import AGENTS
 
 TaskId = Field(min_length=1, max_length=40, pattern=r"^[A-Za-z0-9_-]+$")
@@ -27,9 +28,18 @@ class PlanTask(BaseModel):
     criterion: str | None = Field(default=None, max_length=300)
 
     @model_validator(mode="after")
-    def _known_agent(self):
+    def _known_agent_capability_and_type(self):
         if self.agent not in AGENTS:
             raise ValueError(f"unknown agent '{self.agent}'")
+        if self.type is not None and self.type not in TASK_TYPES:
+            raise ValueError(f"unknown task type '{self.type}'")
+        if self.capability is not None:
+            cap = CAPABILITY_BY_ID.get(self.capability)
+            if cap is None:
+                raise ValueError(f"unknown capability '{self.capability}'")
+            # Anything that acts outside AgentOS (send, book, pay, schedule) must ask first.
+            if cap.external and not self.gated:
+                raise ValueError(f"task '{self.id}' uses external capability '{cap.id}' and must require approval (gated)")
         return self
 
 

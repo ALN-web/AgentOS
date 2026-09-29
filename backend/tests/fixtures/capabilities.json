@@ -1,0 +1,118 @@
+{
+  "capabilities": [
+    {
+      "id": "planning",
+      "name": "Planning",
+      "agent": "planner",
+      "external": false
+    },
+    {
+      "id": "research",
+      "name": "Research",
+      "agent": "research",
+      "external": false
+    },
+    {
+      "id": "search",
+      "name": "Web Search",
+      "agent": "browser",
+      "external": false
+    },
+    {
+      "id": "browser",
+      "name": "Browser Automation",
+      "agent": "browser",
+      "external": false
+    },
+    {
+      "id": "analysis",
+      "name": "Analysis & Review",
+      "agent": "critic",
+      "external": false
+    },
+    {
+      "id": "document",
+      "name": "Document Creation",
+      "agent": "execution",
+      "external": false
+    },
+    {
+      "id": "communication",
+      "name": "Communication",
+      "agent": "execution",
+      "external": true
+    },
+    {
+      "id": "submission",
+      "name": "Submission",
+      "agent": "browser",
+      "external": true
+    },
+    {
+      "id": "purchasing",
+      "name": "Purchasing & Booking",
+      "agent": "execution",
+      "external": true
+    },
+    {
+      "id": "monitoring",
+      "name": "Monitoring",
+      "agent": "execution",
+      "external": false
+    },
+    {
+      "id": "verification",
+      "name": "Verification",
+      "agent": "verification",
+      "external": false
+    },
+    {
+      "id": "recovery",
+      "name": "Recovery",
+      "agent": "recovery",
+      "external": false
+    },
+    {
+      "id": "calendar",
+      "name": "Calendar",
+      "agent": "execution",
+      "external": true
+    },
+    {
+      "id": "email",
+      "name": "Email",
+      "agent": "execution",
+      "external": true
+    },
+    {
+      "id": "reminders",
+      "name": "Reminders",
+      "agent": "execution",
+      "external": true
+    },
+    {
+      "id": "approval",
+      "name": "Human Approval",
+      "agent": "approval",
+      "external": false
+    }
+  ],
+  "taskTypes": {
+    "analyze": "planning",
+    "research": "research",
+    "search": "search",
+    "compare": "analysis",
+    "create": "document",
+    "draft": "document",
+    "browse": "browser",
+    "communicate": "communication",
+    "submit": "submission",
+    "purchase": "purchasing",
+    "monitor": "monitoring",
+    "verify": "verification",
+    "recover": "recovery",
+    "schedule": "calendar",
+    "inbox": "email",
+    "remind": "reminders"
+  }
+}

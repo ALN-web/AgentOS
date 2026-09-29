@@ -25,6 +25,17 @@ describe('backend API client', () => {
     expect(JSON.parse(init.body)).toEqual({ goal, plan: JSON.parse(JSON.stringify(plan)) });
   });
 
+  it('sends how the mission was requested only when given', async () => {
+    const fetchImpl = vi.fn(async () => json(201, { id: 'm2' }));
+    const api = createApiClient('/api', { fetchImpl });
+    const goal = 'Plan my week around my deadlines';
+    await api.createMission(goal, planMission(goal), { source: 'template', templateId: 'week-os' });
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toMatchObject({ source: 'template', template_id: 'week-os' });
+    await api.createMission(goal, planMission(goal));
+    const plain = JSON.parse(fetchImpl.mock.calls[1][1].body);
+    expect('source' in plain || 'template_id' in plain).toBe(false);
+  });
+
   it('turns the server error shape into an ApiError with its code', async () => {
     const api = createApiClient('/api', {
       fetchImpl: async () => json(404, { error: { code: 'mission_not_found', message: 'Mission not found.', request_id: 'r1' } }),

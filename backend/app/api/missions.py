@@ -18,6 +18,8 @@ def _summary(m: Mission) -> dict:
         goal=m.goal,
         mode=m.mode,
         status=m.status,
+        source=m.source,
+        template_id=m.template_id,
         metric=Metric(label=m.metric_label, current=m.metric_current, target=m.metric_target),
         task_count=len(m.tasks),
         approval_points=sum(1 for t in m.tasks if t.gated),

@@ -5,6 +5,7 @@ The public AgentOS demo is the frontend Demo Mode and does **not** use this back
 Current state: **Phase 2 plus part of Phase 3.**
 - The app: FastAPI with typed settings, request ids, structured logging and a consistent error format.
 - The database: SQLAlchemy models for the full Live Mode schema, with Alembic migrations (SQLite locally, PostgreSQL-ready).
+- Capabilities: `GET /api/capabilities` returns the registry mirrored from the frontend, including calendar, email and reminders, with honest `simulated`/`live` modes. Plans must gate every external capability behind approval.
 - Missions: `POST/GET /api/missions`, `GET /api/missions/{id}` and `GET /api/missions/{id}/events`. They validate and store mission plans from the frontend planner.
 - Health: `GET /api/health` reports database status and `live_mode.available: false`.
 - Nothing executes yet: there are no tools, policy engine or LLM.

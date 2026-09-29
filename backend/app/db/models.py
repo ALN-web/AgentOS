@@ -81,6 +81,9 @@ class Mission(Base):
     goal: Mapped[str] = mapped_column(String(500))
     mode: Mapped[str] = mapped_column(String(10), default="live")
     status: Mapped[str] = mapped_column(String(20), default="planned")
+    # How the mission was requested: typed, voice or template (see #17).
+    source: Mapped[str] = mapped_column(String(10), default="typed", server_default="typed")
+    template_id: Mapped[str | None] = mapped_column(String(60), nullable=True)
     plan_json: Mapped[dict] = mapped_column(JSON)
     metric_label: Mapped[str] = mapped_column(String(120))
     metric_current: Mapped[int] = mapped_column(Integer, default=0)
