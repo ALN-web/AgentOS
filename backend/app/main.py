@@ -10,7 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
-from app.api import capabilities, health, missions
+from app.api import apps, capabilities, health, missions
 from app.core.config import Settings, get_settings
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger, request_id_var
@@ -77,6 +77,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router, prefix="/api")
     app.include_router(missions.router, prefix="/api")
     app.include_router(capabilities.router, prefix="/api")
+    app.include_router(apps.router, prefix="/api")
     log.info("AgentOS API %s started (%s)", __version__, settings.environment)
     return app
 

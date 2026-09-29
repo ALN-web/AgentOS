@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { FlaskConical, Inbox, LayoutDashboard, LayoutTemplate, ListChecks, Network, Play, Plus, Sparkles } from 'lucide-react';
+import { AppWindow, FlaskConical, Inbox, LayoutDashboard, LayoutTemplate, ListChecks, Network, Play, Plus, Sparkles } from 'lucide-react';
 import { Logo } from '../components/ui';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ResetDemoButton from '../components/ResetDemoButton';
@@ -10,6 +10,7 @@ import { useMissions, usePendingApprovals } from '../store/MissionStore';
 const NAV = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/app/missions', label: 'Missions', icon: ListChecks },
+  { to: '/app/apps', label: 'Apps', icon: AppWindow },
   { to: '/app/workforce', label: 'Workforce', icon: Network },
   { to: '/app/features', label: 'Features', icon: Sparkles },
   { to: '/app/approvals', label: 'Approvals', icon: Inbox, badge: true },

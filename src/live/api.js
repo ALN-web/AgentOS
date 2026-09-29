@@ -55,6 +55,14 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
     listMissions: () => request('/missions'),
     getMission: (missionId) => request(`/missions/${id(missionId)}`),
     listEvents: (missionId, after = 0) => request(`/missions/${id(missionId)}/events?after=${Number(after) || 0}`),
+    listApps: () => request('/apps'),
+    updateAppPermissions: (appId, actions) =>
+      request(`/apps/${id(appId)}/permissions`, {
+        method: 'PATCH',
+        body: { actions },
+      }),
+    getAppActivity: (appId, limit = 20) => request(`/apps/${id(appId)}/activity?limit=${Number(limit) || 20}`),
+    disconnectApp: (appId) => request(`/apps/${id(appId)}`, { method: 'DELETE' }),
   };
 }
 

@@ -73,4 +73,30 @@ describe('backend API client', () => {
     await api.listEvents('a/b?c', 'nonsense');
     expect(fetchImpl.mock.calls[0][0]).toBe('/api/missions/a%2Fb%3Fc/events?after=0');
   });
+
+  it('handles app endpoints: list, update permissions, activity, and disconnect', async () => {
+    const fetchImpl = vi.fn(async (url, init) => {
+      if (url === '/api/apps' && (!init || init.method === 'GET')) return json(200, [{ id: 'google-calendar' }]);
+      if (url === '/api/apps/google-calendar/permissions' && init?.method === 'PATCH') return json(200, { ok: true });
+      if (url === '/api/apps/google-calendar/activity?limit=10') return json(200, [{ id: 'act-1' }]);
+      if (url === '/api/apps/google-calendar' && init?.method === 'DELETE') return json(200, { disconnected: true });
+      return json(404, {});
+    });
+    const api = createApiClient('/api', { fetchImpl });
+
+    const apps = await api.listApps();
+    expect(apps).toEqual([{ id: 'google-calendar' }]);
+
+    const updateRes = await api.updateAppPermissions('google-calendar', { 'calendar.create_event': 'ask' });
+    expect(updateRes).toEqual({ ok: true });
+    expect(JSON.parse(fetchImpl.mock.calls[1][1].body)).toEqual({ actions: { 'calendar.create_event': 'ask' } });
+
+    const activity = await api.getAppActivity('google-calendar', 10);
+    expect(activity).toEqual([{ id: 'act-1' }]);
+
+    const discRes = await api.disconnectApp('google-calendar');
+    expect(discRes).toEqual({ disconnected: true });
+    expect(fetchImpl.mock.calls[3][1].method).toBe('DELETE');
+  });
 });
+
