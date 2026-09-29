@@ -1,15 +1,15 @@
 // Refresh-safe storage for missions.
 //
 // Only plain data is stored. A mission's script (which contains functions) is
-// never saved: on load it is rebuilt from the goal, which selects the scenario,
-// and the recorded approval decisions are spliced back in exactly as the
-// engine did live. Anything that fails validation is dropped rather than
+// never saved: on load it is compiled again from the mission's stored plan, and
+// the recorded approval decisions are spliced back in exactly as the engine
+// did live. Anything that fails validation is dropped rather than
 // trusted, and if storage is unavailable the app simply runs in memory.
 
-import { buildScript } from '../engine/scenarios';
+import { compileScript } from '../engine/scenarios';
 
 export const STORAGE_KEY = 'agentos.demo';
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 const STATUSES = ['planning', 'running', 'awaiting_approval', 'recovering', 'completed'];
 const DECIDED = ['approved', 'edited', 'rejected'];
@@ -32,16 +32,17 @@ function store() {
 // A fingerprint of a scenario's base script, so state saved against an older
 // version of the script is discarded instead of replayed against the wrong steps.
 const signatures = new Map();
-export function scriptSignature(goal) {
-  if (!signatures.has(goal)) {
-    const { script } = buildScript(goal);
-    signatures.set(goal, `${script.length}:${script.map((s) => (s.approval ? 'A' : s.delay)).join('.')}`);
+export function scriptSignature(plan) {
+  const key = JSON.stringify(plan);
+  if (!signatures.has(key)) {
+    const { script } = compileScript(plan);
+    signatures.set(key, `${script.length}:${script.map((s) => (s.approval ? 'A' : s.delay)).join('.')}`);
   }
-  return signatures.get(goal);
+  return signatures.get(key);
 }
 
 export function rebuildScript(m) {
-  let { script } = buildScript(m.goal);
+  let { script } = compileScript(m.plan);
   const decided = m.approvals.filter((a) => a.status !== 'pending').sort((a, b) => a.stepIndex - b.stepIndex);
   for (const a of decided) {
     const step = script[a.stepIndex];
@@ -63,6 +64,10 @@ function looksValid(m) {
     isStr(m.id) &&
     isStr(m.runId) &&
     isStr(m.goal) &&
+    m.plan &&
+    typeof m.plan === 'object' &&
+    isStr(m.plan.kind) &&
+    Array.isArray(m.plan.tasks) &&
     STATUSES.includes(m.status) &&
     ['tasks', 'events', 'approvals', 'recoveries', 'checks'].every((k) => Array.isArray(m[k])) &&
     m.metric &&
@@ -83,7 +88,7 @@ export function serialize(missions, now) {
   return JSON.stringify({
     version: SCHEMA_VERSION,
     savedAt: now,
-    missions: missions.map(({ script, ...m }) => ({ ...m, sig: scriptSignature(m.goal) })),
+    missions: missions.map(({ script, ...m }) => ({ ...m, sig: scriptSignature(m.plan) })),
   });
 }
 
@@ -100,7 +105,7 @@ export function deserialize(raw, now) {
   const restored = [];
   for (const saved of data.missions) {
     try {
-      if (!looksValid(saved) || saved.sig !== scriptSignature(saved.goal)) continue;
+      if (!looksValid(saved) || saved.sig !== scriptSignature(saved.plan)) continue;
       const script = rebuildScript(saved);
       if (saved.cursor > script.length) continue;
       const pending = saved.approvals.filter((a) => a.status === 'pending');

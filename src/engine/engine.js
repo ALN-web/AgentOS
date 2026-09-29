@@ -7,7 +7,8 @@
 // script when the user decides. All functions here are pure so React can call
 // them freely (StrictMode double-invocation included).
 
-import { buildScript } from './scenarios';
+import { compileScript } from './scenarios';
+import { planMission } from '../agentos/planner';
 
 let seq = 0;
 const uid = (prefix) => `${prefix}_${Date.now().toString(36)}${(seq++).toString(36)}`;
@@ -16,14 +17,18 @@ export const ACTIVE_STATUSES = ['planning', 'running', 'awaiting_approval', 'rec
 
 // `runId` changes on every (re)start, so ids of events and approvals from an
 // earlier run never collide with the current one.
-export function createMission(goal, { templateId = null, createdAt = Date.now(), demo = false } = {}) {
-  const { script, metric } = buildScript(goal);
+// `plan` is the MissionPlan from the planner; without one, the demo planner
+// plans the goal with its assumptions.
+export function createMission(goal, { templateId = null, createdAt = Date.now(), demo = false, plan = null } = {}) {
+  const missionPlan = plan || planMission(goal);
+  const { script, metric } = compileScript(missionPlan);
   return {
     id: uid('m'),
     runId: uid('r'),
     goal,
     templateId,
     demo,
+    plan: missionPlan,
     status: 'planning',
     createdAt,
     updatedAt: createdAt,
@@ -132,7 +137,7 @@ export function setSpeed(m, speed, now) {
 
 // Starts the same mission over from its initial state, keeping its id and speed.
 export function restartMission(m, now) {
-  const fresh = createMission(m.goal, { templateId: m.templateId, createdAt: now, demo: m.demo });
+  const fresh = createMission(m.goal, { templateId: m.templateId, createdAt: now, demo: m.demo, plan: m.plan });
   return { ...fresh, id: m.id, speed: m.speed, nextAt: now + fresh.script[0].delay / m.speed };
 }
 
@@ -169,7 +174,7 @@ const REPLAY_APPROVAL_HOLD = 2500; // how long a replay lingers on each approval
 const DECISION = { approved: 'approve', edited: 'edit', rejected: 'reject' };
 
 export function replayTo(m, until) {
-  let r = { ...createMission(m.goal, { templateId: m.templateId, createdAt: m.createdAt, demo: m.demo }), id: m.id, runId: m.runId };
+  let r = { ...createMission(m.goal, { templateId: m.templateId, createdAt: m.createdAt, demo: m.demo, plan: m.plan }), id: m.id, runId: m.runId };
   while (r.cursor < r.script.length) {
     const step = r.script[r.cursor];
     if (step.approval) {
