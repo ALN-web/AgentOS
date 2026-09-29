@@ -165,8 +165,10 @@ function extractDeliverable(goal) {
 }
 
 // "... and email it to all staff" -> 'all staff'
+// "Email the design team" -> 'the design team'
 function extractRecipient(goal) {
-  const m = goal.match(/\b(?:email|e-mail|send|share|mail|message|forward|present)\b[^.]*?\bto\s+((?:all|the|our|my|every)\s+[a-z]+(?:\s[a-z]+)?|everyone|[a-z]+\s+team)\b/i);
+  const m = goal.match(/\b(?:email|e-mail|send|share|mail|message|forward|present)\b[^.]*?\bto\s+((?:all|the|our|my|every)\s+[a-z]+(?:\s[a-z]+)?|everyone|[a-z]+\s+team)\b/i) ||
+            goal.match(/\b(?:email|e-mail|message|contact|tell|remind)\s+((?:all|the|our|my|every)\s+team|(?:the\s+)?[a-z]+\s+team|everyone|staff)\b/i);
   return m ? m[1].toLowerCase() : null;
 }
 
@@ -190,8 +192,21 @@ function objectiveOf(goal) {
 }
 
 // Critical details worth asking for, per domain. Only asked when missing.
-function questionsFor(domain, ctx) {
+function questionsFor(domain, ctx, preferences = {}, applied = []) {
   const q = [];
+  
+  if (ctx.recipient && /\b(team|group|everyone|staff)\b/.test(ctx.recipient)) {
+    const known = preferences?.groups?.find(g => g.name.toLowerCase() === ctx.recipient);
+    if (!known) {
+      q.push({ id: 'group_emails', question: `I don't know who is in "${ctx.recipient}". Who should I include?`, placeholder: 'e.g. alice@example.com' });
+    } else {
+      ctx.recipientEmails = known.emails.join(', ');
+      applied.push("team_group");
+      if (preferences.tone) applied.push("tone");
+      if (preferences.signature) applied.push("signature");
+    }
+  }
+
   if (domain === 'event_management') {
     if (!ctx.quantity) q.push({ id: 'participants', question: 'How many participants do you expect?', placeholder: 'e.g. 150' });
     if (!ctx.date) q.push({ id: 'date', question: 'When is it?', placeholder: 'e.g. Nov 14' });
@@ -229,11 +244,18 @@ function applyAnswers(ctx, answers, domain) {
   if (a.budget && String(a.budget).trim()) ctx.constraints = [...ctx.constraints.filter((c) => !c.startsWith('Budget')), `Budget: ${String(a.budget).trim()}`];
   if (a.field && String(a.field).trim()) ctx.constraints = [...ctx.constraints, `Field: ${String(a.field).trim()}`];
   if (a.location && String(a.location).trim()) ctx.constraints = [...ctx.constraints, `Location: ${String(a.location).trim()}`];
+  if (a.group_emails && String(a.group_emails).trim()) ctx.recipientEmails = String(a.group_emails).trim();
 }
 
 // Sensible defaults for anything still unknown, stated openly.
-function assume(ctx, domain) {
+function assume(ctx, domain, preferences = {}, applied = []) {
   const out = [];
+  if (domain === 'personal') {
+    if (preferences?.workingDays?.length) { out.push(`Working days: ${preferences.workingDays.join(', ')}`); applied.push("working_days"); }
+    if (preferences?.workingHours?.start) { out.push(`Working hours: ${preferences.workingHours.start} - ${preferences.workingHours.end}`); applied.push("working_hours"); }
+    if (preferences?.timezone) { out.push(`Timezone: ${preferences.timezone}`); applied.push("timezone"); }
+    if (preferences?.meetingLength) { out.push(`Default meeting length: ${preferences.meetingLength} minutes`); applied.push("meeting_length"); }
+  }
   if (domain === 'event_management') {
     if (!ctx.quantity) {
       ctx.quantity = { n: 100, unit: 'participants' };
@@ -297,7 +319,7 @@ const DOMAIN_CAPABILITIES = {
 
 const RISK_CAPABILITY = { communication: 'communication', publishing: 'communication', submission: 'submission', purchase: 'purchasing', destructive: 'browser' };
 
-export function analyzeGoal(goal, answers = {}) {
+export function analyzeGoal(goal, answers = {}, preferences = {}) {
   const text = cleanGoal(goal);
   const domain = classifyDomain(text);
   const quantities = extractQuantities(text);
@@ -308,6 +330,8 @@ export function analyzeGoal(goal, answers = {}) {
     format: extractFormat(text),
     constraints: extractConstraints(text),
     eventNoun: eventNoun(text),
+    recipient: extractRecipient(text),
+    deliverable: extractDeliverable(text),
   };
 
   const peopleMatch = text.match(/\b(?:for|with)\s+(\d+(?:\s+[a-z]+)?|[A-Z][a-z]+)\b/i);
@@ -318,9 +342,10 @@ export function analyzeGoal(goal, answers = {}) {
   
   if (text.match(/\b(Goa)\b/i)) ctx.place = 'Goa';
 
-  const questions = questionsFor(domain, ctx).filter((q) => !(answers[q.id] && String(answers[q.id]).trim()));
+  const appliedPreferences = [];
+  const questions = questionsFor(domain, ctx, preferences, appliedPreferences).filter((q) => !(answers[q.id] && String(answers[q.id]).trim()));
   applyAnswers(ctx, answers, domain);
-  const assumptions = assume(ctx, domain);
+  const assumptions = assume(ctx, domain, preferences, appliedPreferences);
 
   const risks = RISKS.filter((r) => r.words.test(text)).map(({ id, label }) => ({ id, label }));
   const tokens = words(text);
@@ -339,8 +364,9 @@ export function analyzeGoal(goal, answers = {}) {
     date: ctx.date,
     format: ctx.format,
     eventNoun: ctx.eventNoun,
-    deliverable: extractDeliverable(text),
-    recipient: extractRecipient(text),
+    deliverable: ctx.deliverable,
+    recipient: ctx.recipient,
+    recipientEmails: ctx.recipientEmails || null,
     constraints: ctx.constraints,
     entities,
     risks,
@@ -348,5 +374,6 @@ export function analyzeGoal(goal, answers = {}) {
     questions,
     assumptions,
     answers,
+    applied_preferences: [...new Set(appliedPreferences)],
   };
 }

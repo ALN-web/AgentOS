@@ -21,6 +21,7 @@
         "object": "report"
       },
       "recipient": null,
+      "recipientEmails": null,
       "constraints": [],
       "entities": [
         "research",
@@ -38,7 +39,8 @@
       ],
       "questions": [],
       "assumptions": [],
-      "answers": {}
+      "answers": {},
+      "applied_preferences": []
     },
     "tasks": [
       {

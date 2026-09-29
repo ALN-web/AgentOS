@@ -43,7 +43,7 @@ const DEFAULT_WHY = {
   reason: 'The plan needs this before the goal can be verified.',
 };
 
-function withRiskSteps(steps, intent) {
+function withRiskSteps(steps, intent, preferences) {
   const covered = new Set(steps.filter((s) => isExternal(s.type)).map((s) => TASK_TYPES[s.type].capability));
   const extra = [];
   for (const risk of intent.risks) {
@@ -63,9 +63,9 @@ function withRiskSteps(steps, intent) {
             title: `Send ${thing} to ${intent.recipient}`,
             payload: {
               ...tpl.payload,
-              to: cap(intent.recipient),
+              to: intent.recipientEmails || cap(intent.recipient),
               subject: intent.deliverable ? cap(intent.deliverable.object) : 'Update',
-              body: `Hi,\n\nPlease find ${thing} attached.\n\nThanks`,
+              body: `Hi,\n\nPlease find ${thing} attached.\n\n${preferences?.signature || 'Thanks'}`,
             },
           }
         : {}),
@@ -83,9 +83,9 @@ function withRiskSteps(steps, intent) {
   return [...before, ...extra, verify, ...steps.slice(verifyAt + 1)];
 }
 
-function dynamicPlan(goal, answers) {
-  const intent = analyzeGoal(goal, answers);
-  const steps = withRiskSteps(BLUEPRINTS[intent.domain](intent), intent);
+function dynamicPlan(goal, answers, preferences = {}) {
+  const intent = analyzeGoal(goal, answers, preferences);
+  const steps = withRiskSteps(BLUEPRINTS[intent.domain](intent), intent, preferences);
   const idOf = Object.fromEntries(steps.map((s, i) => [s.key, `p${i + 1}`]));
 
   const tasks = steps.map((s) => {
@@ -211,8 +211,8 @@ export const demoPlanner = {
   id: 'demo',
   label: 'Demo planner',
   description: 'Deterministic goal analysis and planning heuristics. Runs in the browser, no API key.',
-  plan(goal, answers = {}) {
-    return isHeroGoal(goal) ? heroPlan(goal) : dynamicPlan(goal, answers);
+  plan(goal, answers = {}, preferences = {}) {
+    return isHeroGoal(goal) ? heroPlan(goal) : dynamicPlan(goal, answers, preferences);
   },
 };
 
@@ -220,6 +220,6 @@ export const demoPlanner = {
 // Only planners that are actually implemented are listed.
 export const PLANNERS = { demo: demoPlanner };
 
-export function planMission(goal, answers = {}, planner = PLANNERS.demo) {
-  return planner.plan(goal, answers);
+export function planMission(goal, answers = {}, planner = PLANNERS.demo, preferences = {}) {
+  return planner.plan(goal, answers, preferences);
 }

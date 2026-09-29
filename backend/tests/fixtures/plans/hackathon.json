@@ -21,6 +21,7 @@
       "eventNoun": "hackathon",
       "deliverable": null,
       "recipient": null,
+      "recipientEmails": null,
       "constraints": [],
       "entities": [
         "hackathon",
@@ -47,7 +48,8 @@
       "assumptions": [
         "A date about six weeks from now"
       ],
-      "answers": {}
+      "answers": {},
+      "applied_preferences": []
     },
     "tasks": [
       {

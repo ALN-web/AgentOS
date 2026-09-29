@@ -4,6 +4,7 @@ import { MotionConfig } from 'framer-motion';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeProvider } from './context/ThemeContext';
 import { MissionProvider } from './store/MissionStore';
+import { PreferencesProvider } from './store/PreferencesStore';
 import NewMissionModal from './components/NewMissionModal';
 import Landing from './landing/Landing';
 import AppLayout from './app/AppLayout';
@@ -14,6 +15,7 @@ import Approvals from './app/Approvals';
 import TemplatesPage from './app/TemplatesPage';
 import Missions from './app/Missions';
 import FeaturesPage from './app/FeaturesPage';
+import SettingsPage from './app/SettingsPage';
 import ConnectedApps from './app/ConnectedApps';
 
 function ScrollToTop() {
@@ -30,8 +32,9 @@ export default function App() {
       <ThemeProvider>
         <BrowserRouter>
           <MotionConfig reducedMotion="user">
-            <MissionProvider>
-            <ScrollToTop />
+            <PreferencesProvider>
+              <MissionProvider>
+                <ScrollToTop />
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/app" element={<AppLayout />}>
@@ -43,12 +46,14 @@ export default function App() {
                 <Route path="workforce" element={<Workforce />} />
                 <Route path="approvals" element={<Approvals />} />
                 <Route path="templates" element={<TemplatesPage />} />
+                <Route path="settings" element={<SettingsPage />} />
                 <Route path="*" element={<Navigate to="/app" replace />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             <NewMissionModal />
           </MissionProvider>
+          </PreferencesProvider>
         </MotionConfig>
       </BrowserRouter>
       </ThemeProvider>

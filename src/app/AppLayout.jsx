@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { AppWindow, FlaskConical, Inbox, LayoutDashboard, LayoutTemplate, ListChecks, Network, Play, Plus, Sparkles } from 'lucide-react';
+import { AppWindow, FlaskConical, Inbox, LayoutDashboard, LayoutTemplate, ListChecks, Network, Play, Plus, Sparkles, Settings } from 'lucide-react';
 import { Logo } from '../components/ui';
 import ThemeToggle from '../components/ThemeToggle';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -16,6 +16,7 @@ const NAV = [
   { to: '/app/features', label: 'Features', icon: Sparkles },
   { to: '/app/approvals', label: 'Approvals', icon: Inbox, badge: true },
   { to: '/app/templates', label: 'Templates', icon: LayoutTemplate },
+  { to: '/app/settings', label: 'Settings', icon: Settings },
 ];
 
 function NavItems({ pending, compact }) {

@@ -10,6 +10,7 @@ import {
 } from '../engine/engine';
 import { DEMO_GOAL } from '../data/templates';
 import { clearMissions, loadMissions, saveMissions } from './persistence';
+import { usePreferences } from './PreferencesStore';
 
 const MissionContext = createContext(null);
 
@@ -32,6 +33,7 @@ export function seedMissions() {
 }
 
 export function MissionProvider({ children }) {
+  const { preferences } = usePreferences();
   // Saved demo state from this browser if it is valid, otherwise a fresh start.
   const [missions, setMissions] = useState(() => loadMissions() ?? seedMissions());
   const [launcher, setLauncher] = useState({ open: false, goal: '' });
@@ -74,7 +76,7 @@ export function MissionProvider({ children }) {
         setMissions((ms) => ms.map((m) => (m.id === existing.id ? restarted : m)));
         return existing.id;
       }
-      const m = createMission(DEMO_GOAL, { demo: true });
+      const m = createMission(DEMO_GOAL, { demo: true, preferences });
       latest.current = [m, ...latest.current];
       setMissions((ms) => [m, ...ms]);
       return m.id;
@@ -87,7 +89,7 @@ export function MissionProvider({ children }) {
       launch(goal, opts) {
         // Typing the demo goal runs the demo mission rather than a duplicate of it.
         if (normalise(goal) === normalise(DEMO_GOAL)) return startDemo();
-        const m = createMission(goal.trim(), opts);
+        const m = createMission(goal.trim(), { ...opts, preferences });
         setMissions((ms) => [m, ...ms]);
         setLauncher({ open: false, goal: '' });
         return m.id;
@@ -119,7 +121,7 @@ export function MissionProvider({ children }) {
         setLauncher({ open: false, goal: '' });
       },
     };
-  }, [missions, launcher]);
+  }, [missions, launcher, preferences]);
 
   return <MissionContext.Provider value={value}>{children}</MissionContext.Provider>;
 }
