@@ -101,7 +101,7 @@ function career(ctx) {
       out: `Looking for ${n} ${unit}${field ? ` in ${field}` : ''}. Fit is judged on skills, location and deadline.`,
     },
     {
-      key: 'search', type: 'search', title: `Search ${unit} listings`, deps: ['profile'],
+      key: 'search', type: 'search', title: `Search for ${unit}`, deps: ['profile'],
       why: { objective: 'Collect candidates from several job boards.', reason: 'One source is never complete.' },
       site: 'jobs.example.com', siteTitle: 'Job board (simulated)',
       steps: ['Opened three job boards', `Searched “${field || 'internship'}”`, `Collected ${found} listings`],
