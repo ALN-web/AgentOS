@@ -11,7 +11,7 @@ import MissionControl from './MissionControl';
 import ActivityFeed from './ActivityFeed';
 import BrowserPanel from './BrowserPanel';
 import RecoveryCard from './RecoveryCard';
-import VerificationCard from './VerificationCard';
+import ProofPanel from './ProofPanel';
 import ExplainDrawer from './ExplainDrawer';
 import MissionBrief from './MissionBrief';
 import MissionOutcome from './MissionOutcome';
@@ -248,7 +248,7 @@ export default function MissionDetail() {
             </div>
           )}
           <BrowserPanel browser={view.browser} task={browserTask} paused={view.paused} recovering={view.status === 'recovering'} />
-          <VerificationCard checks={view.checks} criteria={m.plan?.criteria} />
+          <ProofPanel m={view} />
         </div>
       </div>
 
