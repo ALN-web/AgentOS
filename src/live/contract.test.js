@@ -18,6 +18,8 @@ export const CONTRACT_GOALS = {
   internships: 'Find 20 suitable internship opportunities.',
   launch: 'Prepare and launch our new product.',
   research: 'Research the market for AI customer support platforms and create a report.',
+  dinner: 'Organise a birthday dinner for 8 on Saturday',
+  week: 'Plan my week around my deadlines',
 };
 
 describe('MissionPlan contract fixtures', () => {

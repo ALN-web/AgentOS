@@ -102,6 +102,27 @@ export const CAPABILITIES = [
     external: false,
   },
   {
+    id: 'calendar',
+    name: 'Calendar',
+    agent: 'execution',
+    description: 'Manage calendar events and availability.',
+    external: true,
+  },
+  {
+    id: 'email',
+    name: 'Email',
+    agent: 'execution',
+    description: 'Manage inbox and send emails.',
+    external: true,
+  },
+  {
+    id: 'reminders',
+    name: 'Reminders',
+    agent: 'execution',
+    description: 'Set and manage reminders.',
+    external: true,
+  },
+  {
     id: 'approval',
     name: 'Human Approval',
     agent: 'approval',
@@ -128,6 +149,9 @@ export const TASK_TYPES = {
   monitor: { label: 'Monitor', capability: 'monitoring' },
   verify: { label: 'Verify', capability: 'verification' },
   recover: { label: 'Recover', capability: 'recovery' },
+  schedule: { label: 'Schedule', capability: 'calendar' },
+  inbox: { label: 'Inbox', capability: 'email' },
+  remind: { label: 'Remind', capability: 'reminders' },
 };
 
 export const capabilityOf = (type) => CAPABILITY_BY_ID[TASK_TYPES[type].capability];

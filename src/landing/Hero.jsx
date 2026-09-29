@@ -113,10 +113,10 @@ export default function Hero() {
         <div className="text-center max-w-4xl mx-auto mb-10">
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.05] mb-6">
             Your autonomous <br />
-            <span className="bg-gradient-to-r from-[#ffb37a] via-[#ff8c42] to-[#eb6920] bg-clip-text text-transparent">AI workforce</span>
+            <span className="bg-gradient-to-r from-[#ffb37a] via-[#ff8c42] to-[#eb6920] bg-clip-text text-transparent">agent for everyday apps</span>
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-gray-400 leading-relaxed max-w-2xl mx-auto">
-            Give AgentOS a goal. Eight agents plan it, do the work, fix what breaks, and prove it’s done.
+            Tell AgentOS the outcome, it works across email, calendar and other apps, and asks before important actions.
           </p>
         </div>
 
@@ -139,7 +139,22 @@ export default function Hero() {
         <p className="text-center text-xs text-gray-500 mb-10">
           Runs entirely in your browser as a simulation. No sign-up, no API keys, nothing is sent anywhere.
         </p>
-
+        <div className="flex flex-col items-center justify-center gap-3 mb-14">
+          <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Works across</div>
+          <div className="flex flex-wrap justify-center gap-3">
+            {['Calendar (Demo)', 'Gmail (Demo)', 'Drive (Coming soon)', 'Slack (Coming soon)', 'WhatsApp (Coming soon)'].map((app) => {
+              const [name, status] = app.split(' (');
+              return (
+                <div key={name} className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/5 bg-white/[0.02]">
+                  <span className="text-xs font-medium text-gray-300">{name}</span>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${status === 'Demo)' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/5 text-gray-500'}`}>
+                    {status.replace(')', '')}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
         <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 max-w-4xl mx-auto mb-14" aria-label="How AgentOS works">
           {STEPS.map((text, i) => (
             <li key={text} className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/[0.03] border border-white/10">

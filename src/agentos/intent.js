@@ -49,6 +49,14 @@ const DOMAINS = {
     label: 'Operations',
     words: { invoice: 3, invoices: 3, billing: 3, payments: 2, overdue: 3, expenses: 3, payroll: 3, onboarding: 3, onboard: 3, reconcile: 3, paperwork: 2 },
   },
+  personal: {
+    label: 'Everyday life',
+    words: {
+      week: 3, schedule: 3, calendar: 3, meeting: 3, reminder: 3, remind: 3,
+      inbox: 3, emails: 3, reply: 3, bill: 3, bills: 3, pay: 3, rent: 3, dinner: 3,
+      birthday: 3, trip: 3, appointment: 3, dentist: 3, groceries: 3, errands: 3, plans: 3, friends: 3
+    },
+  },
 };
 
 // Verbs that reach outside the system. Any of these makes an approval point.
@@ -67,6 +75,7 @@ const PRIMARY_UNIT = {
   event_management: /student|participant|people|attendee|registration|guest|team/i,
   outreach: /registration|sign|user|lead|follower|subscriber|attendee|customer/i,
   procurement: /^(?!quote|vendor|option|supplier)/i,
+  personal: /friend|people|guest/i,
 };
 
 const EVENT_WORDS = ['hackathon', 'workshop', 'meetup', 'conference', 'seminar', 'webinar', 'festival', 'fest', 'summit', 'bootcamp', 'competition', 'contest', 'ceremony', 'party', 'offsite', 'orientation', 'outing'];
@@ -113,12 +122,13 @@ function pickQuantity(domain, quantities) {
 
 function extractDate(goal) {
   const m =
-    goal.match(/\b(?:next|this)\s+(?:mon|tues|wednes|thurs|fri|satur|sun)day\b/i) ||
+    goal.match(/\b(?:next|this)\s+(?:mon|tues|wednes|thurs|fri|satur|sun)day(?:\s+at\s+\d{1,2}(?:\s?[ap]m)?)?\b/i) ||
+    goal.match(/\b(?:mon|tues|wednes|thurs|fri|satur|sun)day(?:\s+at\s+\d{1,2}(?:\s?[ap]m)?)?\b/i) ||
     goal.match(/\b(?:next|this)\s+(?:week|month|quarter|semester)\b/i) ||
     goal.match(/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?\b/i) ||
     goal.match(/\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b/i) ||
     goal.match(/\b(?:tomorrow|today|tonight)\b/i) ||
-    goal.match(/\bby\s+(?:mon|tues|wednes|thurs|fri|satur|sun)day\b/i);
+    goal.match(/\b(?:before|by)\s+(?:mon|tues|wednes|thurs|fri|satur|sun)day\b/i);
   return m ? m[0] : null;
 }
 
@@ -132,12 +142,14 @@ function extractFormat(goal) {
 
 function extractConstraints(goal) {
   const out = [];
-  const budget = goal.match(/\b(?:under|below|less than|max(?:imum)?|within|budget of)\s+\$?\s?\d[\d,]*(?:\s?k)?(?:\s+each)?/i) || goal.match(/\$\d[\d,]*(?:\s?k)?(?:\s+each)?/);
+  const budget = goal.match(/\b(?:under|below|less than|max(?:imum)?|within|budget of)\s+(?:\$|₹|Rs\.?)?\s?\d[\d,]*(?:\s?k)?(?:\s+each)?/i) || goal.match(/(?:\$|₹|Rs\.?)\d[\d,]*(?:\s?k)?(?:\s+each)?/);
   if (budget) out.push(`Budget: ${budget[0].trim()}`);
   const best = goal.match(/\b(?:best|top)\s+(\d+)\b/i);
   if (best) out.push(`Focus on the top ${best[1]}`);
   const where = goal.match(/\b(?:in|near|around)\s+([A-Z][a-zA-Z]+(?:\s[A-Z][a-zA-Z]+)?)/);
   if (where) out.push(`Location: ${where[1]}`);
+  const deadline = goal.match(/\bbefore\s+(?:mon|tues|wednes|thurs|fri|satur|sun)day\b/i);
+  if (deadline) out.push(`Deadline: ${deadline[0]}`);
   return out;
 }
 
@@ -279,6 +291,7 @@ const DOMAIN_CAPABILITIES = {
   procurement: ['planning', 'search', 'analysis', 'communication', 'verification'],
   outreach: ['planning', 'research', 'browser', 'communication', 'monitoring', 'verification'],
   operations: ['planning', 'research', 'document', 'analysis', 'communication', 'monitoring', 'verification'],
+  personal: ['planning', 'analysis', 'search', 'research', 'document', 'calendar', 'email', 'reminders', 'communication', 'verification'],
   general: ['planning', 'research', 'browser', 'document', 'analysis', 'verification'],
 };
 
@@ -297,6 +310,14 @@ export function analyzeGoal(goal, answers = {}) {
     eventNoun: eventNoun(text),
   };
 
+  const peopleMatch = text.match(/\b(?:for|with)\s+(\d+(?:\s+[a-z]+)?|[A-Z][a-z]+)\b/i);
+  if (peopleMatch) ctx.people = peopleMatch[0];
+  
+  const placeMatch = text.match(/\b(?:to|in|at)\s+([A-Z][a-z]+|dentist|office|restaurant|hospital|clinic)\b/i);
+  if (placeMatch) ctx.place = placeMatch[1];
+  
+  if (text.match(/\b(Goa)\b/i)) ctx.place = 'Goa';
+
   const questions = questionsFor(domain, ctx).filter((q) => !(answers[q.id] && String(answers[q.id]).trim()));
   applyAnswers(ctx, answers, domain);
   const assumptions = assume(ctx, domain);
@@ -313,6 +334,8 @@ export function analyzeGoal(goal, answers = {}) {
     domainLabel: DOMAINS[domain]?.label || 'General',
     desiredOutcome: desiredOutcome(domain, ctx),
     quantity: ctx.quantity,
+    people: ctx.people || null,
+    place: ctx.place || null,
     date: ctx.date,
     format: ctx.format,
     eventNoun: ctx.eventNoun,

@@ -11,6 +11,8 @@
       "domainLabel": "Product launch",
       "desiredOutcome": "Launch ready",
       "quantity": null,
+      "people": null,
+      "place": null,
       "date": null,
       "format": null,
       "eventNoun": "event",

@@ -32,6 +32,12 @@ const GOALS = [
   'Invoice all clients for September and chase overdue payments',
   'Learn Spanish basics and book a tutor',
   'Write a newsletter about our new cafeteria menu',
+  'Plan my week around my deadlines',
+  'Reply to the emails that need me today',
+  'Organise a birthday dinner for 8 on Saturday',
+  "Remind me to pay my bills before they're due",
+  'Book a dentist appointment next week',
+  'Plan a weekend trip to Goa for 4 friends under ₹20,000',
 ];
 
 describe('goal understanding', () => {
@@ -84,6 +90,27 @@ describe('goal understanding', () => {
     const i = analyzeGoal('Write a newsletter about our new cafeteria menu');
     expect(i.domain).toBe('general');
     expect(planMission(i.goal).tasks.length).toBeGreaterThan(3);
+  });
+
+  it('classifies everyday goals to personal domain', () => {
+    expect(analyzeGoal('Plan my week around my deadlines').domain).toBe('personal');
+    expect(analyzeGoal('Reply to the emails that need me today').domain).toBe('personal');
+    expect(analyzeGoal('Organise a birthday dinner for 8 on Saturday').domain).toBe('personal');
+    expect(analyzeGoal("Remind me to pay my bills before they're due").domain).toBe('personal');
+    expect(analyzeGoal('Book a dentist appointment next week').domain).toBe('personal');
+    expect(analyzeGoal('Plan a weekend trip to Goa for 4 friends under ₹20,000').domain).toBe('personal');
+  });
+
+  it('extracts everyday details', () => {
+    const i = analyzeGoal('Plan a weekend trip to Goa for 4 friends under ₹20,000 before Friday');
+    expect(i.quantity).toEqual({ n: 4, unit: 'friends' });
+    expect(i.place).toBe('Goa');
+    expect(i.constraints).toContain('Budget: under ₹20,000');
+    expect(i.constraints).toContain('Deadline: before Friday');
+    
+    const b = analyzeGoal('Organise a birthday dinner for 8 on Saturday at 7 pm');
+    expect(b.date).toMatch(/saturday at 7 pm/i);
+    expect(b.people).toMatch(/for 8/i);
   });
 });
 
