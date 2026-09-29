@@ -13,6 +13,17 @@ export class ApiError extends Error {
   }
 }
 
+// The backend speaks snake_case; the Apps UI reads camelCase. Keep both.
+const toUiApp = (a) =>
+  a && typeof a === 'object'
+    ? {
+        ...a,
+        accountEmail: a.accountEmail ?? a.account_email ?? undefined,
+        grantedScopes: a.grantedScopes ?? a.granted_scopes ?? undefined,
+        disconnectWarning: a.disconnectWarning ?? a.disconnect_warning ?? undefined,
+      }
+    : a;
+
 export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeoutMs = 8000 } = {}) {
   async function request(path, { method = 'GET', body } = {}) {
     if (!baseUrl) throw new ApiError(0, 'not_configured', 'The AgentOS backend is not configured.');
@@ -55,12 +66,12 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
     listMissions: () => request('/missions'),
     getMission: (missionId) => request(`/missions/${id(missionId)}`),
     listEvents: (missionId, after = 0) => request(`/missions/${id(missionId)}/events?after=${Number(after) || 0}`),
-    listApps: () => request('/apps'),
+    listApps: () => request('/apps').then((list) => (Array.isArray(list) ? list.map(toUiApp) : list)),
     updateAppPermissions: (appId, actions) =>
       request(`/apps/${id(appId)}/permissions`, {
         method: 'PATCH',
         body: { actions },
-      }),
+      }).then(toUiApp),
     getAppActivity: (appId, limit = 20) => request(`/apps/${id(appId)}/activity?limit=${Number(limit) || 20}`),
     disconnectApp: (appId) => request(`/apps/${id(appId)}`, { method: 'DELETE' }),
   };
