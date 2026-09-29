@@ -13,6 +13,7 @@ import Approvals from './app/Approvals';
 import TemplatesPage from './app/TemplatesPage';
 import Missions from './app/Missions';
 import FeaturesPage from './app/FeaturesPage';
+import ConnectedApps from './app/ConnectedApps';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -35,6 +36,7 @@ export default function App() {
                 <Route index element={<Dashboard />} />
                 <Route path="missions" element={<Missions />} />
                 <Route path="missions/:id" element={<MissionDetail />} />
+                <Route path="apps" element={<ConnectedApps />} />
                 <Route path="features" element={<FeaturesPage />} />
                 <Route path="workforce" element={<Workforce />} />
                 <Route path="approvals" element={<Approvals />} />
