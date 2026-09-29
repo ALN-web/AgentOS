@@ -20,9 +20,12 @@ def ensure_reference_data(db: Session) -> None:
 
 def append_event(db: Session, mission: Mission, type_: EventType, agent: str | None = None, payload: dict | None = None) -> MissionEvent:
     """Add the next event for a mission. `seq` is unique per mission (enforced by the schema)."""
-    last = db.scalar(select(func.max(MissionEvent.seq)).where(MissionEvent.mission_id == mission.id)) or 0
+    db_last = db.scalar(select(func.max(MissionEvent.seq)).where(MissionEvent.mission_id == mission.id)) or 0
+    pending_seqs = [obj.seq for obj in db.new if isinstance(obj, MissionEvent) and obj.mission_id == mission.id]
+    last = max([db_last] + pending_seqs)
     event = MissionEvent(mission_id=mission.id, seq=last + 1, type=str(type_), agent=agent, payload_json=payload or {})
     db.add(event)
+    db.flush()
     return event
 
 
@@ -59,6 +62,8 @@ def create_mission(db: Session, user: User, data: MissionCreate) -> Mission:
             status=TaskStatus.PENDING,
             gated=t.gated,
             criterion=t.criterion,
+            inputs=t.inputs or {},
+            output=None,
         )
         mission.tasks.append(task)
         by_key[t.id] = task

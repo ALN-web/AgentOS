@@ -78,6 +78,8 @@ class TaskOut(BaseModel):
     gated: bool
     criterion: str | None
     deps: list[str]
+    inputs: dict = Field(default_factory=dict)
+    output_summary: dict | None = None
 
 
 class MissionDetail(MissionSummary):
