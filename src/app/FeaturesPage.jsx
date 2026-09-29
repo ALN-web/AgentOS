@@ -2,14 +2,13 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { FEATURES } from '../data/features';
-import { DEMO_GOAL } from '../data/templates';
 import FeatureCard from '../components/FeatureCard';
 import { useMissions } from '../store/MissionStore';
 
 const LOOP = ['Goal', 'Plan', 'Execute', 'Approve', 'Recover', 'Verify', 'Outcome'];
 
 export default function FeaturesPage() {
-  const { missions, openLauncher } = useMissions();
+  const { missions, startDemo } = useMissions();
   const navigate = useNavigate();
 
   const see = (target) => {
@@ -19,7 +18,7 @@ export default function FeaturesPage() {
       const done = completed.find((m) => /registration/i.test(m.goal)) || completed[0];
       if (done) return navigate(`/app/missions/${done.id}`);
     }
-    openLauncher(DEMO_GOAL);
+    navigate(`/app/missions/${startDemo()}`);
   };
 
   return (

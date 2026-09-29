@@ -23,7 +23,7 @@ export default function BrowserPanel({ browser, task, paused, recovering }) {
       <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-3">
         <div className="flex items-center gap-2 text-sm font-semibold text-white">
           <MousePointerClick className="w-4 h-4 text-emerald-400" />
-          Browser agent
+          Simulated Browser Session
         </div>
         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${meta.cls}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
@@ -85,7 +85,7 @@ export default function BrowserPanel({ browser, task, paused, recovering }) {
           )}
         </div>
       </div>
-      <p className="px-4 pb-3 text-[10px] text-gray-600">Simulated browser session. The steps are scripted for this demo.</p>
+      <p className="px-4 pb-3 text-[10px] text-gray-600">Browser agent steps are scripted for this demo. No external site is opened.</p>
     </div>
   );
 }

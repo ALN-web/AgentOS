@@ -5,13 +5,13 @@ import { useMissions } from '../store/MissionStore';
 import { DEMO_GOAL } from '../data/templates';
 
 export default function FinalCta() {
-  const { launch } = useMissions();
+  const { launch, startDemo } = useMissions();
   const navigate = useNavigate();
   const [goal, setGoal] = useState('');
 
   const submit = (e) => {
     e.preventDefault();
-    navigate(`/app/missions/${launch(goal.trim() || DEMO_GOAL)}`);
+    navigate(`/app/missions/${goal.trim() ? launch(goal) : startDemo()}`);
   };
 
   return (

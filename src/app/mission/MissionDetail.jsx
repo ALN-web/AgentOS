@@ -39,7 +39,7 @@ function Panel({ icon: Icon, title, right, children, className = '' }) {
 export default function MissionDetail() {
   const { id } = useParams();
   const m = useMission(id);
-  const { setSpeed, togglePause, launch } = useMissions();
+  const { setSpeed, togglePause, restart, startDemo } = useMissions();
   const navigate = useNavigate();
   const [selected, setSelected] = useState(null); // { kind: 'event' | 'task', id }
 
@@ -80,14 +80,27 @@ export default function MissionDetail() {
     return (
       <EmptyState icon={GitBranch} title="Mission not found" className="py-24">
         Missions live in memory in this demo and reset when the page reloads.
-        <span className="block mt-5">
-          <Link to="/app/missions" className="btn-orange inline-block px-5 py-2.5 rounded-xl text-sm font-semibold">
+        <span className="flex flex-wrap justify-center gap-2 mt-5">
+          <button
+            onClick={() => navigate(`/app/missions/${startDemo()}`)}
+            className="btn-orange px-5 py-2.5 rounded-xl text-sm font-semibold"
+          >
+            Try Demo Mission
+          </button>
+          <Link to="/app/missions" className="btn-dark px-5 py-2.5 rounded-xl text-sm font-semibold">
             Back to missions
           </Link>
         </span>
       </EmptyState>
     );
   }
+
+  const restartRun = () => {
+    setSelected(null);
+    setReplay(null);
+    restart(m.id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const view = replayView || m;
   const replaying = !!replay;
@@ -154,12 +167,9 @@ export default function MissionDetail() {
                 <Clapperboard className="w-3.5 h-3.5" />
                 Replay
               </button>
-              <button
-                onClick={() => navigate(`/app/missions/${launch(m.goal)}`)}
-                className="btn-dark px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5"
-              >
+              <button onClick={restartRun} className="btn-dark px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
                 <RotateCcw className="w-3.5 h-3.5" />
-                Run again
+                Restart
               </button>
             </>
           ) : (
@@ -184,6 +194,14 @@ export default function MissionDetail() {
                 className="btn-dark w-9 h-9 rounded-xl flex items-center justify-center"
               >
                 {m.paused ? <Play className="w-3.5 h-3.5 fill-current" /> : <Pause className="w-3.5 h-3.5" />}
+              </button>
+              <button
+                onClick={restartRun}
+                aria-label="Restart mission"
+                title="Restart from the beginning"
+                className="btn-dark w-9 h-9 rounded-xl flex items-center justify-center"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
               </button>
             </>
           )

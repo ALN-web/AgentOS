@@ -64,6 +64,12 @@ export default function MissionControl({ m, controls }) {
             <h1 className="text-lg sm:text-2xl font-extrabold text-white tracking-tight">{m.goal}</h1>
             <div className="flex flex-wrap items-center gap-2 mt-2.5">
               <StatusPill status={m.status} paused={m.paused} />
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded-full border border-white/10 bg-white/[0.04] text-[10px] font-semibold uppercase tracking-wider text-gray-400"
+                title="This mission is a scripted simulation. No real emails, forms or posts are created."
+              >
+                Simulated
+              </span>
               <span className="text-[11px] text-gray-500">{m.metric.label}</span>
             </div>
           </div>

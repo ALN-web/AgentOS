@@ -10,7 +10,7 @@ export default function ReplayBar({ replay, total, onChange, onExit }) {
   const toggle = () => (ended ? onChange({ t: 0, playing: true }) : onChange({ playing: !playing }));
 
   return (
-    <div className="sticky top-[104px] lg:top-4 z-30 mb-4 rounded-2xl border border-[#eb6920]/40 bg-[#120d0a]/95 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.6)] px-4 py-3">
+    <div className="sticky top-[128px] lg:top-4 z-30 mb-4 rounded-2xl border border-[#eb6920]/40 bg-[#120d0a]/95 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.6)] px-4 py-3">
       <div className="flex flex-wrap items-center gap-3">
         <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#eb6920]">
           <Clapperboard className="w-3.5 h-3.5" />
