@@ -3,13 +3,13 @@ import { Link } from 'react-router-dom';
 import { Bot } from 'lucide-react';
 import { AGENT_BY_ID } from '../data/agents';
 
+// The one status vocabulary used across the product.
 export const STATUS_META = {
   planning: { label: 'Planning', dot: 'bg-violet-400', text: 'text-violet-300', ring: 'border-violet-400/30 bg-violet-400/10', pulse: true },
   running: { label: 'Running', dot: 'bg-[#eb6920]', text: 'text-[#ff9a5c]', ring: 'border-[#eb6920]/30 bg-[#eb6920]/10', pulse: true },
-  awaiting_approval: { label: 'Needs approval', dot: 'bg-amber-400', text: 'text-amber-300', ring: 'border-amber-400/30 bg-amber-400/10', pulse: true },
+  awaiting_approval: { label: 'Awaiting Approval', dot: 'bg-amber-400', text: 'text-amber-300', ring: 'border-amber-400/30 bg-amber-400/10', pulse: true },
   recovering: { label: 'Recovering', dot: 'bg-red-400', text: 'text-red-300', ring: 'border-red-400/30 bg-red-400/10', pulse: true },
   completed: { label: 'Completed', dot: 'bg-emerald-400', text: 'text-emerald-300', ring: 'border-emerald-400/30 bg-emerald-400/10' },
-  failed: { label: 'Failed', dot: 'bg-red-500', text: 'text-red-300', ring: 'border-red-500/30 bg-red-500/10' },
 };
 
 export function StatusPill({ status, paused }) {
@@ -98,6 +98,33 @@ export function SectionLabel({ icon: Icon, children }) {
       <span>{children}</span>
     </div>
   );
+}
+
+export function EmptyState({ icon: Icon, title, children, action, className = '' }) {
+  return (
+    <div className={`flex flex-col items-center justify-center text-center px-6 py-10 ${className}`}>
+      {Icon && (
+        <span className="w-10 h-10 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-gray-500 mb-3">
+          <Icon className="w-5 h-5" />
+        </span>
+      )}
+      <div className="text-sm font-semibold text-white">{title}</div>
+      {children && <p className="text-xs text-gray-500 mt-1 max-w-xs leading-relaxed">{children}</p>}
+      {action && <div className="mt-4">{action}</div>}
+    </div>
+  );
+}
+
+export function formatTime(ts) {
+  if (!ts) return '--:--:--';
+  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+}
+
+export function formatDuration(ms) {
+  if (ms == null) return null;
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s}s`;
+  return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
 }
 
 export function formatClock(ms) {

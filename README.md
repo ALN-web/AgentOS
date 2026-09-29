@@ -6,24 +6,19 @@ Turn goals into completed outcomes through planning, execution, verification, re
 
 ---
 
-## 🌟 Key Features
+## 🌟 What's in the demo
 
-- **Autonomous Multi-Agent Pipeline**: Goal → Planner → Research → Execution → Verification → Recovery → Approval → Mission Complete.
-- **8 Specialized Feature Agents**:
-  - **Planner Agent**: Macro orchestration, DAG decomposition, dependency graph resolution.
-  - **Research Agent**: Deep web crawling, API schema parsing, ground-truth context synthesis.
-  - **Execution Agent**: Sandboxed ephemeral runtimes, deterministic tool execution.
-  - **Browser Agent**: Vision-guided web navigation, DOM element manipulation, session sync.
-  - **Verification Agent**: Cryptographic outcome state assertions, automated test generation.
-  - **Critic Agent**: Adversarial fuzz testing, edge case simulations, logic verification.
-  - **Recovery Agent**: Automated exception diagnostics, root-cause analysis, surgical state rollbacks.
-  - **Approval Agent**: Human-in-the-loop governance checkpoints for critical transactions.
-- **Pre-Configured Mission Templates**:
-  - `DeadlineOS`, `RecoveryOS`, `EventRescue`, `RefundPilot`, `WarrantyOS`, `FreelanceFlow`, `ProcureOS`, `TeamOS`, `CampusOS`, `LaunchOS`.
-- **High-Fidelity Dashboard & Bento UI**:
-  - Live metric sparklines (`72,350` active agents, `28.4%` consensus, `38.8%` recovery, `56.8%` throughput).
-  - Glowing spotlight orange funnel core emblem.
-  - Interactive task checklist tree and live mission dispatch simulator.
+AgentOS is a frontend demo. The agents follow a deterministic, scripted mission engine (`src/engine/`) — there is no backend and no live LLM call. Everything on screen is derived from that engine's state.
+
+- **Mission Control** (`/app/missions/:id`): goal, status, current objective, active agents, tasks, elapsed time, recoveries and approval state.
+- **Mission plan**: a live task graph with owners, durations, dependencies and approval gates.
+- **Agent activity timeline**: every agent action, timestamped. Click any event or task for **"Why did the agent do this?"**.
+- **Failure → Recovery**: the hero mission always hits a real-looking failure (Discord blocks links); the Recovery agent diagnoses it, the Planner re-plans, Execution resumes.
+- **Human approval**: risky actions pause for approve / edit / reject. Edits change what actually happens next (e.g. 480 → 320 recipients).
+- **Outcome report** and **Mission replay** (1×/2×/4×, scrubbable) for finished missions.
+- **Workforce graph** (`/app/workforce`), **Approvals** (`/app/approvals`), **Features hub** (`/app/features`), **Templates**.
+
+Hero demo goal: **"Get 100 registrations for our hackathon"**.
 
 ---
 

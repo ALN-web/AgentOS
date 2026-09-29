@@ -1,12 +1,14 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { Inbox, LayoutDashboard, LayoutTemplate, Network, Plus } from 'lucide-react';
+import { Inbox, LayoutDashboard, LayoutTemplate, ListChecks, Network, Plus, Sparkles } from 'lucide-react';
 import { Logo } from '../components/ui';
 import { useMissions, usePendingApprovals } from '../store/MissionStore';
 
 const NAV = [
-  { to: '/app', label: 'Missions', icon: LayoutDashboard, end: true },
+  { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/app/missions', label: 'Missions', icon: ListChecks },
   { to: '/app/workforce', label: 'Workforce', icon: Network },
+  { to: '/app/features', label: 'Features', icon: Sparkles },
   { to: '/app/approvals', label: 'Approvals', icon: Inbox, badge: true },
   { to: '/app/templates', label: 'Templates', icon: LayoutTemplate },
 ];
@@ -27,6 +29,7 @@ function NavItems({ pending, compact }) {
       {label}
       {badge && pending > 0 && (
         <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-amber-400 text-black text-[10px] font-bold flex items-center justify-center">
+          <span className="sr-only"> waiting</span>
           {pending}
         </span>
       )}
@@ -49,7 +52,7 @@ export default function AppLayout() {
           <Plus className="w-4 h-4" />
           New mission
         </button>
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-col gap-1" aria-label="Console">
           <NavItems pending={pending} />
         </nav>
         <div className="mt-auto px-3 text-[11px] text-gray-600 leading-relaxed">Don’t tell AI what to do. Tell it what you want done.</div>
@@ -64,7 +67,7 @@ export default function AppLayout() {
             New
           </button>
         </div>
-        <nav className="px-3 pb-2 flex gap-1 overflow-x-auto no-scrollbar">
+        <nav className="px-3 pb-2 flex gap-1 overflow-x-auto no-scrollbar" aria-label="Console">
           <NavItems pending={pending} compact />
         </nav>
       </header>
