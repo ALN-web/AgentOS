@@ -14,7 +14,8 @@ const COLUMNS = [
   {
     title: 'Console',
     links: [
-      { name: 'Missions', to: '/app' },
+      { name: 'Dashboard', to: '/app' },
+      { name: 'Missions', to: '/app/missions' },
       { name: 'Workforce', to: '/app/workforce' },
       { name: 'Approvals', to: '/app/approvals' },
     ],
