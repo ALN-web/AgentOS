@@ -146,3 +146,40 @@ export function runInstantly(goal, { createdAt, stopAtApproval = false, decision
   return { ...m, updatedAt: end, completedAt: end };
 }
 
+
+// ---------------------------------------------------------------------------
+// Replay. Rebuilds a mission's state at mission-time `until` by running the
+// same script again and applying the decisions the human actually made. There
+// is no separate replay engine: it is the same applyStep/resolveApproval path.
+
+const REPLAY_APPROVAL_HOLD = 2500; // how long a replay lingers on each approval
+
+const DECISION = { approved: 'approve', edited: 'edit', rejected: 'reject' };
+
+export function replayTo(m, until) {
+  let r = { ...createMission(m.goal, { templateId: m.templateId, createdAt: m.createdAt }), id: m.id };
+  while (r.cursor < r.script.length) {
+    const step = r.script[r.cursor];
+    if (step.approval) {
+      r = applyStep(r, m.createdAt + r.clock);
+      const asked = r.approvals[r.approvals.length - 1];
+      const decided = m.approvals.find((a) => a.id === asked.id);
+      if (!decided || decided.status === 'pending' || r.clock + REPLAY_APPROVAL_HOLD > until) break;
+      const decision = DECISION[decided.status];
+      r = { ...r, clock: r.clock + REPLAY_APPROVAL_HOLD };
+      r = resolveApproval(r, asked.id, decision, decision === 'edit' ? decided.payload : null, decided.resolvedAt);
+      continue;
+    }
+    if (r.clock + step.delay > until) break;
+    r = applyStep(r, m.createdAt + r.clock + step.delay);
+  }
+  // Show the wall-clock times from the live run where they exist.
+  const liveAt = Object.fromEntries(m.events.map((e) => [e.id, e.at]));
+  const events = r.events.map((e) => (liveAt[e.id] ? { ...e, at: liveAt[e.id] } : e));
+  const finished = r.cursor >= r.script.length;
+  return { ...r, events, clock: finished ? r.clock : Math.max(r.clock, until) };
+}
+
+export function replayLength(m) {
+  return replayTo(m, Infinity).clock;
+}

@@ -152,3 +152,43 @@ export function explainTask(m, task) {
     t: task.startedAt,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Outcome report for a finished mission.
+
+export function missionSummary(m) {
+  const counts = taskCounts(m);
+  const decided = m.approvals.filter((a) => a.status !== 'pending');
+  const verifiers = m.tasks.filter((t) => t.agent === 'verification');
+  const verified = verifiers.length > 0 && verifiers.every((t) => t.status === 'done') && m.events.some((e) => e.type === 'verified');
+  const gated = m.tasks.find((t) => t.gated);
+
+  const items = [
+    ...m.tasks
+      .filter((t) => t.status === 'done')
+      .map((t) => ({ t: t.finishedAt ?? 0, kind: 'task', agent: t.agent, text: t.title })),
+    ...m.recoveries
+      .filter((r) => r.status === 'resolved')
+      .map((r) => ({ t: (r.resolvedAt ?? r.startedAt) - 0.5, kind: 'recovery', agent: 'recovery', text: `Recovered from a failure: ${r.error}` })),
+    ...decided.map((a) => ({
+      t: (gated?.startedAt ?? gated?.finishedAt ?? 0) - 1,
+      kind: 'approval',
+      agent: 'approval',
+      text:
+        a.status === 'rejected'
+          ? `Respected your rejection: ${a.title}`
+          : a.status === 'edited'
+          ? `Obtained your approval, with your edits: ${a.title}`
+          : `Obtained your approval: ${a.title}`,
+    })),
+  ].sort((a, b) => a.t - b.t);
+
+  return {
+    counts,
+    agents: involvedAgents(m),
+    recoveries: m.recoveries.length,
+    approvals: decided.length,
+    verified,
+    items,
+  };
+}

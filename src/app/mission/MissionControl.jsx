@@ -79,19 +79,16 @@ export default function MissionControl({ m, controls }) {
           </span>
           <div className="min-w-0">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">{done ? 'Result' : 'Current objective'}</div>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentObjective(m)}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.2 }}
-                className="text-sm font-semibold text-white"
-                aria-live="polite"
-              >
-                {currentObjective(m)}
-              </motion.div>
-            </AnimatePresence>
+            <motion.div
+              key={currentObjective(m)}
+              initial={{ opacity: 0.4, y: 3 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="text-sm font-semibold text-white"
+              aria-live="polite"
+            >
+              {currentObjective(m)}
+            </motion.div>
           </div>
         </div>
         <div className="flex items-center gap-2 lg:justify-end min-w-0">

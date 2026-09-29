@@ -1,7 +1,7 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, GitBranch, MessagesSquare, Pause, Play, RotateCcw, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Clapperboard, GitBranch, MessagesSquare, Pause, Play, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useMission, useMissions } from '../../store/MissionStore';
 import { EmptyState } from '../../components/ui';
 import ApprovalCard from '../../components/ApprovalCard';
@@ -13,6 +13,11 @@ import BrowserPanel from './BrowserPanel';
 import RecoveryCard from './RecoveryCard';
 import VerificationCard from './VerificationCard';
 import ExplainDrawer from './ExplainDrawer';
+import MissionOutcome from './MissionOutcome';
+import ReplayBar from './ReplayBar';
+import { replayLength, replayTo } from '../../engine/engine';
+
+const REPLAY_TICK = 100;
 
 const SPEEDS = [1, 2, 4];
 
@@ -42,6 +47,35 @@ export default function MissionDetail() {
   const selectTask = useCallback((t) => setSelected({ kind: 'task', id: t.id }), []);
   const closeExplain = useCallback(() => setSelected(null), []);
 
+  // Replay is a playhead over mission time. The state shown at each position
+  // comes from the engine (replayTo), never from a copy kept here.
+  const [replay, setReplay] = useState(null); // { t, playing, speed }
+  const completed = m?.status === 'completed';
+  const total = useMemo(() => (m && completed ? replayLength(m) : 0), [m, completed]);
+  const replayView = useMemo(() => (m && replay ? replayTo(m, replay.t) : null), [m, replay?.t]);
+  const updateReplay = useCallback((patch) => setReplay((r) => (r ? { ...r, ...patch } : r)), []);
+  const startReplay = useCallback(() => {
+    setSelected(null);
+    setReplay((r) => ({ t: 0, playing: true, speed: r?.speed || 1 }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const playing = !!replay?.playing;
+  useEffect(() => {
+    if (!playing) return;
+    const id = setInterval(() => {
+      setReplay((r) => {
+        if (!r) return r;
+        const t = Math.min(total, r.t + REPLAY_TICK * r.speed);
+        return { ...r, t, playing: t < total };
+      });
+    }, REPLAY_TICK);
+    return () => clearInterval(id);
+  }, [playing, total]);
+
+  // Leaving the page or switching missions ends the replay.
+  useEffect(() => setReplay(null), [id]);
+
   if (!m) {
     return (
       <EmptyState icon={GitBranch} title="Mission not found" className="py-24">
@@ -55,7 +89,8 @@ export default function MissionDetail() {
     );
   }
 
-  const view = m;
+  const view = replayView || m;
+  const replaying = !!replay;
   const done = view.status === 'completed';
   const pending = view.approvals.filter((a) => a.status === 'pending');
   const decided = view.approvals.filter((a) => a.status !== 'pending');
@@ -79,7 +114,7 @@ export default function MissionDetail() {
       <AnimatePresence>
         {pending.map((a) => (
           <motion.div key={a.id} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }}>
-            <ApprovalCard approval={a} />
+            <ApprovalCard approval={a} readOnly={replaying} />
           </motion.div>
         ))}
       </AnimatePresence>
@@ -88,7 +123,7 @@ export default function MissionDetail() {
       ))}
       {decided.map((a) => (
         <motion.div key={a.id} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-          <ApprovalCard approval={a} compact />
+          <ApprovalCard approval={a} compact readOnly={replaying} />
         </motion.div>
       ))}
     </>
@@ -101,17 +136,32 @@ export default function MissionDetail() {
         All missions
       </Link>
 
+      {replaying && (
+        <ReplayBar
+          replay={replay}
+          total={total}
+          onChange={updateReplay}
+          onExit={() => setReplay(null)}
+        />
+      )}
+
       <MissionControl
         m={view}
         controls={
-          done ? (
-            <button
-              onClick={() => navigate(`/app/missions/${launch(m.goal)}`)}
-              className="btn-dark px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Run again
-            </button>
+          replaying ? null : done ? (
+            <>
+              <button onClick={startReplay} className="btn-dark px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                <Clapperboard className="w-3.5 h-3.5" />
+                Replay
+              </button>
+              <button
+                onClick={() => navigate(`/app/missions/${launch(m.goal)}`)}
+                className="btn-dark px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Run again
+              </button>
+            </>
           ) : (
             <>
               <div className="flex rounded-xl border border-white/10 overflow-hidden" role="group" aria-label="Mission speed">
@@ -139,6 +189,8 @@ export default function MissionDetail() {
           )
         }
       />
+
+      {done && <MissionOutcome m={view} onReplay={completed ? startReplay : null} replaying={replaying} />}
 
       {(pending.length > 0 || recoveries.length > 0 || decided.length > 0) && (
         <div className="xl:hidden flex flex-col gap-4 mb-4">{attention}</div>
