@@ -5,9 +5,9 @@ import { AgentIcon, ProgressRing, StatusPill, formatClock } from '../../componen
 import { AGENT_BY_ID } from '../../data/agents';
 import { activeAgents, activeRecovery, approvalState, currentObjective, taskCounts } from '../../engine/selectors';
 
-function Tile({ icon: Icon, label, value, tone = 'text-white' }) {
+function Tile({ icon: Icon, label, value, tone = 'text-white', className = '' }) {
   return (
-    <div className="rounded-xl bg-black/40 border border-white/5 px-3.5 py-3 min-w-0">
+    <div className={`rounded-xl bg-black/40 border border-white/5 px-3.5 py-3 min-w-0 ${className}`}>
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
         <Icon className="w-3 h-3 shrink-0" />
         <span className="truncate">{label}</span>
@@ -50,20 +50,22 @@ export default function MissionControl({ m, controls }) {
       </AnimatePresence>
 
       <div className="p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-5 md:gap-6">
-        <ProgressRing value={m.metric.current} target={m.metric.target} size={112}>
-          <span className="text-2xl font-extrabold text-white tabular-nums leading-none">{m.metric.current}</span>
-          <span className="text-[10px] text-gray-500 mt-1">of {m.metric.target}</span>
-        </ProgressRing>
+        <div className="flex items-center gap-4 sm:gap-6 flex-1 min-w-0">
+          <ProgressRing value={m.metric.current} target={m.metric.target} size={96}>
+            <span className="text-2xl font-extrabold text-white tabular-nums leading-none">{m.metric.current}</span>
+            <span className="text-[10px] text-gray-500 mt-1">of {m.metric.target}</span>
+          </ProgressRing>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#eb6920] mb-1.5">
-            <Target className="w-3 h-3" />
-            Mission goal
-          </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">{m.goal}</h1>
-          <div className="flex flex-wrap items-center gap-2 mt-2.5">
-            <StatusPill status={m.status} paused={m.paused} />
-            <span className="text-[11px] text-gray-500">{m.metric.label}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#eb6920] mb-1.5">
+              <Target className="w-3 h-3" />
+              Mission goal
+            </div>
+            <h1 className="text-lg sm:text-2xl font-extrabold text-white tracking-tight">{m.goal}</h1>
+            <div className="flex flex-wrap items-center gap-2 mt-2.5">
+              <StatusPill status={m.status} paused={m.paused} />
+              <span className="text-[11px] text-gray-500">{m.metric.label}</span>
+            </div>
           </div>
         </div>
 
@@ -113,16 +115,16 @@ export default function MissionControl({ m, controls }) {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 px-5 sm:px-6 pb-5 sm:pb-6">
-        <Tile icon={CheckCircle2} label="Tasks completed" value={`${counts.done} / ${counts.total}`} tone="text-emerald-300" />
-        <Tile icon={ListTodo} label="Tasks remaining" value={counts.remaining} />
-        <Tile icon={Timer} label="Time elapsed" value={formatClock(m.clock)} />
+        <Tile icon={CheckCircle2} label="Tasks done" value={`${counts.done} / ${counts.total}`} tone="text-emerald-300" />
+        <Tile icon={ListTodo} label="Remaining" value={counts.remaining} />
+        <Tile icon={Timer} label="Elapsed" value={formatClock(m.clock)} />
         <Tile
           icon={RotateCcw}
-          label="Recovery attempts"
+          label="Recoveries"
           value={m.recoveries.length}
           tone={recovery ? 'text-red-300' : m.recoveries.length ? 'text-[#ff9a5c]' : 'text-white'}
         />
-        <Tile icon={ShieldCheck} label="Approval" value={approval.label} tone={approval.tone} />
+        <Tile icon={ShieldCheck} label="Approval" value={approval.label} tone={approval.tone} className="col-span-2 sm:col-span-1" />
       </div>
     </div>
   );

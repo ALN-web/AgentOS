@@ -74,14 +74,14 @@ export default function MissionOutcome({ m, onReplay, replaying }) {
 
         <div className="mt-6 pt-5 border-t border-white/5">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-3">What AgentOS accomplished</div>
-          <ol className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+          <ol className="md:columns-2 gap-x-6">
             {s.items.map((item, i) => (
               <motion.li
                 key={i}
                 initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.15 + i * 0.05 }}
-                className="flex items-start gap-2.5 text-sm text-gray-200"
+                className="flex items-start gap-2.5 text-sm text-gray-200 mb-2 break-inside-avoid"
               >
                 <CheckCircle2 className={`w-4 h-4 mt-0.5 shrink-0 ${KIND_TONE[item.kind]}`} />
                 <span>{item.text}</span>

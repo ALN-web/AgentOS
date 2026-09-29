@@ -11,7 +11,7 @@ const CAPABILITIES = [
   {
     icon: MousePointerClick,
     title: 'Acts',
-    text: 'Uses real tools: APIs, email, and a Playwright browser that clicks, types and publishes like a person.',
+    text: 'Works through tools: email, forms and a browser agent that clicks, types and publishes. The live demo runs a scripted simulation.',
   },
   {
     icon: ShieldCheck,

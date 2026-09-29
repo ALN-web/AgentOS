@@ -81,7 +81,7 @@ export default function MissionDetail() {
       <EmptyState icon={GitBranch} title="Mission not found" className="py-24">
         Missions live in memory in this demo and reset when the page reloads.
         <span className="block mt-5">
-          <Link to="/app" className="btn-orange inline-block px-5 py-2.5 rounded-xl text-sm font-semibold">
+          <Link to="/app/missions" className="btn-orange inline-block px-5 py-2.5 rounded-xl text-sm font-semibold">
             Back to missions
           </Link>
         </span>
@@ -131,7 +131,7 @@ export default function MissionDetail() {
 
   return (
     <div>
-      <Link to="/app" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-white mb-5">
+      <Link to="/app/missions" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-white mb-5">
         <ArrowLeft className="w-3.5 h-3.5" />
         All missions
       </Link>
@@ -228,7 +228,7 @@ export default function MissionDetail() {
               </EmptyState>
             </div>
           )}
-          <BrowserPanel browser={view.browser} active={!!browserTask && !view.paused} />
+          <BrowserPanel browser={view.browser} task={browserTask} paused={view.paused} recovering={view.status === 'recovering'} />
           <VerificationCard checks={view.checks} />
         </div>
       </div>

@@ -18,11 +18,12 @@ export function isLive(m) {
 export function activeAgents(m) {
   const working = new Set();
   if (!m || !ACTIVE_STATUSES.includes(m.status)) return working;
+  // While the mission waits on a human, only the Approval agent is doing anything.
+  if (m.status === 'awaiting_approval') return new Set(['approval']);
   m.events.slice(-3).forEach((e) => e.agent !== 'system' && working.add(e.agent));
   m.tasks.filter((t) => t.status === 'running').forEach((t) => working.add(t.agent));
   if (m.status === 'planning') working.add('planner');
   if (m.status === 'recovering') working.add('recovery');
-  if (m.status === 'awaiting_approval') working.add('approval');
   return working;
 }
 

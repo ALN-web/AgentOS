@@ -6,7 +6,7 @@ const STAGES = [
   { icon: Target, title: 'Goal', text: 'You describe the outcome in one sentence.', example: '“Get 100 registrations for our hackathon.”' },
   { icon: Cpu, title: 'Plan', text: 'The Planner builds a task graph and assigns each task to an agent.', example: '7 tasks. The form and the invite email run in parallel.' },
   { icon: Globe, title: 'Research', text: 'The Research agent gathers the facts the plan depends on.', example: 'Finds 480 past attendees and 3 active student clubs.' },
-  { icon: Terminal, title: 'Execute', text: 'Execution and Browser agents do the work with real tools.', example: 'Publishes a Google Form and drafts the invite.' },
+  { icon: Terminal, title: 'Execute', text: 'Execution and Browser agents do the work: forms, emails and posts.', example: 'Publishes a Google Form and drafts the invite.' },
   { icon: UserCheck, title: 'Approve', text: 'Anything risky pauses until you approve, reject or edit it.', example: '“Email 480 people from events@?” You approve.' },
   { icon: RotateCcw, title: 'Recover', text: 'Failures are diagnosed and worked around automatically.', example: 'Discord blocks links, so it posts a QR-code image instead.' },
   { icon: CheckCircle2, title: 'Verify', text: 'The Verification agent checks the result against the goal.', example: 'Removes 8 duplicates and bad emails, then sends a reminder.' },
