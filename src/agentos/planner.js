@@ -30,6 +30,8 @@ function seed(text) {
   return h >>> 0;
 }
 
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
 const CATEGORY = {
   communication: 'External communication',
   submission: 'Submits in your name',
@@ -51,12 +53,25 @@ function withRiskSteps(steps, intent) {
     if (covered.has(capId)) continue;
     covered.add(capId);
     const booking = risk.id === 'purchase' && /\b(book|reserve)\b/i.test(intent.goal);
+    const addressed = risk.id === 'communication' && intent.recipient;
+    const thing = intent.deliverable ? `the ${intent.deliverable.object}` : 'it';
     extra.push({
       ...tpl,
       ...(booking ? { title: 'Make the booking', payload: { ...tpl.payload, subject: 'Booking request' } } : {}),
+      ...(addressed
+        ? {
+            title: `Send ${thing} to ${intent.recipient}`,
+            payload: {
+              ...tpl.payload,
+              to: cap(intent.recipient),
+              subject: intent.deliverable ? cap(intent.deliverable.object) : 'Update',
+              body: `Hi,\n\nPlease find ${thing} attached.\n\nThanks`,
+            },
+          }
+        : {}),
       key: `risk_${risk.id}`,
       why: { objective: `${risk.label}, as the goal asks.`, reason: 'This has consequences outside AgentOS, so it waits for your approval.' },
-      criterion: `${booking ? 'Make the booking' : tpl.title} (with approval)`,
+      criterion: `${booking ? 'Make the booking' : addressed ? `Send ${thing} to ${intent.recipient}` : tpl.title} (with approval)`,
     });
   }
   if (!extra.length) return steps;

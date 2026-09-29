@@ -13,6 +13,7 @@ import BrowserPanel from './BrowserPanel';
 import RecoveryCard from './RecoveryCard';
 import VerificationCard from './VerificationCard';
 import ExplainDrawer from './ExplainDrawer';
+import MissionBrief from './MissionBrief';
 import MissionOutcome from './MissionOutcome';
 import ReplayBar from './ReplayBar';
 import { replayLength, replayTo } from '../../engine/engine';
@@ -239,6 +240,7 @@ export default function MissionDetail() {
 
         <div className="xl:col-span-4 flex flex-col gap-4">
           <div className="hidden xl:flex flex-col gap-4">{attention}</div>
+          <MissionBrief plan={m.plan} />
           {recoveries.length === 0 && (
             <div className="glass-card rounded-2xl">
               <EmptyState icon={ShieldCheck} title="No recovery events" className="!py-6">
@@ -247,7 +249,7 @@ export default function MissionDetail() {
             </div>
           )}
           <BrowserPanel browser={view.browser} task={browserTask} paused={view.paused} recovering={view.status === 'recovering'} />
-          <VerificationCard checks={view.checks} />
+          <VerificationCard checks={view.checks} criteria={m.plan?.criteria} />
         </div>
       </div>
 

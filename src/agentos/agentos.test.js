@@ -104,6 +104,14 @@ describe('dynamic planning', () => {
     expect(p.tasks.some((t) => t.gated && t.capability === 'communication')).toBe(true);
   });
 
+  it('names what an unfamiliar goal asks for, and who it goes to', () => {
+    const p = planMission('Write a newsletter about our new cafeteria menu and email it to all staff');
+    const titles = p.tasks.map((t) => t.title);
+    expect(titles).toContain('Write the newsletter');
+    expect(titles).toContain('Send the newsletter to all staff');
+    expect(p.tasks.find((t) => t.title === 'Send the newsletter to all staff').gated).toBe(true);
+  });
+
   it('names booking actions as bookings', () => {
     expect(planMission('Learn Spanish basics and book a tutor').tasks.map((t) => t.title)).toContain('Make the booking');
     expect(planMission('Summarise the report and order lunch').tasks.map((t) => t.title)).toContain('Place the order');

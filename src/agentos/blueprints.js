@@ -420,7 +420,8 @@ function operations(ctx) {
   ];
 }
 
-function general() {
+function general(ctx) {
+  const d = ctx.deliverable;
   return [
     {
       key: 'understand', type: 'analyze', title: 'Understand the goal and define success', deps: [],
@@ -445,12 +446,13 @@ function general() {
       out: 'Resources gathered (simulated).', fail: true,
     },
     {
-      key: 'deliver', type: 'create', title: 'Produce the deliverables', deps: ['gather'],
+      key: 'deliver', type: 'create', title: d ? `${d.verb} the ${d.object}` : 'Produce the deliverables', deps: ['gather'],
       why: { objective: 'Create what the goal asks for.', reason: 'This is the output everything else supports.' },
-      out: 'Produced the deliverables described in the plan.', criterion: 'Deliverables produced',
+      out: d ? `${d.verb === 'Write' ? 'Wrote' : 'Prepared'} the ${d.object} (simulated draft).` : 'Produced the deliverables described in the plan.',
+      criterion: d ? `${cap(d.object)} ready` : 'Deliverables produced',
     },
     {
-      key: 'review', type: 'compare', title: 'Review the result', deps: ['deliver'],
+      key: 'review', type: 'compare', title: d ? `Review the ${d.object}` : 'Review the result', deps: ['deliver'],
       why: { objective: 'Check quality before calling it done.', reason: 'A second look catches what the first missed.' },
       out: 'Reviewed the deliverables; tightened two weak sections.', criterion: 'Result reviewed',
     },

@@ -135,6 +135,23 @@ function extractConstraints(goal) {
   return out;
 }
 
+// "Write a newsletter about ..." -> { verb: 'Write', object: 'newsletter' }
+const MAKE = /\b(write|create|draft|design|make|build|prepare|produce|compile|plan)\s+(?:a|an|the|our|my|some)?\s*([a-z][a-z-]*(?:\s+[a-z][a-z-]*)?)/i;
+const OBJECT_STOP = /\s+(about|for|on|to|with|that|and|of|in|by)\b.*$/i;
+function extractDeliverable(goal) {
+  const m = goal.match(MAKE);
+  if (!m) return null;
+  const object = m[2].replace(OBJECT_STOP, '').trim().toLowerCase();
+  if (!object || STOP.has(object.split(' ')[0])) return null;
+  return { verb: m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase(), object };
+}
+
+// "... and email it to all staff" -> 'all staff'
+function extractRecipient(goal) {
+  const m = goal.match(/\b(?:email|e-mail|send|share|mail|message|forward|present)\b[^.]*?\bto\s+((?:all|the|our|my|every)\s+[a-z]+(?:\s[a-z]+)?|everyone|[a-z]+\s+team)\b/i);
+  return m ? m[1].toLowerCase() : null;
+}
+
 function eventNoun(goal) {
   const tokens = words(goal);
   return EVENT_WORDS.find((w) => tokens.includes(w)) || 'event';
@@ -293,6 +310,8 @@ export function analyzeGoal(goal, answers = {}) {
     date: ctx.date,
     format: ctx.format,
     eventNoun: ctx.eventNoun,
+    deliverable: extractDeliverable(text),
+    recipient: extractRecipient(text),
     constraints: ctx.constraints,
     entities,
     risks,
