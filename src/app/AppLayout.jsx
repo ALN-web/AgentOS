@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { FlaskConical, Inbox, LayoutDashboard, LayoutTemplate, ListChecks, Network, Play, Plus, Sparkles } from 'lucide-react';
 import { Logo } from '../components/ui';
 import ErrorBoundary from '../components/ErrorBoundary';
+import ResetDemoButton from '../components/ResetDemoButton';
 import { useMissions, usePendingApprovals } from '../store/MissionStore';
 
 const NAV = [
@@ -69,6 +70,7 @@ export default function AppLayout() {
             Demo environment
           </div>
           Agents run a scripted simulation in your browser. No emails are sent and no external sites are contacted.
+          <ResetDemoButton className="mt-2" />
         </div>
       </aside>
 

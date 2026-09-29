@@ -8,6 +8,7 @@ import { AGENTS } from '../data/agents';
 import { AgentIcon, EmptyState } from '../components/ui';
 import MissionRow, { MissionHeader } from '../components/MissionRow';
 import { DEMO_GOAL } from '../data/templates';
+import ResetDemoButton from '../components/ResetDemoButton';
 
 const RECENT = 5;
 
@@ -59,6 +60,10 @@ export default function Dashboard() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Dashboard</h1>
           <p className="text-sm text-gray-400 mt-1">Tell AgentOS what you want done. It handles the rest.</p>
+          <p className="text-[11px] text-gray-500 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>Missions are saved in this browser only.</span>
+            <ResetDemoButton />
+          </p>
         </div>
         <button
           type="button"

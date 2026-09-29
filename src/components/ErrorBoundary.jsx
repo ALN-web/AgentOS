@@ -1,4 +1,5 @@
 import React from 'react';
+import { clearMissions } from '../store/persistence';
 
 // Last line of defence: a render error shows a way back instead of a blank page.
 export default class ErrorBoundary extends React.Component {
@@ -26,7 +27,7 @@ export default class ErrorBoundary extends React.Component {
             </button>
             <button
               onClick={() => {
-                if (this.props.onReset) this.props.onReset();
+                clearMissions();
                 window.location.assign('/app');
               }}
               className="btn-dark px-5 py-2.5 rounded-xl text-sm font-semibold"

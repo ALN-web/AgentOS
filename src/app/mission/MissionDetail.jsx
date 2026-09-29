@@ -79,7 +79,7 @@ export default function MissionDetail() {
   if (!m) {
     return (
       <EmptyState icon={GitBranch} title="Mission not found" className="py-24">
-        Missions live in memory in this demo and reset when the page reloads.
+        This mission isn’t in this browser’s demo data. It may have been reset, or opened from another browser.
         <span className="flex flex-wrap justify-center gap-2 mt-5">
           <button
             onClick={() => navigate(`/app/missions/${startDemo()}`)}
