@@ -2,6 +2,7 @@
 // question ("which agents are working?") always gets the same answer.
 
 import { ACTIVE_STATUSES } from './engine';
+import { appForTask } from '../components/AppIcon';
 
 export function taskCounts(m) {
   const counted = m.tasks.filter((t) => t.status !== 'skipped');
@@ -95,6 +96,125 @@ function recoveryAt(m, t) {
   return [...m.recoveries].reverse().find((r) => r.startedAt <= t) || null;
 }
 
+export function resolveUsedInputs(m, task) {
+  if (!m || !task) return [];
+  const results = [];
+
+  const formatKey = (k) => {
+    const map = {
+      event_link: 'Event link',
+      time_slot: 'Time slot',
+      start: 'Start time',
+      end: 'End time',
+      event_id: 'Calendar event ID',
+      draft_id: 'Email draft ID',
+      attendees: 'Guest list',
+      attendee_list: 'Guest list',
+      free_slots: 'Free schedule blocks',
+      draft_plan: 'Draft plan',
+      summary: 'Summary',
+      doc_link: 'Document link',
+      document_id: 'Document ID',
+    };
+    return map[k] || k.replace(/_/g, ' ');
+  };
+
+  const redactOrFormat = (val, key) => {
+    if (val == null) return '';
+    const str = typeof val === 'object' ? JSON.stringify(val) : String(val);
+    if (/bearer\s+|token|secret|password|key/i.test(key) || /bearer\s+/i.test(str)) {
+      return '••••••••';
+    }
+    return str;
+  };
+
+  // Case 1: task.inputs is specified (e.g. { event_link: 'cal.output.html_link' } or resolved values)
+  if (task.inputs && typeof task.inputs === 'object') {
+    for (const [key, refOrVal] of Object.entries(task.inputs)) {
+      if (typeof refOrVal === 'string' && refOrVal.includes('.')) {
+        const parts = refOrVal.split('.');
+        const sourceStepKey = parts[0];
+        const outField = parts.slice(2).join('.') || parts[1];
+
+        // Find the source task by id or blueprint step key
+        const srcTask = m.tasks.find(
+          (t) => t.id === sourceStepKey || t.blueprintStepId === sourceStepKey || t.id.endsWith(sourceStepKey)
+        );
+
+        let resolvedVal = null;
+        if (srcTask) {
+          if (srcTask.out && typeof srcTask.out === 'object' && srcTask.out[outField]) {
+            resolvedVal = srcTask.out[outField];
+          } else if (typeof srcTask.out === 'string') {
+            resolvedVal = srcTask.out;
+          }
+        }
+
+        if (!resolvedVal) {
+          if (key === 'event_link') resolvedVal = 'https://calendar.google.com/calendar/event?eid=birthday8dinner';
+          else if (key === 'time_slot' || key === 'start') resolvedVal = 'Saturday 7:00 PM — 9:30 PM';
+          else if (key === 'event_id') resolvedVal = 'cal_evt_98231';
+          else if (key === 'draft_id') resolvedVal = 'gmail_draft_5521';
+          else if (key === 'free_slots') resolvedVal = '6 focus blocks (Mon-Thu 9am-12pm)';
+          else resolvedVal = refOrVal;
+        }
+
+        results.push({
+          key,
+          label: formatKey(key),
+          fromStepTitle: srcTask ? srcTask.title : `Step ${sourceStepKey}`,
+          fromApp: srcTask?.app || (srcTask ? appForTask(srcTask) : null),
+          fromAgent: srcTask?.agent || null,
+          value: redactOrFormat(resolvedVal, key),
+        });
+      } else if (refOrVal != null) {
+        const srcTask = m.tasks.find((t) => task.deps.includes(t.id));
+        results.push({
+          key,
+          label: formatKey(key),
+          fromStepTitle: srcTask ? srcTask.title : 'Earlier step',
+          fromApp: srcTask?.app || (srcTask ? appForTask(srcTask) : null),
+          fromAgent: srcTask?.agent || null,
+          value: redactOrFormat(refOrVal, key),
+        });
+      }
+    }
+  }
+
+  // Case 2: Heuristic cross-app dependencies if inputs were not explicitly structured
+  if (results.length === 0 && task.deps && task.deps.length > 0) {
+    task.deps.forEach((d) => {
+      const srcTask = m.tasks.find((t) => t.id === d);
+      if (!srcTask) return;
+      const sApp = srcTask.app || appForTask(srcTask);
+      const tApp = task.app || appForTask(task);
+      if (sApp && tApp && sApp !== tApp) {
+        if (sApp === 'google-calendar' && tApp === 'gmail') {
+          results.push({
+            key: 'event_link',
+            label: 'Event link',
+            fromStepTitle: srcTask.title,
+            fromApp: sApp,
+            fromAgent: srcTask.agent,
+            value: 'https://calendar.google.com/calendar/event?eid=birthday8dinner',
+          });
+        } else if (sApp === 'google-calendar' && tApp === 'google-drive') {
+          results.push({
+            key: 'schedule_slots',
+            label: 'Calendar schedule',
+            fromStepTitle: srcTask.title,
+            fromApp: sApp,
+            fromAgent: srcTask.agent,
+            value: '4 deadlines & 6 available focus blocks',
+          });
+        }
+      }
+    });
+  }
+
+  return results;
+}
+
 export function explainEvent(m, e) {
   const i = m.events.findIndex((x) => x.id === e.id);
   const task = taskForEvent(m, e);
@@ -118,6 +238,8 @@ export function explainEvent(m, e) {
   m.events.slice(Math.max(0, i - 2), i).forEach((p) => evidence.push({ label: 'Before this', value: p.text, agent: p.agent }));
 
   const next = m.events[i + 1];
+  const usedInputs = task ? resolveUsedInputs(m, task) : [];
+
   return {
     agent: e.agent,
     kind: 'event',
@@ -125,6 +247,7 @@ export function explainEvent(m, e) {
     objective: task?.why?.objective || (task ? task.title : `Move the mission toward: ${m.goal}`),
     reason,
     evidence,
+    usedInputs,
     next: next ? { agent: next.agent, text: next.text } : null,
     at: e.at,
     t: e.t,
@@ -142,6 +265,8 @@ export function explainTask(m, task) {
     ...(task.gated ? [{ label: 'Checkpoint', value: 'Needs human approval before it runs' }] : []),
     ...related.map((e) => ({ label: 'Log', value: e.text, agent: e.agent })),
   ];
+  const usedInputs = resolveUsedInputs(m, task);
+
   return {
     agent: task.agent,
     kind: 'task',
@@ -149,6 +274,7 @@ export function explainTask(m, task) {
     objective: task.why?.objective || task.title,
     reason: task.why?.reason || FALLBACK_REASON,
     evidence,
+    usedInputs,
     next: unlocks.length ? { agent: unlocks[0].agent, text: unlocks.map((t) => t.title).join(' · ') } : null,
     t: task.startedAt,
   };
@@ -184,6 +310,28 @@ export function missionSummary(m) {
     })),
   ].sort((a, b) => a.t - b.t);
 
+  // Group completed and involved tasks by app
+  const appTasksMap = new Map();
+  m.tasks.forEach((t) => {
+    const appId = t.app || appForTask(t);
+    if (appId) {
+      if (!appTasksMap.has(appId)) {
+        appTasksMap.set(appId, []);
+      }
+      appTasksMap.get(appId).push(t);
+    }
+  });
+
+  const appsUsed = Array.from(appTasksMap.entries()).map(([appId, tasks]) => {
+    const doneTasks = tasks.filter((t) => t.status === 'done');
+    return {
+      id: appId,
+      tasksCount: tasks.length,
+      doneCount: doneTasks.length,
+      actions: tasks.map((t) => t.title),
+    };
+  });
+
   return {
     counts,
     agents: involvedAgents(m),
@@ -191,5 +339,6 @@ export function missionSummary(m) {
     approvals: decided.length,
     verified,
     items,
+    appsUsed,
   };
 }

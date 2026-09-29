@@ -54,17 +54,18 @@
         "risk": null,
         "category": null,
         "why": {
-          "objective": "Know what is due.",
+          "objective": "Inspect upcoming deadlines.",
           "reason": "Priorities depend on deadlines."
         },
-        "out": "Listed all deadlines.",
+        "out": "Listed 4 project deadlines from calendar.",
         "criterion": null,
         "progress": null,
         "site": null,
         "siteTitle": null,
         "steps": null,
         "payload": null,
-        "fail": false
+        "fail": false,
+        "app": "google-calendar"
       },
       {
         "id": "p2",
@@ -77,21 +78,22 @@
         "risk": null,
         "category": null,
         "why": {
-          "objective": "Know your free time.",
-          "reason": "Tasks need time slots."
+          "objective": "Check free blocks in Google Calendar.",
+          "reason": "Focus blocks need open calendar slots."
         },
-        "out": "Found available blocks.",
+        "out": "Found 6 available focus blocks.",
         "criterion": null,
         "progress": null,
         "site": null,
         "siteTitle": null,
         "steps": null,
         "payload": null,
-        "fail": false
+        "fail": false,
+        "app": "google-calendar"
       },
       {
         "id": "p3",
-        "title": "Build weekly plan",
+        "title": "Build weekly plan in Google Drive",
         "type": "create",
         "capability": "document",
         "agent": "execution",
@@ -103,17 +105,21 @@
         "risk": null,
         "category": null,
         "why": {
-          "objective": "Create the plan.",
-          "reason": "This is the main outcome."
+          "objective": "Draft structured weekly schedule document.",
+          "reason": "This saves the plan to your cloud documents."
         },
-        "out": "Drafted the weekly plan.",
-        "criterion": "Plan created",
+        "out": "Created \"Weekly Focus Plan\" in Google Drive.",
+        "criterion": "Plan created in Google Drive",
         "progress": null,
         "site": null,
         "siteTitle": null,
         "steps": null,
         "payload": null,
-        "fail": false
+        "fail": false,
+        "app": "google-drive",
+        "inputs": {
+          "free_slots": "p2.output.slots"
+        }
       },
       {
         "id": "p4",
@@ -128,10 +134,10 @@
         "risk": null,
         "category": null,
         "why": {
-          "objective": "Confirm the plan works.",
+          "objective": "Confirm the schedule is balanced and feasible.",
           "reason": "Done means verified."
         },
-        "out": null,
+        "out": "Verified schedule balance.",
         "criterion": null,
         "progress": null,
         "site": null,
@@ -143,7 +149,7 @@
     ],
     "criteria": [
       {
-        "label": "Plan created",
+        "label": "Plan created in Google Drive",
         "taskId": "p3"
       }
     ],
@@ -175,7 +181,7 @@
         "deps": [],
         "gated": false,
         "why": {
-          "objective": "Know your free time.",
+          "objective": "Check free blocks in Google Calendar.",
           "reason": "Replaces “Review available schedule”, which failed (access blocked). Switch to a source that offers an export or an API, and cross-check it against a second source."
         },
         "countsFor": "p2"

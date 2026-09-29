@@ -91,7 +91,21 @@ function dynamicPlan(goal, answers) {
   const tasks = steps.map((s) => {
     const capability = TASK_TYPES[s.type].capability;
     const gated = isExternal(s.type);
-    return {
+    const app = s.app || (capability === 'calendar' ? 'google-calendar' : capability === 'email' ? 'gmail' : capability === 'reminders' ? 'google-calendar' : null);
+    const mappedInputs = s.inputs
+      ? Object.fromEntries(
+          Object.entries(s.inputs).map(([k, v]) => {
+            if (typeof v === 'string' && v.includes('.')) {
+              const [sourceKey, ...rest] = v.split('.');
+              const sourceId = idOf[sourceKey] || sourceKey;
+              return [k, [sourceId, ...rest].join('.')];
+            }
+            return [k, v];
+          })
+        )
+      : null;
+
+    const task = {
       id: idOf[s.key],
       title: s.title,
       type: s.type,
@@ -111,6 +125,9 @@ function dynamicPlan(goal, answers) {
       payload: s.payload || null,
       fail: !!s.fail,
     };
+    if (app) task.app = app;
+    if (mappedInputs && Object.keys(mappedInputs).length > 0) task.inputs = mappedInputs;
+    return task;
   });
 
   const criteria = tasks.filter((t) => t.criterion).map((t) => ({ label: t.criterion, taskId: t.id }));

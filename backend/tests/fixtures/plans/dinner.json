@@ -43,7 +43,7 @@
     "tasks": [
       {
         "id": "p1",
-        "title": "Find suitable time",
+        "title": "Find suitable time slot",
         "type": "search",
         "capability": "search",
         "agent": "browser",
@@ -52,72 +52,82 @@
         "risk": null,
         "category": null,
         "why": {
-          "objective": "Find availability.",
-          "reason": "Need a time that works."
+          "objective": "Find availability in Google Calendar.",
+          "reason": "Need a free time slot that works across schedules."
         },
-        "out": "Identified Saturday evening.",
+        "out": "Identified Saturday 7:00 PM — 9:30 PM slot in Google Calendar.",
         "criterion": null,
         "progress": null,
         "site": null,
         "siteTitle": null,
         "steps": null,
         "payload": null,
-        "fail": false
+        "fail": false,
+        "app": "google-calendar"
       },
       {
         "id": "p2",
-        "title": "Prepare invitation",
-        "type": "draft",
-        "capability": "document",
-        "agent": "execution",
-        "deps": [
-          "p1"
-        ],
-        "gated": false,
-        "risk": null,
-        "category": null,
-        "why": {
-          "objective": "Draft details.",
-          "reason": "People need to know when and where."
-        },
-        "out": "Drafted the invite.",
-        "criterion": null,
-        "progress": null,
-        "site": null,
-        "siteTitle": null,
-        "steps": null,
-        "payload": null,
-        "fail": false
-      },
-      {
-        "id": "p3",
         "title": "Create calendar event",
         "type": "schedule",
         "capability": "calendar",
         "agent": "execution",
         "deps": [
-          "p2"
+          "p1"
         ],
         "gated": true,
         "risk": "medium",
         "why": {
-          "objective": "Block the time.",
-          "reason": "This updates your calendar."
+          "objective": "Create event in Google Calendar.",
+          "reason": "Blocks the slot and creates a calendar event link."
         },
-        "out": null,
-        "criterion": null,
+        "out": "Created Google Calendar event: https://calendar.google.com/calendar/event?eid=MjAyNi... (link generated).",
+        "criterion": "Calendar event created in Google Calendar",
         "progress": null,
         "site": null,
         "siteTitle": null,
         "steps": null,
         "payload": {
-          "subject": "Dinner"
+          "subject": "Birthday Dinner for 8"
         },
-        "fail": false
+        "fail": false,
+        "app": "google-calendar",
+        "inputs": {
+          "start": "p1.output.start",
+          "end": "p1.output.end"
+        }
+      },
+      {
+        "id": "p3",
+        "title": "Prepare invitation in Gmail",
+        "type": "draft",
+        "capability": "document",
+        "agent": "execution",
+        "deps": [
+          "p2"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Draft invitation email in Gmail using the calendar event link.",
+          "reason": "Attendees need the Google Calendar link to RSVP."
+        },
+        "out": "Drafted invitation in Gmail including Google Calendar event link.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false,
+        "app": "gmail",
+        "inputs": {
+          "event_link": "p2.output.html_link"
+        }
       },
       {
         "id": "p4",
-        "title": "Send invitation",
+        "title": "Send invitation via Gmail",
         "type": "communicate",
         "capability": "communication",
         "agent": "execution",
@@ -128,37 +138,45 @@
         "risk": "medium",
         "category": "External communication",
         "why": {
-          "objective": "Invite the guests.",
-          "reason": "This sends emails in your name."
+          "objective": "Send invitation emails to friends via Gmail.",
+          "reason": "This sends external emails in your name and requires approval."
         },
         "out": null,
-        "criterion": "Invitation sent",
+        "criterion": "Invitation sent to friends via Gmail",
         "progress": null,
         "site": null,
         "siteTitle": null,
         "steps": null,
         "payload": {
-          "subject": "Dinner Invitation"
+          "to": "8 friends",
+          "subject": "Birthday Dinner Celebration — Saturday 7 PM",
+          "body": "Hey everyone!\n\nExcited to celebrate my birthday this Saturday! Details & RSVP link from Google Calendar: https://calendar.google.com/calendar/event?eid=MjAyNi...\n\nSee you there!"
         },
-        "fail": false
+        "fail": false,
+        "app": "gmail",
+        "inputs": {
+          "draft_id": "p3.output.draft_id",
+          "event_link": "p2.output.html_link"
+        }
       },
       {
         "id": "p5",
-        "title": "Verify",
+        "title": "Verify event and email",
         "type": "verify",
         "capability": "verification",
         "agent": "verification",
         "deps": [
-          "p4"
+          "p4",
+          "p2"
         ],
         "gated": false,
         "risk": null,
         "category": null,
         "why": {
-          "objective": "Confirm it is done.",
-          "reason": "Check everything is sorted."
+          "objective": "Verify both the Google Calendar entry and Gmail delivery.",
+          "reason": "Ensures the event is on calendar and all invitations are sent."
         },
-        "out": null,
+        "out": "Verified Google Calendar event and confirmed all 8 Gmail invitations dispatched.",
         "criterion": null,
         "progress": null,
         "site": null,
@@ -170,21 +188,25 @@
     ],
     "criteria": [
       {
-        "label": "Invitation sent",
+        "label": "Calendar event created in Google Calendar",
+        "taskId": "p2"
+      },
+      {
+        "label": "Invitation sent to friends via Gmail",
         "taskId": "p4"
       }
     ],
     "metric": {
       "kind": "criteria",
       "label": "Success criteria met",
-      "target": 1
+      "target": 2
     },
     "approvalPoints": 2,
     "capabilities": [
       "planning",
       "search",
-      "document",
       "calendar",
+      "document",
       "communication",
       "verification",
       "recovery",
@@ -198,15 +220,15 @@
       "site": "The source",
       "alt": {
         "id": "p1b",
-        "title": "Find suitable time (alternative source)",
+        "title": "Find suitable time slot (alternative source)",
         "type": "search",
         "capability": "research",
         "agent": "research",
         "deps": [],
         "gated": false,
         "why": {
-          "objective": "Find availability.",
-          "reason": "Replaces “Find suitable time”, which failed (access blocked). Switch to a source that offers an export or an API, and cross-check it against a second source."
+          "objective": "Find availability in Google Calendar.",
+          "reason": "Replaces “Find suitable time slot”, which failed (access blocked). Switch to a source that offers an export or an API, and cross-check it against a second source."
         },
         "countsFor": "p1"
       }

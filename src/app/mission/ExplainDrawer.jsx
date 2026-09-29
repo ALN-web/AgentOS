@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, FileSearch, Gauge, Lightbulb, Target, X, Zap } from 'lucide-react';
+import { ArrowRight, FileSearch, Gauge, GitBranch, Lightbulb, Target, X, Zap } from 'lucide-react';
 import { AgentIcon, agentName, formatClock, formatTime } from '../../components/ui';
+import { AppBadge } from '../../components/AppIcon';
 import { AGENT_BY_ID } from '../../data/agents';
 
 function Section({ icon: Icon, label, children }) {
@@ -105,6 +106,29 @@ export default function ExplainDrawer({ explanation, onClose }) {
                   </ul>
                 )}
               </Section>
+              {explanation.usedInputs && explanation.usedInputs.length > 0 && (
+                <Section icon={GitBranch} label="Used from earlier steps">
+                  <div className="space-y-2">
+                    {explanation.usedInputs.map((input, i) => (
+                      <div key={i} className="rounded-xl bg-black/40 border border-white/5 p-3">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="text-[11px] font-semibold text-white">
+                            {input.label || input.key}
+                          </span>
+                          {input.fromApp && <AppBadge appId={input.fromApp} size="sm" />}
+                        </div>
+                        <div className="text-[10px] text-gray-500 mb-1.5 flex items-center gap-1">
+                          <span>From step:</span>
+                          <span className="text-gray-300 font-medium truncate">{input.fromStepTitle}</span>
+                        </div>
+                        <div className="text-xs font-mono text-[#ff9a5c] bg-white/[0.03] border border-white/5 rounded-lg px-2.5 py-1.5 break-all">
+                          {input.value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+              )}
               {confidence != null && (
                 <Section icon={Gauge} label="Confidence">
                   <div className="flex items-center gap-3">
