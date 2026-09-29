@@ -25,7 +25,7 @@ KNOWN_CAPABILITY_OUTPUT_FIELDS: dict[str, set[str]] = {
     "document": {"draft_id", "message_id", "thread_id", "subject", "body", "to", "html_link", "content", "title"},
     "communication": {"message_id", "thread_id", "status", "sent_at", "body", "subject", "to"},
     "reminders": {"event_id", "html_link", "start", "end", "summary", "status"},
-    "search": {"results", "query", "snippets", "urls", "start", "end", "free_slots"},
+    "search": {"results", "query", "snippets", "urls", "start", "end", "free_slots", "slots"},
     "research": {"results", "query", "snippets", "urls", "data", "start", "end"},
     "browser": {"url", "title", "content", "status"},
     "verification": {"verified", "criteria", "summary", "passed", "evidence"},

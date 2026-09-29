@@ -99,6 +99,9 @@ class GmailCreateDraftTool(Tool):
             )
         elif event_link and event_link not in body:
             body = f"{body}\n\nEvent link: {event_link}"
+        signature = args.get("signature")
+        if signature and signature not in body:
+            body = f"{body.rstrip()}\n\n{signature}"
 
         html_link = f"https://mail.google.com/mail/#drafts/{draft_id}"
         return ToolResult(

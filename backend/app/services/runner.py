@@ -22,6 +22,7 @@ from app.db.models import (
 from app.domain import EventType, MissionStatus, RiskLevel, TaskStatus
 from app.schemas.plan import check_no_secrets_or_tokens, redact_dict
 from app.services.missions import append_event, get_mission
+from app.services.preferences import UnknownGroupError, apply_preferences, load_preferences
 from app.tools.base import Tool, ToolContext, ToolResult
 from app.tools.google import (
     CalendarCreateEventTool,
@@ -126,6 +127,8 @@ def run_mission(db: Session, user: User, mission_id: str) -> Mission:
         append_event(db, mission, EventType.MISSION_STARTED, "planner", {"status": "running"})
         db.commit()
 
+    prefs = load_preferences(db, user)
+
     # Collect outputs from already completed tasks
     completed_outputs: dict[str, dict[str, Any]] = {
         t.key: (t.output or {}) for t in mission.tasks if t.status == TaskStatus.DONE
@@ -189,8 +192,25 @@ def run_mission(db: Session, user: User, mission_id: str) -> Mission:
             db.commit()
             continue
 
+        # Apply the user's preferences (#18) before approval, so the approval shows
+        # exactly what will run. Unknown contact groups are asked about, never guessed.
+        try:
+            resolved_inputs, applied_prefs = apply_preferences(tool.name, resolved_inputs, prefs)
+        except UnknownGroupError as err:
+            task.status = TaskStatus.FAILED
+            task.finished_at = utcnow()
+            mission.status = MissionStatus.PAUSED
+            append_event(
+                db, mission, EventType.TASK_FAILED, task.agent,
+                {"task_key": task.key, "error_class": "needs_clarification", "message": err.question, "group": err.group},
+            )
+            db.commit()
+            return mission
+        task.inputs = resolved_inputs
+
         # Check Approval Gateway
         needs_approval = task.gated or tool.risk == RiskLevel.HIGH
+        existing_approval = None
         if needs_approval:
             existing_approval = db.scalar(select(Approval).where(Approval.task_id == task.id))
             if existing_approval is None:
@@ -219,6 +239,7 @@ def run_mission(db: Session, user: User, mission_id: str) -> Mission:
                         "category": approval.category,
                         "reason": approval.reason,
                         "payload": redact_dict(resolved_inputs),
+                        "applied_preferences": applied_prefs,
                     },
                 )
                 db.commit()
@@ -232,7 +253,9 @@ def run_mission(db: Session, user: User, mission_id: str) -> Mission:
                 task.status = TaskStatus.SKIPPED
                 append_event(db, mission, EventType.PLAN_UPDATED, "planner", {"task_key": task.key, "strategy": "skipped_due_to_rejection"})
                 continue
-            elif existing_approval.status == "edited":
+            elif existing_approval.status in ("approved", "edited"):
+                # Run exactly what was approved: preference-derived values such as a
+                # free slot must not be recomputed after the user said yes.
                 if existing_approval.payload_json:
                     resolved_inputs.update(existing_approval.payload_json)
                     task.inputs = resolved_inputs
@@ -241,7 +264,10 @@ def run_mission(db: Session, user: User, mission_id: str) -> Mission:
         task.status = TaskStatus.RUNNING
         task.started_at = utcnow()
         append_event(db, mission, EventType.TASK_STARTED, task.agent, {"task_key": task.key, "simulated": False})
-        append_event(db, mission, EventType.TOOL_CALLED, task.agent, {"task_key": task.key, "tool": tool.name, "risk": str(tool.risk)})
+        append_event(
+            db, mission, EventType.TOOL_CALLED, task.agent,
+            {"task_key": task.key, "tool": tool.name, "risk": str(tool.risk), "applied_preferences": applied_prefs},
+        )
 
         # Ensure tool exists in Tool table
         db_tool = db.get(ToolModel, tool.name)
@@ -255,6 +281,7 @@ def run_mission(db: Session, user: User, mission_id: str) -> Mission:
             task_id=task.id,
             db=db,
             idempotency_key=idempotency_key,
+            preferences=prefs.as_client(),
         )
 
         result = tool.execute(ctx, resolved_inputs)

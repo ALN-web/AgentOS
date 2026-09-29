@@ -70,6 +70,23 @@ class AppPermission(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class UserPreference(Base):
+    """How a user likes things done (#18). One row per user; defaults apply when absent."""
+
+    __tablename__ = "user_preference"
+    user_id: Mapped[str] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), primary_key=True)
+    timezone: Mapped[str] = mapped_column(String(64), default="UTC")
+    working_days: Mapped[list] = mapped_column(JSON, default=list)
+    work_start: Mapped[str] = mapped_column(String(5), default="09:00")
+    work_end: Mapped[str] = mapped_column(String(5), default="18:00")
+    display_name: Mapped[str] = mapped_column(String(80), default="")
+    signature: Mapped[str] = mapped_column(Text, default="")
+    tone: Mapped[str] = mapped_column(String(10), default="Friendly")
+    meeting_length: Mapped[int] = mapped_column(Integer, default=30)
+    groups: Mapped[list] = mapped_column(JSON, default=list)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class Agent(Base):
     __tablename__ = "agent"
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
