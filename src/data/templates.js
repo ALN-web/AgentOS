@@ -2,6 +2,8 @@ export const DEMO_GOAL = 'Get 100 registrations for our college hackathon';
 
 // Suggestions only: the launcher accepts any goal.
 export const EXAMPLE_GOALS = [
+  'Birthday dinner: find a slot, invite friends, remind me',
+  'Weekly planner: read calendar, draft a plan, block focus time',
   'Plan my week around my deadlines',
   'Reply to the emails that need me today',
   'Organise a birthday dinner for 8 on Saturday',
@@ -19,20 +21,31 @@ export const EXAMPLE_GOALS = [
 
 export const TEMPLATES = [
   {
-    id: 'inbox-os',
-    name: 'InboxOS',
-    category: 'Everyday',
-    tagline: 'Clear your inbox in seconds.',
-    goal: 'Reply to the emails that need me today',
+    id: 'plans-os',
+    name: 'PlansOS',
+    category: 'Cross-App',
+    tagline: 'Organise your social life across Calendar and Gmail.',
+    goal: 'Birthday dinner: find a slot, invite friends, remind me',
+    apps: ['google-calendar', 'gmail'],
     image: '/assets/showcase_card_1.jpg',
   },
   {
     id: 'week-os',
     name: 'WeekOS',
-    category: 'Everyday',
-    tagline: 'Plan your week automatically.',
-    goal: 'Plan my week around my deadlines',
+    category: 'Cross-App',
+    tagline: 'Read calendar, draft a plan, block focus time.',
+    goal: 'Weekly planner: read calendar, draft a plan, block focus time',
+    apps: ['google-calendar', 'google-drive'],
     image: '/assets/showcase_card_2.jpg',
+  },
+  {
+    id: 'inbox-os',
+    name: 'InboxOS',
+    category: 'Everyday',
+    tagline: 'Clear your inbox in seconds.',
+    goal: 'Reply to the emails that need me today',
+    apps: ['gmail'],
+    image: '/assets/showcase_card_1.jpg',
   },
   {
     id: 'bills-os',
@@ -40,15 +53,8 @@ export const TEMPLATES = [
     category: 'Everyday',
     tagline: 'Never miss a payment.',
     goal: "Remind me to pay my bills before they're due",
+    apps: ['google-calendar'],
     image: '/assets/showcase_card_3.jpg',
-  },
-  {
-    id: 'plans-os',
-    name: 'PlansOS',
-    category: 'Everyday',
-    tagline: 'Organise your social life.',
-    goal: 'Organise a birthday dinner for 8 on Saturday',
-    image: '/assets/showcase_card_1.jpg',
   },
   {
     id: 'deadline-os',

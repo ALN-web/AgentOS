@@ -28,6 +28,10 @@ const record = (t) => ({
   type: t.type,
   capability: t.capability,
   why: t.why,
+  app: t.app || null,
+  inputs: t.inputs || null,
+  out: t.out || null,
+  payload: t.payload || null,
   ...(t.countsFor ? { countsFor: t.countsFor } : {}),
 });
 

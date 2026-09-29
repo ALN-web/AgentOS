@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { BadgeCheck, CheckCircle2, Clapperboard, ListChecks, RotateCcw, ShieldCheck, Users } from 'lucide-react';
 import { AgentIcon, formatClock } from '../../components/ui';
+import { AppBadge } from '../../components/AppIcon';
 import { missionSummary } from '../../engine/selectors';
 
 function Stat({ icon: Icon, label, value, tone = 'text-white' }) {
@@ -92,6 +93,39 @@ export default function MissionOutcome({ m, onReplay, replaying }) {
             ))}
           </ol>
         </div>
+
+        {s.appsUsed && s.appsUsed.length > 0 && (
+          <div className="mt-6 pt-5 border-t border-white/5">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                Apps used · {m.live ? 'connected' : 'simulated'}
+              </div>
+              <span className="text-[10px] text-gray-500">Cross-app workflow</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {s.appsUsed.map((app) => (
+                <div key={app.id} className="rounded-xl bg-black/40 border border-white/5 p-3.5 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <AppBadge appId={app.id} size="sm" />
+                      <span className="text-[10px] text-gray-500 ml-auto tabular-nums font-mono">
+                        {app.doneCount} / {app.tasksCount} done
+                      </span>
+                    </div>
+                    <ul className="space-y-1 text-xs text-gray-300">
+                      {app.actions.map((act, idx) => (
+                        <li key={idx} className="flex items-start gap-1.5 leading-snug">
+                          <span className="text-emerald-400 mt-0.5">•</span>
+                          <span className="line-clamp-2">{act}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {onReplay && (
           <div className="mt-6 flex flex-wrap items-center gap-3">
