@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import AppCard from '../components/AppCard';
 import { useConnectedApps } from '../live/useConnectedApps';
+import GoogleConnectControl from '../live/GoogleConnectControl';
 
 export default function ConnectedApps() {
   const { apps, isLive, loading, error, updatePermission, disconnect, connect } = useConnectedApps();
@@ -158,6 +159,9 @@ export default function ConnectedApps() {
           <div className="text-[11px] text-gray-500 mt-1">Verified action proofs</div>
         </div>
       </div>
+
+      {/* Google Integration Control */}
+      <GoogleConnectControl />
 
       {/* Safety Policy Notice Card */}
       <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#171321] to-[#0f0d16] border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">

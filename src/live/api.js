@@ -76,6 +76,17 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
       }).then(toUiApp),
     getAppActivity: (appId, limit = 20) => request(`/apps/${id(appId)}/activity?limit=${Number(limit) || 20}`),
     disconnectApp: (appId) => request(`/apps/${id(appId)}`, { method: 'DELETE' }),
+    startMission: (missionId) => request(`/missions/${id(missionId)}/start`, { method: 'POST' }),
+    getApproval: (approvalId) => request(`/approvals/${id(approvalId)}`),
+    decideApproval: (approvalId, decision, edits = null) =>
+      request(`/approvals/${id(approvalId)}/decision`, {
+        method: 'POST',
+        body: { decision, ...(edits ? { edits } : {}) },
+      }),
+    getMissionEvidence: (missionId) => request(`/missions/${id(missionId)}/evidence`),
+    listIntegrations: () => request('/integrations'),
+    connectGoogle: () => request('/integrations/google/connect', { method: 'POST' }),
+    disconnectGoogle: () => request('/integrations/google', { method: 'DELETE' }),
   };
 }
 

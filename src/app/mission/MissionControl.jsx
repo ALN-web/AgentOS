@@ -64,12 +64,22 @@ export default function MissionControl({ m, controls }) {
             <h1 className="text-lg sm:text-2xl font-extrabold text-white tracking-tight">{m.goal}</h1>
             <div className="flex flex-wrap items-center gap-2 mt-2.5">
               <StatusPill status={m.status} paused={m.paused} />
-              <span
-                className="inline-flex items-center px-2 py-0.5 rounded-full border border-white/10 bg-white/[0.04] text-[10px] font-semibold uppercase tracking-wider text-gray-400"
-                title="This mission is a scripted simulation. No real emails, forms or posts are created."
-              >
-                Simulated
-              </span>
+              {m.isLive || m.live || (!m.demo && m.id?.startsWith('m-')) ? (
+                <span
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-emerald-400/40 bg-emerald-400/15 text-[10px] font-bold uppercase tracking-wider text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.2)]"
+                  title="This mission runs in Live mode acting on real accounts and verified tools."
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  LIVE
+                </span>
+              ) : (
+                <span
+                  className="inline-flex items-center px-2 py-0.5 rounded-full border border-white/10 bg-white/[0.04] text-[10px] font-semibold uppercase tracking-wider text-gray-400"
+                  title="This mission is a scripted simulation. No real emails, forms or posts are created."
+                >
+                  Simulated
+                </span>
+              )}
               <span className="text-[11px] text-gray-500">{m.metric.label}</span>
               <span className="text-[11px] text-gray-500 font-mono">· started {formatTime(m.createdAt)}</span>
             </div>

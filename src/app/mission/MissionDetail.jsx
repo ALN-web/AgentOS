@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Clapperboard, GitBranch, MessagesSquare, Pause, Play, RotateCcw, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Clapperboard, GitBranch, Loader2, MessagesSquare, Pause, Play, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useMission, useMissions } from '../../store/MissionStore';
+import { useLiveMission } from '../../live/useLiveMission';
 import { EmptyState } from '../../components/ui';
 import ApprovalCard from '../../components/ApprovalCard';
 import { explainEvent, explainTask } from '../../engine/selectors';
@@ -39,7 +40,9 @@ function Panel({ icon: Icon, title, right, children, className = '' }) {
 
 export default function MissionDetail() {
   const { id } = useParams();
-  const m = useMission(id);
+  const localMission = useMission(id);
+  const { mission: liveMission, decideApproval: decideLiveApproval, loading: liveLoading } = useLiveMission(id);
+  const m = liveMission || localMission;
   const { setSpeed, togglePause, restart, startDemo } = useMissions();
   const navigate = useNavigate();
   const [selected, setSelected] = useState(null); // { kind: 'event' | 'task', id }
@@ -78,6 +81,14 @@ export default function MissionDetail() {
   useEffect(() => setReplay(null), [id]);
 
   if (!m) {
+    if (liveLoading) {
+      return (
+        <div className="py-24 flex flex-col items-center justify-center gap-3">
+          <Loader2 className="w-8 h-8 text-[#eb6920] animate-spin" />
+          <span className="text-sm font-semibold text-gray-400">Loading mission from backend...</span>
+        </div>
+      );
+    }
     return (
       <EmptyState icon={GitBranch} title="Mission not found" className="py-24">
         This mission isn’t in this browser’s demo data. It may have been reset, or opened from another browser.
@@ -128,7 +139,7 @@ export default function MissionDetail() {
       {/* No exit animation: once decided, the pending card and its buttons go immediately. */}
       {pending.map((a) => (
         <motion.div key={a.id} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-          <ApprovalCard approval={a} readOnly={replaying} />
+          <ApprovalCard approval={a} readOnly={replaying} onDecide={m?.isLive ? decideLiveApproval : undefined} />
         </motion.div>
       ))}
       {recoveries.map((r) => (
@@ -162,16 +173,30 @@ export default function MissionDetail() {
         m={view}
         controls={
           replaying ? null : done ? (
-            <>
-              <button onClick={startReplay} className="btn-dark px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
-                <Clapperboard className="w-3.5 h-3.5" />
-                Replay
-              </button>
-              <button onClick={restartRun} className="btn-dark px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
-                <RotateCcw className="w-3.5 h-3.5" />
-                Restart
-              </button>
-            </>
+            m?.isLive ? (
+              <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span>Live Mission Completed</span>
+              </div>
+            ) : (
+              <>
+                <button onClick={startReplay} className="btn-dark px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                  <Clapperboard className="w-3.5 h-3.5" />
+                  Replay
+                </button>
+                <button onClick={restartRun} className="btn-dark px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Restart
+                </button>
+              </>
+            )
+          ) : m?.isLive ? (
+            <div className="flex items-center gap-2">
+              <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Live Stream Active</span>
+              </div>
+            </div>
           ) : (
             <>
               <div className="flex rounded-xl border border-white/10 overflow-hidden" role="group" aria-label="Mission speed">

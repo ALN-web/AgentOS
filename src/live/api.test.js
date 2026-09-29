@@ -108,5 +108,43 @@ describe('backend API client', () => {
     expect(discRes).toEqual({ disconnected: true });
     expect(fetchImpl.mock.calls[3][1].method).toBe('DELETE');
   });
+
+  it('handles live mission execution, approvals, evidence and integrations', async () => {
+    const fetchImpl = vi.fn(async (url, init) => {
+      if (url === '/api/missions/m-123/start' && init?.method === 'POST') return json(200, { id: 'm-123', status: 'running' });
+      if (url === '/api/approvals/appr-1' && (!init || init.method === 'GET')) return json(200, { id: 'appr-1', status: 'pending' });
+      if (url === '/api/approvals/appr-1/decision' && init?.method === 'POST') {
+        const body = JSON.parse(init.body);
+        return json(200, { id: 'appr-1', status: body.decision });
+      }
+      if (url === '/api/missions/m-123/evidence' && (!init || init.method === 'GET')) return json(200, [{ id: 'ev-1', label: 'Event' }]);
+      if (url === '/api/integrations' && (!init || init.method === 'GET')) return json(200, [{ provider: 'google', status: 'connected' }]);
+      if (url === '/api/integrations/google/connect' && init?.method === 'POST') return json(200, { authorization_url: 'https://auth' });
+      if (url === '/api/integrations/google' && init?.method === 'DELETE') return json(204, null);
+      return json(404, {});
+    });
+    const api = createApiClient('/api', { fetchImpl });
+
+    const started = await api.startMission('m-123');
+    expect(started).toEqual({ id: 'm-123', status: 'running' });
+
+    const appr = await api.getApproval('appr-1');
+    expect(appr).toEqual({ id: 'appr-1', status: 'pending' });
+
+    const decided = await api.decideApproval('appr-1', 'approve');
+    expect(decided).toEqual({ id: 'appr-1', status: 'approve' });
+
+    const evidence = await api.getMissionEvidence('m-123');
+    expect(evidence).toEqual([{ id: 'ev-1', label: 'Event' }]);
+
+    const integs = await api.listIntegrations();
+    expect(integs).toEqual([{ provider: 'google', status: 'connected' }]);
+
+    const conn = await api.connectGoogle();
+    expect(conn).toEqual({ authorization_url: 'https://auth' });
+
+    await api.disconnectGoogle();
+    expect(fetchImpl.mock.calls[fetchImpl.mock.calls.length - 1][1].method).toBe('DELETE');
+  });
 });
 

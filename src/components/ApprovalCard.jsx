@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Check, CheckCircle2, Info, Pencil, ShieldAlert, X, XCircle } from 'lucide-react';
+import { AlertCircle, ArrowRight, Check, CheckCircle2, Info, Loader2, Pencil, ShieldAlert, X, XCircle } from 'lucide-react';
 import { useMissions } from '../store/MissionStore';
 import { agentName, timeAgo } from './ui';
 
@@ -27,6 +27,10 @@ function diffs(original, next) {
   if (original.recipients !== next.recipients) out.push({ field: 'Recipients', from: recipientsLabel(original), to: recipientsLabel(next) });
   if (original.subject !== next.subject) out.push({ field: 'Subject', from: original.subject, to: next.subject });
   if (original.body !== next.body) out.push({ field: 'Message', from: 'Original draft', to: 'Edited by you' });
+  const origSummary = original.summary || original.title;
+  const nextSummary = next.summary || next.title;
+  if (origSummary && nextSummary && origSummary !== nextSummary) out.push({ field: 'Title', from: origSummary, to: nextSummary });
+  if (original.start && next.start && original.start !== next.start) out.push({ field: 'Start Time', from: original.start, to: next.start });
   return out;
 }
 
@@ -65,22 +69,50 @@ function Row({ label, children, align = 'center' }) {
 }
 
 // readOnly: shown during a replay, where decisions are the recorded ones.
-export default function ApprovalCard({ approval, showMission = false, readOnly = false, compact = false }) {
+export default function ApprovalCard({ approval, showMission = false, readOnly = false, compact = false, onDecide }) {
   const { decide } = useMissions();
-  const p = approval.payload;
+  const p = approval.payload || {};
   const [editing, setEditing] = useState(false);
-  const [subject, setSubject] = useState(p.subject);
-  const [body, setBody] = useState(p.body);
+  const [subject, setSubject] = useState(p.subject || '');
+  const [body, setBody] = useState(p.body || '');
   const [recipients, setRecipients] = useState(p.recipients);
+  const [summary, setSummary] = useState(p.summary || p.title || '');
+  const [start, setStart] = useState(p.start || '');
+  const [inFlight, setInFlight] = useState(false);
+  const [error, setError] = useState(null);
+
   const pending = approval.status === 'pending';
   const resolved = RESOLVED[approval.status];
   const max = p.recipients;
   const validRecipients = p.recipients == null || (Number.isInteger(recipients) && recipients >= 1 && recipients <= max);
 
-  const edits = { subject, body, ...(p.recipients != null ? { recipients } : {}) };
+  const edits = {
+    ...(p.subject !== undefined ? { subject } : {}),
+    ...(p.body !== undefined ? { body } : {}),
+    ...(p.recipients != null ? { recipients } : {}),
+    ...(p.summary !== undefined ? { summary } : {}),
+    ...(p.title !== undefined ? { title: summary } : {}),
+    ...(p.start !== undefined ? { start } : {}),
+  };
   const draftDiffs = editing ? diffs(p, { ...p, ...edits }) : [];
   const appliedDiffs = diffs(approval.original, p);
-  const act = (decision) => decide(approval.missionId, approval.id, decision, decision === 'edit' ? edits : undefined);
+
+  const act = async (decision) => {
+    setInFlight(true);
+    setError(null);
+    try {
+      if (onDecide) {
+        await onDecide(approval.id, decision, decision === 'edit' ? edits : undefined);
+      } else {
+        await decide(approval.missionId, approval.id, decision, decision === 'edit' ? edits : undefined);
+      }
+      setEditing(false);
+    } catch (err) {
+      setError(err.message || `Failed to submit ${decision} decision.`);
+    } finally {
+      setInFlight(false);
+    }
+  };
 
   const input = 'bg-black/60 border border-white/10 rounded-md px-2 py-1 text-white focus:outline-none focus:border-[#eb6920]/60';
 
@@ -127,36 +159,60 @@ export default function ApprovalCard({ approval, showMission = false, readOnly =
       {!(compact && !pending) && (
         <div className="rounded-xl bg-black/50 border border-white/5 p-3 text-xs space-y-1.5">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Proposed action</div>
-          <Row label="From">
-            <span className="text-gray-300 truncate block">{p.from}</span>
-          </Row>
-          <Row label="To">
-            {editing && p.recipients != null ? (
-              <span className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={1}
-                  max={max}
-                  value={Number.isNaN(recipients) ? '' : recipients}
-                  onChange={(e) => setRecipients(parseInt(e.target.value, 10))}
-                  aria-label="Number of recipients"
-                  className={`${input} w-20 tabular-nums`}
-                />
-                <span className="text-gray-400">{p.audience}</span>
-                <span className="text-[10px] text-gray-600">max {max}</span>
-              </span>
-            ) : (
-              <span className="text-gray-300 truncate block">{recipientsLabel(p)}</span>
-            )}
-          </Row>
-          <Row label="Subject" align="start">
-            {editing ? (
-              <input value={subject} onChange={(e) => setSubject(e.target.value)} aria-label="Subject" className={`${input} w-full`} />
-            ) : (
-              <span className="text-white font-medium">{p.subject}</span>
-            )}
-          </Row>
-          {!compact && (
+          {(p.summary || p.title) && (
+            <Row label="Title" align="start">
+              {editing ? (
+                <input value={summary} onChange={(e) => setSummary(e.target.value)} aria-label="Event Title" className={`${input} w-full`} />
+              ) : (
+                <span className="text-white font-medium">{p.summary || p.title}</span>
+              )}
+            </Row>
+          )}
+          {p.start && (
+            <Row label="Start Time" align="start">
+              {editing ? (
+                <input value={start} onChange={(e) => setStart(e.target.value)} aria-label="Start Time" className={`${input} w-full font-mono text-[11px]`} />
+              ) : (
+                <span className="text-gray-300 font-mono text-[11px]">{p.start}</span>
+              )}
+            </Row>
+          )}
+          {p.from && (
+            <Row label="From">
+              <span className="text-gray-300 truncate block">{p.from}</span>
+            </Row>
+          )}
+          {(p.to || p.recipients != null) && (
+            <Row label="To">
+              {editing && p.recipients != null ? (
+                <span className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={max}
+                    value={Number.isNaN(recipients) ? '' : recipients}
+                    onChange={(e) => setRecipients(parseInt(e.target.value, 10))}
+                    aria-label="Number of recipients"
+                    className={`${input} w-20 tabular-nums`}
+                  />
+                  <span className="text-gray-400">{p.audience}</span>
+                  <span className="text-[10px] text-gray-600">max {max}</span>
+                </span>
+              ) : (
+                <span className="text-gray-300 truncate block">{recipientsLabel(p)}</span>
+              )}
+            </Row>
+          )}
+          {p.subject !== undefined && (
+            <Row label="Subject" align="start">
+              {editing ? (
+                <input value={subject} onChange={(e) => setSubject(e.target.value)} aria-label="Subject" className={`${input} w-full`} />
+              ) : (
+                <span className="text-white font-medium">{p.subject}</span>
+              )}
+            </Row>
+          )}
+          {!compact && p.body !== undefined && (
             <div className="pt-2 border-t border-white/5">
               {editing ? (
                 <textarea
@@ -176,6 +232,13 @@ export default function ApprovalCard({ approval, showMission = false, readOnly =
 
       <Diff rows={pending ? draftDiffs : appliedDiffs} />
 
+      {error && (
+        <div className="mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-xs text-red-300 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+          <span>{error}</span>
+        </div>
+      )}
+
       {pending && readOnly && (
         <div className="mt-4 text-[11px] text-gray-500">Replay: waiting for the decision you made in the live run.</div>
       )}
@@ -186,33 +249,42 @@ export default function ApprovalCard({ approval, showMission = false, readOnly =
             <>
               <button
                 onClick={() => act('edit')}
-                disabled={!validRecipients}
+                disabled={inFlight || !validRecipients}
                 className="btn-orange px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
               >
-                <Check className="w-3.5 h-3.5" />
-                Approve with edits
+                {inFlight ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                <span>Approve with edits</span>
               </button>
-              <button onClick={() => setEditing(false)} className="btn-dark px-4 py-2 rounded-xl text-xs font-semibold">
+              <button onClick={() => setEditing(false)} disabled={inFlight} className="btn-dark px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-40">
                 Cancel
               </button>
               {!validRecipients && <span className="self-center text-[11px] text-red-300">Recipients must be between 1 and {max}.</span>}
             </>
           ) : (
             <>
-              <button onClick={() => act('approve')} className="btn-orange px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
-                <Check className="w-3.5 h-3.5" />
-                Approve
+              <button
+                onClick={() => act('approve')}
+                disabled={inFlight}
+                className="btn-orange px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
+              >
+                {inFlight ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                <span>Approve</span>
               </button>
-              <button onClick={() => setEditing(true)} className="btn-dark px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+              <button
+                onClick={() => setEditing(true)}
+                disabled={inFlight}
+                className="btn-dark px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40"
+              >
                 <Pencil className="w-3.5 h-3.5" />
-                Edit
+                <span>Edit</span>
               </button>
               <button
                 onClick={() => act('reject')}
-                className="px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 text-red-300 border border-red-400/20 hover:bg-red-400/10 transition-colors"
+                disabled={inFlight}
+                className="px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 text-red-300 border border-red-400/20 hover:bg-red-400/10 transition-colors disabled:opacity-40"
               >
-                <X className="w-3.5 h-3.5" />
-                Reject
+                {inFlight ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                <span>Reject</span>
               </button>
             </>
           )}

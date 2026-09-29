@@ -135,7 +135,10 @@ export function useConnectedApps() {
 
       if (isLive) {
         try {
-          await api.disconnectApp(appId);
+          if (appId.startsWith('google-') || appId === 'gmail') {
+            await api.disconnectGoogle().catch(() => {});
+          }
+          await api.disconnectApp(appId).catch(() => {});
         } catch (err) {
           setError(err.message || 'Failed to disconnect app on server');
           setApps(getStoredLocalApps);
@@ -146,9 +149,22 @@ export function useConnectedApps() {
     [isLive]
   );
 
-  // Connect an app (in Demo Mode: simulates connecting; in Live Mode: triggers OAuth)
+  // Connect an app (in Demo Mode: simulates connecting; in Live Mode: triggers OAuth for Google apps)
   const connect = useCallback(
     async (appId, email = 'alex.chen@agentos.org') => {
+      if (isLive && (appId.startsWith('google-') || appId === 'gmail')) {
+        try {
+          const res = await api.connectGoogle();
+          if (res?.authorization_url) {
+            window.location.href = res.authorization_url;
+            return;
+          }
+        } catch (err) {
+          setError(err.message || 'Failed to connect Google');
+          throw err;
+        }
+      }
+
       setApps((prevApps) => {
         const next = prevApps.map((app) => {
           if (app.id !== appId) return app;
@@ -162,7 +178,7 @@ export function useConnectedApps() {
         return next;
       });
     },
-    []
+    [isLive]
   );
 
   return {
