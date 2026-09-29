@@ -37,6 +37,9 @@ class ToolContext:
     db: Session | None = None
     allowed_scopes: frozenset[str] = field(default_factory=frozenset)
     idempotency_key: str | None = None
+    # The user's preferences (timezone, working hours, signature, ...), already
+    # applied to the arguments by the runner; available for tools that need more.
+    preferences: dict | None = None
 
 
 class Tool(ABC):

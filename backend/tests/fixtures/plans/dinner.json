@@ -134,7 +134,8 @@
         "capability": "communication",
         "agent": "execution",
         "deps": [
-          "p3"
+          "p3",
+          "p2"
         ],
         "gated": true,
         "risk": "medium",
