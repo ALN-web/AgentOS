@@ -71,7 +71,7 @@ function withRiskSteps(steps, intent) {
         : {}),
       key: `risk_${risk.id}`,
       why: { objective: `${risk.label}, as the goal asks.`, reason: 'This has consequences outside AgentOS, so it waits for your approval.' },
-      criterion: `${booking ? 'Make the booking' : addressed ? `Send ${thing} to ${intent.recipient}` : tpl.title} (with approval)`,
+      criterion: `${booking ? 'Make the booking' : addressed ? `Send ${thing} to ${intent.recipient}` : tpl.title}: approved (simulated)`,
     });
   }
   if (!extra.length) return steps;
