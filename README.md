@@ -1,6 +1,10 @@
 # AgentOS — Autonomous AI Workforce
 
+**An autonomous AI workforce that turns arbitrary goals into executable missions.**
+
 > *"Don't tell AI what to do. Tell it what you want done."*
+
+> **The current public deployment is a deterministic frontend demonstration. External actions are simulated.** No API key, login or backend is needed, so anyone can open the link and run the full demo.
 
 You give AgentOS a goal. A team of specialised agents plans it, does the work, asks you before anything risky, recovers when something breaks, and verifies the result before calling the mission done.
 
@@ -132,10 +136,26 @@ git clone https://github.com/ALN-web/AgentOS.git
 cd AgentOS
 npm install
 npm run dev        # development server on http://localhost:3000
-npm test           # engine and persistence tests
+npm test           # 62 Vitest tests
 npm run build      # production build into dist/
 npm run preview    # serve the production build
 ```
+
+## Testing
+
+`npm test` runs 62 Vitest tests covering:
+- **Engine:** approval gating; approve, edit and reject; recovery order; pause and resume; restart; replay; honest wording.
+- **Persistence:** restoring a pending approval without auto-approving it; restoring mid-run; rejecting corrupt, outdated or tampered data.
+- **Planning:** intent extraction, clarifying questions, risk gating, plan variety and determinism, end-to-end runs of nine different goals.
+
+Before release the production build was also checked by hand in a clean browser:
+- every route loaded directly, refreshed, and navigated back and forward;
+- the hero mission run through all three approval branches;
+- freeform goals planned and completed;
+- refreshes during planning, approval and recovery;
+- reset;
+- screen sizes from 1920 px down to 375 px;
+- no external network requests.
 
 ## Deployment
 
@@ -143,17 +163,19 @@ The app is a static single-page app. `vercel.json` sets the Vite framework, `npm
 
 ---
 
-## 5 minute judging script
+## Judging demo (about 4½ minutes)
 
-1. **(0:00) The idea.** "Most AI tools make you drive every step. AgentOS takes a goal and delivers an outcome, while you stay in control." Show the landing page's four steps.
-2. **(0:30) Launch.** Click **Launch Mission**; the hero goal is prefilled. Launch it and set **2×**. Point out the header: goal, status, current objective, active agents.
-3. **(1:00) Plan and collaboration.** The Planner builds the task graph; the form and the invite draft run in parallel. The Browser panel shows the simulated form build. The Critic rewrites the weak subject line.
-4. **(1:45) Human control.** The mission stops: *Action requires approval*. Click **Edit**, change 480 recipients to 320, and approve. Show that later messages use 320.
-5. **(2:30) Failure and recovery.** The simulated Discord post is rejected. Walk down the recovery card: root cause, alternative, Planner update, resumed execution. Open **Workforce** to show the red recovery path.
-6. **(3:15) Verification and outcome.** Verification catches duplicates, the plan adds a reminder, and the outcome report shows the simulated 104 / 100 with everything that happened.
-7. **(3:45) Any goal.** Click **New mission**, type a goal nobody prepared, press **Analyze goal**: show the mission intent, capabilities, plan and approval points. "Templates are starting points; the system plans from the goal." Start it and show a different plan running through the same engine.
-8. **(4:15) Trust.** Click an event → **Why did the agent do this?** Then **Replay** at 4×.
-9. **(4:40) Be clear.** "Planning and execution here are deterministic and simulated, in the browser. The next step is an LLM planner and real tools behind the same plan and capability interfaces."
+1. **0:00–0:30 · Landing page.** "Most AI assistants answer questions. AgentOS takes a goal and works toward the outcome." Point at the four steps: goal → agents execute → failure handled → outcome verified.
+2. **0:30–0:50 · Launch.** Click **Launch Mission**. The goal *"Get 100 registrations for our college hackathon"* is prefilled. **Analyze goal**, then **Start mission**. Set **2×**.
+3. **0:50–1:30 · Plan and team.** Mission Control header (goal, status, current objective, active agents), the **task graph**, the **activity timeline**. Optionally open **Workforce** to show agents lighting up.
+4. **1:30–2:00 · Agents at work.** The **Simulated Browser Session** builds the form; the **Critic** rewrites the weak subject line; the mission stops: **Action requires approval**.
+5. **2:00–2:30 · Approve.** Approve (or **Edit** 480 → 320 to show the change flows through). Execution continues.
+6. **2:30–3:00 · Failure and recovery.** The simulated Discord post is rejected. Walk the recovery card: diagnosis, alternative, Planner update, execution resumed.
+7. **3:00–3:30 · Outcome.** Verification catches duplicates, the plan adds a reminder, and the report shows the simulated **104 / 100** — **Mission complete**.
+8. **3:30–4:30 · Any goal.** **New mission** → *"Organize a hackathon event in our college."* → **Analyze goal**: mission intent, capabilities, plan, approval points, questions. Then a completely different goal, e.g. *"Find 20 suitable internship opportunities."* — a different plan. "AgentOS isn't one hard-coded workflow; it turns goals into missions."
+9. **Close.** "Everything you saw is deterministic and simulated in the browser. Next: an LLM planner and real tools behind the same plan and capability interfaces."
+
+Backup moves if there is time: click any event for **Why did the agent do this?**; **Replay** a finished mission at 4×; **Reset demo data** for a clean start.
 
 ---
 
