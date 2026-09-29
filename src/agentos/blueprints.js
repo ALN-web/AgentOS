@@ -535,6 +535,8 @@ function personal(ctx) {
         key: 'send',
         type: 'communicate',
         title: 'Send invitation via Gmail',
+        // It uses the calendar link too, so it must wait for 'cal' (the backend only
+        // allows references to declared dependencies).
         deps: ['invite', 'cal'],
         app: 'gmail',
         inputs: { draft_id: 'invite.output.draft_id', event_link: 'cal.output.html_link' },
