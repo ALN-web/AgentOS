@@ -1,10 +1,14 @@
 export const DEMO_GOAL = 'Get 100 registrations for our college hackathon';
 
+// Suggestions only: the launcher accepts any goal.
 export const EXAMPLE_GOALS = [
   DEMO_GOAL,
-  'Find 5 AI internship openings and apply to the best 3',
-  'Launch a community meetup for 50 people next Friday',
-  'Plan and run our product launch next Tuesday',
+  'Organize a hackathon in our college',
+  'Plan a technical workshop for 100 students',
+  'Find 20 internship opportunities for me',
+  'Research our top 3 competitors',
+  'Prepare for our product launch next Tuesday',
+  'Organize a team event for 30 people',
 ];
 
 export const TEMPLATES = [

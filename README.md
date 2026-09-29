@@ -4,15 +4,17 @@
 
 You give AgentOS a goal. A team of specialised agents plans it, does the work, asks you before anything risky, recovers when something breaks, and verifies the result before calling the mission done.
 
+**AgentOS isn't a collection of predefined workflows.** It turns arbitrary goals into executable missions: goal → mission intent → plan → task graph → agents → execution → verification, with approval and recovery built in. Templates are only starting points.
+
 ---
 
 ## What this submission is
 
-**Current demo: a deterministic simulation of an autonomous workflow.**
-Everything runs in the browser. There is no backend, no database, no login, no API key and no LLM call. The agents follow a scripted mission engine (`src/engine/`), and every panel on screen is derived from that engine's state. Actions like sending email, publishing a form or posting to Discord are **simulated**, and the UI labels them that way.
+**Current demo: AgentOS demonstrates autonomous mission planning and execution using deterministic simulated tools.**
+Everything runs in the browser. There is no backend, no database, no login, no API key and no LLM call. Any goal you type is analysed and planned by a deterministic demo planner (`src/agentos/`), compiled into steps for the mission engine (`src/engine/`), and every panel on screen is derived from that engine's state. Actions like sending email, publishing a form or posting to Discord are **simulated**, and the UI labels them that way.
 
 **Future production system: real agents.**
-LLM-driven planning, a backend that runs the agents, real tool and API integrations, MCP servers and live browser automation. None of that is in this repository yet.
+An LLM planner that returns the same mission plan, and real API, MCP and browser tools connected through the capability registry, running on a backend. None of that is in this repository yet; the seams for it are.
 
 The demo exists to show the product experience: how a user hands off a goal and stays in control while agents do the work.
 
@@ -20,7 +22,7 @@ The demo exists to show the product experience: how a user hands off a goal and 
 
 ## Try it
 
-1. Open the site and click **Launch Mission**. The launcher is prefilled with the hero goal, *"Get 100 registrations for our college hackathon"*. Press **Launch mission**. (Or click **Try Demo Mission** to jump straight in.)
+1. Open the site and click **Launch Mission**. The launcher is prefilled with the hero goal, *"Get 100 registrations for our college hackathon"*. Press **Analyze goal** to see how AgentOS understood it, then **Start mission**. (Or click **Try Demo Mission** to jump straight in.)
 2. Watch the **Planner** build a 7-task plan, then Research, Browser, Execution and Critic agents work through it. Use **1× / 2× / 4×** to change speed, and pause or restart at any time.
 3. The mission **pauses for approval** before simulating an email to 480 people. Choose:
    - **Approve** — the mission continues as planned.
@@ -30,6 +32,17 @@ The demo exists to show the product experience: how a user hands off a goal and 
 5. **Verification** finds too few valid sign-ups, the plan adds a reminder task, and the mission completes at a simulated **104 / 100**.
 6. Read the **outcome report**, then click **See how AgentOS worked** to **replay** the mission at any speed or scrub to any moment.
 7. Click any event or task for **"Why did the agent do this?"**
+
+### Try any goal
+
+Click **New mission** and type anything, for example *"Organize a hackathon in our college"*, *"Find 20 internship opportunities for me"*, *"Research our top 3 competitors"*, or something no template covers, like *"Write a newsletter about our new cafeteria menu and email it to all staff"*. **Analyze goal** shows:
+
+- **Mission understood:** objective, domain, what success means
+- **Likely capabilities** and an **estimated plan** (tasks, approval points, success criteria, risk)
+- **Clarifying questions**, only when critical details are missing; answering them re-plans instantly, skipping uses stated assumptions
+- **Review plan:** every task, its agent, and which ones need approval
+
+Different goals produce different plans. Every mission runs through the same engine: approvals gate actions with external consequences, one step fails and is recovered generically (classify the failure → choose another capability → replace the task in the graph → resume), and verification checks the plan's success criteria.
 
 Missions are saved in your browser, so refreshing keeps your progress (a pending approval stays pending). **Reset demo data** in the sidebar or dashboard returns to a clean start.
 
@@ -56,7 +69,8 @@ Missions are saved in your browser, so refreshing keeps your progress (a pending
 
 | Capability | In this demo | Needs for production |
 |---|---|---|
-| Planning | Scripted plans per scenario | LLM planner |
+| Goal understanding | Deterministic analysis: domain, quantities, dates, format, risks, missing details | LLM that returns the same mission intent |
+| Planning | Blueprints for broad goal types, filled from the intent; a general blueprint for anything else | LLM planner returning the same mission plan |
 | Agent actions (email, forms, posts) | Simulated; no external request is made | Tool / API integrations, credentials |
 | Browser automation | Scripted steps in a "Simulated Browser Session" panel | Playwright (or similar) running server-side |
 | Failure and recovery | Scripted failure; recovery follows real engine state | Real error detection and re-planning |
@@ -65,15 +79,28 @@ Missions are saved in your browser, so refreshing keeps your progress (a pending
 | Confidence values | Configured per agent | Model-derived scores |
 | Persistence | This browser's localStorage | Database, accounts |
 
-Goals other than the hero goal run a shorter generic scenario with the same stages.
+The hero goal keeps a hand-authored, curated plan so the headline demo is identical every time. Every other goal is planned dynamically.
 
 ---
 
 ## Architecture
 
 ```
+USER GOAL → goal understanding → MISSION INTENT → planner → MISSION PLAN (tasks, deps,
+capabilities, approval points, success criteria) → compiler → engine steps → agents
+execute → verification → done, or failure → recovery → re-plan → execute
+```
+
+```
 src/
+  agentos/       Goal → plan. Plain data in, plain data out
+    intent.js      Goal understanding → Mission Intent (+ clarifying questions, assumptions)
+    capabilities.js Capability registry and task types (each capability → an agent)
+    blueprints.js  Planning blueprints for broad goal types, filled from the intent
+    planner.js     Planner registry; the demo planner builds the Mission Plan
+    recovery.js    Failure classes: diagnosis and alternative strategy
   engine/        Pure mission engine: no React, no I/O
+    compile.js     Compiles any Mission Plan into engine steps (simulated tools)
     engine.js      createMission, advance, resolveApproval, restartMission, replayTo
     ops.js         State operations used by scenarios (say, task, recovery, …)
     scenarios.js   Scripted scenarios: hero (registrations) and generic
@@ -87,9 +114,10 @@ src/
   data/          Agents, templates and feature catalogue
 ```
 
-- A mission holds plain state plus a `script` of steps. Each step is either a state update or an approval checkpoint whose approve/reject branch is spliced in when you decide.
+- **Swappable parts.** The UI and engine only depend on the Mission Plan shape. A live planner (for example an LLM) registers in `PLANNERS` and returns the same shape; a live tool registers against a capability id in the registry. Only implemented planners and tools are listed; nothing in the UI pretends otherwise.
+- A mission holds plain state, its plan, and a `script` of steps compiled from the plan. Each step is either a state update or an approval checkpoint whose approve/reject branch is spliced in when you decide.
 - The engine is pure, so it is safe under React StrictMode, testable without a browser, and reusable for **replay**: `replayTo(mission, t)` re-runs the same script with your recorded decisions.
-- Persistence stores only plain data. On load, scripts are rebuilt from the goal and the recorded decisions; saved state from a different script version, or anything malformed, is discarded.
+- Persistence stores only plain data. On load, scripts are recompiled from the stored plan and the recorded decisions; saved state from a different script version, or anything malformed, is discarded.
 
 **Tech stack:** React 18, Vite 6, React Router 7, Tailwind CSS 3, React Flow (`@xyflow/react`), Framer Motion, Lucide icons, self-hosted Plus Jakarta Sans. Tests: Vitest.
 
@@ -115,7 +143,7 @@ The app is a static single-page app. `vercel.json` sets the Vite framework, `npm
 
 ---
 
-## 3–5 minute judging script
+## 5 minute judging script
 
 1. **(0:00) The idea.** "Most AI tools make you drive every step. AgentOS takes a goal and delivers an outcome, while you stay in control." Show the landing page's four steps.
 2. **(0:30) Launch.** Click **Launch Mission**; the hero goal is prefilled. Launch it and set **2×**. Point out the header: goal, status, current objective, active agents.
@@ -123,14 +151,16 @@ The app is a static single-page app. `vercel.json` sets the Vite framework, `npm
 4. **(1:45) Human control.** The mission stops: *Action requires approval*. Click **Edit**, change 480 recipients to 320, and approve. Show that later messages use 320.
 5. **(2:30) Failure and recovery.** The simulated Discord post is rejected. Walk down the recovery card: root cause, alternative, Planner update, resumed execution. Open **Workforce** to show the red recovery path.
 6. **(3:15) Verification and outcome.** Verification catches duplicates, the plan adds a reminder, and the outcome report shows the simulated 104 / 100 with everything that happened.
-7. **(3:45) Trust.** Click an event → **Why did the agent do this?** Then **Replay** at 4×.
-8. **(4:15) Be clear.** "This is a deterministic simulation that demonstrates the workflow and the control layer. The next step is real agents behind the same interface."
+7. **(3:45) Any goal.** Click **New mission**, type a goal nobody prepared, press **Analyze goal**: show the mission intent, capabilities, plan and approval points. "Templates are starting points; the system plans from the goal." Start it and show a different plan running through the same engine.
+8. **(4:15) Trust.** Click an event → **Why did the agent do this?** Then **Replay** at 4×.
+9. **(4:40) Be clear.** "Planning and execution here are deterministic and simulated, in the browser. The next step is an LLM planner and real tools behind the same plan and capability interfaces."
 
 ---
 
 ## Current limitations
 
-- Agent behaviour is scripted; two scenarios exist (the hero mission and a generic one).
+- Goal understanding uses keyword scoring and pattern extraction, not a language model; unusual phrasing can land in the general blueprint.
+- Plans come from eight broad blueprints (events, careers, launches, research, procurement, outreach, operations, general), adapted to the goal; each dynamic mission includes one simulated failure to demonstrate recovery.
 - No real external actions, accounts or data.
 - Saved missions live in one browser; two open tabs do not sync with each other.
 

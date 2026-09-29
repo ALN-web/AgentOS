@@ -1,5 +1,6 @@
 import {
   Activity,
+  Wand2,
   BadgeCheck,
   Clapperboard,
   GitBranch,
@@ -17,9 +18,21 @@ import {
 //   { to, label }            a page in the console
 //   { demo: true, label }    opens the demo mission (starting it if needed)
 //   { replay: true, label }  opens the latest completed mission (falls back to the demo)
+//   { launcher: true, label } opens the mission launcher with an empty goal
 // `note` is shown when the demo simulates part of the feature.
 
 export const FEATURES = [
+  {
+    id: 'any-goal',
+    icon: Wand2,
+    title: 'Start Any Mission',
+    tagline: 'Goals, not predefined workflows.',
+    description:
+      'Describe any outcome in your own words. AgentOS turns it into a mission intent (objective, success criteria, risks, required capabilities) and plans from that. Templates are only starting points.',
+    points: ['Structured intent from free text', 'Asks only for missing critical details', 'Unfamiliar goals still get a plan'],
+    note: 'Demo Mode plans with deterministic goal analysis in your browser. An LLM planner can return the same plan shape later.',
+    see: { launcher: true, label: 'Try any goal' },
+  },
   {
     id: 'planning',
     icon: GitBranch,

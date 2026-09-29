@@ -15,6 +15,22 @@ export const ops = {
       ...m,
       tasks: m.tasks.map((t) => (t.id === id ? stamp({ ...t, ...val(patch, t) }, t, m.clock) : t)),
     }),
+  // Recovery: retire a failed task and put its replacement in the graph,
+  // pointing every dependent at the replacement.
+  replaceTask: (oldId, next) => (m) =>
+    withAutoMetric({
+      ...m,
+      tasks: [
+        ...m.tasks.map((t) =>
+          t.id === oldId
+            ? stamp({ ...t, status: 'skipped', replacedBy: next.id }, t, m.clock)
+            : { ...t, deps: t.deps.map((d) => (d === oldId ? next.id : d)) }
+        ),
+        stamp({ status: 'pending', ...next }, {}, m.clock),
+      ],
+    }),
+  // Rejection: nothing waits on a task that will not run.
+  dropDep: (id) => (m) => ({ ...m, tasks: m.tasks.map((t) => ({ ...t, deps: t.deps.filter((d) => d !== id) })) }),
   metricSet: (n) => (m) => ({ ...m, metric: { ...m.metric, current: n } }),
   metricAdd: (n) => (m) => ({ ...m, metric: { ...m.metric, current: m.metric.current + n } }),
   browse: (patch) => (m) => ({ ...m, browser: { ...m.browser, ...patch } }),
