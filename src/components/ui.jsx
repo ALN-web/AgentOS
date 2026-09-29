@@ -81,12 +81,15 @@ export function ProgressBar({ value, target }) {
 }
 
 export function Logo({ to = '/', size = 'md' }) {
-  const text = size === 'sm' ? 'text-base' : 'text-xl';
+  const isSm = size === 'sm';
+  const imgSize = isSm ? 'h-8 w-8' : 'h-10 w-10';
   return (
-    <Link to={to} className="flex items-center gap-1 group">
-      <span className={`${text} font-extrabold tracking-wider text-white`}>AGENT</span>
-      <span className={`${text} font-extrabold tracking-wider text-[#eb6920]`}>OS</span>
-      <span className="w-2 h-2 rounded-full bg-[#eb6920] ml-0.5 shadow-[0_0_10px_#eb6920] group-hover:scale-125 transition-transform" />
+    <Link to={to} className="inline-flex items-center group" aria-label="AgentOS">
+      <img
+        src="/assets/agentos-logo.jpeg"
+        alt="AgentOS"
+        className={`${imgSize} rounded-xl object-contain shadow-[0_0_15px_rgba(235,105,32,0.25)] group-hover:scale-105 group-hover:shadow-[0_0_22px_rgba(235,105,32,0.45)] transition-all duration-200`}
+      />
     </Link>
   );
 }
