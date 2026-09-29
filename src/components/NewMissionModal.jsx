@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Info, Lock, ShieldAlert, Sparkles, Target, X, Mic, Square, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Info, Lock, ShieldAlert, Sparkles, Target, X, Mic, Square, AlertCircle, Loader2 } from 'lucide-react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { useMissions } from '../store/MissionStore';
 import { usePreferences } from '../store/PreferencesStore';
@@ -10,6 +10,8 @@ import { planMission } from '../agentos/planner';
 import { CAPABILITY_BY_ID } from '../agentos/capabilities';
 import { AgentIcon, agentName } from './ui';
 import { AppBadge, appForTask, getAppMeta } from './AppIcon';
+import { useBackendStatus } from '../live/useBackendStatus';
+import { api } from '../live/api';
 
 const RISK_TONE = {
   low: 'text-emerald-300 border-emerald-400/30 bg-emerald-400/10',
@@ -246,6 +248,12 @@ export default function NewMissionModal() {
     return () => window.removeEventListener('keydown', onKey);
   }, [launcher.open, closeLauncher]);
 
+  const backendStatus = useBackendStatus();
+  const isLiveAvailable = Boolean(backendStatus?.liveMode?.available);
+  const [executionMode, setExecutionMode] = useState('demo');
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState(null);
+
   const ready = goal.trim().length > 2;
 
   const analyze = (e) => {
@@ -255,10 +263,27 @@ export default function NewMissionModal() {
     setStage('review');
   };
 
-  const start = () => {
-    if (!ready) return;
-    const id = launch(goal, { plan: planMission(goal.trim(), answers, undefined, preferences) });
-    navigate(`/app/missions/${id}`);
+  const start = async () => {
+    if (!ready || starting) return;
+    setStartError(null);
+    const plan = planMission(goal.trim(), answers, undefined, preferences);
+
+    if (isLiveAvailable && executionMode === 'live') {
+      setStarting(true);
+      try {
+        const source = speechSupported && speechListening ? 'voice' : 'typed';
+        const backendMission = await api.createMission(goal.trim(), plan, { source });
+        await api.startMission(backendMission.id);
+        const id = launch(goal, { plan, isLive: true, backendMission });
+        navigate(`/app/missions/${id}`);
+      } catch (err) {
+        setStartError(err.message || 'Failed to start live mission.');
+        setStarting(false);
+      }
+    } else {
+      const id = launch(goal, { plan });
+      navigate(`/app/missions/${id}`);
+    }
   };
 
   return (
@@ -384,20 +409,79 @@ export default function NewMissionModal() {
                       ))}
                     </div>
                   </div>
+                  {isLiveAvailable && (
+                    <div className="mt-4 p-3 rounded-2xl bg-black/40 border border-white/10">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Execution Mode</span>
+                        <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          Backend Live Mode Available
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setExecutionMode('demo')}
+                          className={`px-3 py-2 rounded-xl text-xs font-semibold text-left border transition-all ${
+                            executionMode === 'demo'
+                              ? 'border-[#eb6920]/50 bg-[#eb6920]/15 text-white shadow-sm'
+                              : 'border-white/5 bg-white/[0.02] text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                          }`}
+                        >
+                          <div className="font-bold flex items-center gap-1.5">
+                            <span>Demo Mode</span>
+                            {executionMode === 'demo' && <Check className="w-3 h-3 text-[#eb6920]" />}
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-0.5">Scripted browser simulation</div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setExecutionMode('live')}
+                          className={`px-3 py-2 rounded-xl text-xs font-semibold text-left border transition-all ${
+                            executionMode === 'live'
+                              ? 'border-emerald-500/50 bg-emerald-500/15 text-white shadow-sm'
+                              : 'border-white/5 bg-white/[0.02] text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                          }`}
+                        >
+                          <div className="font-bold flex items-center gap-1.5 text-emerald-300">
+                            <span>Live Mode</span>
+                            {executionMode === 'live' && <Check className="w-3 h-3 text-emerald-400" />}
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-0.5">Real Google tools & SSE</div>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {startError && (
+                    <div className="mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-xs text-red-300 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                      <span>{startError}</span>
+                    </div>
+                  )}
+
                   <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                     <span className="text-[11px] text-gray-500 hidden sm:block">Enter to analyze · Esc to close</span>
                     <div className="flex gap-2 ml-auto">
                       <button
                         type="button"
                         onClick={start}
-                        disabled={!ready}
-                        className="btn-dark px-4 py-2.5 rounded-full text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
+                        disabled={!ready || starting}
+                        className="btn-dark px-4 py-2.5 rounded-full text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-1.5"
                       >
-                        Start mission
+                        {starting ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Starting...</span>
+                          </>
+                        ) : (
+                          <span>Start mission</span>
+                        )}
                       </button>
                       <button
                         type="submit"
-                        disabled={!ready}
+                        disabled={!ready || starting}
                         className="btn-orange px-5 py-2.5 rounded-full text-xs font-semibold uppercase tracking-wider flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
                       >
                         Analyze goal
@@ -410,14 +494,80 @@ export default function NewMissionModal() {
                 <>
                   <p className="text-sm text-gray-400 mt-1 truncate">“{goal.trim()}”</p>
                   <Understanding goal={goal.trim()} answers={answers} setAnswers={setAnswers} preferences={preferences} />
+
+                  {isLiveAvailable && (
+                    <div className="mt-4 p-3 rounded-2xl bg-black/40 border border-white/10">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Execution Mode</span>
+                        <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          Backend Live Mode Available
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setExecutionMode('demo')}
+                          className={`px-3 py-2 rounded-xl text-xs font-semibold text-left border transition-all ${
+                            executionMode === 'demo'
+                              ? 'border-[#eb6920]/50 bg-[#eb6920]/15 text-white shadow-sm'
+                              : 'border-white/5 bg-white/[0.02] text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                          }`}
+                        >
+                          <div className="font-bold flex items-center gap-1.5">
+                            <span>Demo Mode</span>
+                            {executionMode === 'demo' && <Check className="w-3 h-3 text-[#eb6920]" />}
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-0.5">Scripted browser simulation</div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setExecutionMode('live')}
+                          className={`px-3 py-2 rounded-xl text-xs font-semibold text-left border transition-all ${
+                            executionMode === 'live'
+                              ? 'border-emerald-500/50 bg-emerald-500/15 text-white shadow-sm'
+                              : 'border-white/5 bg-white/[0.02] text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                          }`}
+                        >
+                          <div className="font-bold flex items-center gap-1.5 text-emerald-300">
+                            <span>Live Mode</span>
+                            {executionMode === 'live' && <Check className="w-3 h-3 text-emerald-400" />}
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-0.5">Real Google tools & SSE</div>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {startError && (
+                    <div className="mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-xs text-red-300 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                      <span>{startError}</span>
+                    </div>
+                  )}
+
                   <div className="mt-6 flex items-center justify-between gap-3">
                     <button type="button" onClick={() => setStage('input')} className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white">
                       <ArrowLeft className="w-3.5 h-3.5" />
                       Edit goal
                     </button>
-                    <button type="submit" className="btn-orange px-6 py-2.5 rounded-full text-xs font-semibold uppercase tracking-wider flex items-center gap-2">
-                      Start mission
-                      <ArrowRight className="w-3.5 h-3.5" />
+                    <button
+                      type="submit"
+                      disabled={starting}
+                      className="btn-orange px-6 py-2.5 rounded-full text-xs font-semibold uppercase tracking-wider flex items-center gap-2 disabled:opacity-40"
+                    >
+                      {starting ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Starting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Start mission</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </>
+                      )}
                     </button>
                   </div>
                 </>

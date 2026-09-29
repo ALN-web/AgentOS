@@ -51,6 +51,7 @@ export function MissionProvider({ children }) {
       setMissions((ms) => {
         let changed = false;
         const next = ms.map((m) => {
+          if (m.isLive) return m;
           const n = advance(m, now);
           if (n !== m) changed = true;
           return n;
@@ -89,10 +90,54 @@ export function MissionProvider({ children }) {
       launch(goal, opts) {
         // Typing the demo goal runs the demo mission rather than a duplicate of it.
         if (normalise(goal) === normalise(DEMO_GOAL)) return startDemo();
-        const m = createMission(goal.trim(), { ...opts, preferences });
+        let m;
+        if (opts?.isLive && opts?.backendMission) {
+          const bm = opts.backendMission;
+          m = {
+            id: bm.id,
+            goal: bm.goal || goal.trim(),
+            status: bm.status || 'running',
+            createdAt: Date.now(),
+            clock: 0,
+            speed: 1,
+            paused: false,
+            isLive: true,
+            demo: false,
+            plan: bm.plan || opts.plan,
+            tasks: (bm.tasks || opts.plan?.tasks || []).map((t) => ({
+              id: t.id,
+              key: t.key || t.id,
+              title: t.title,
+              agent: t.agent,
+              deps: t.dependencies || t.deps || [],
+              gated: t.gated,
+              status: t.status === 'done' ? 'done' : 'pending',
+              inputs: t.inputs || {},
+              output: t.output || null,
+            })),
+            metric: opts.plan?.metric ? { ...opts.plan.metric, current: 0 } : { kind: 'criteria', label: 'tasks done', target: opts.plan?.tasks?.length || 5, current: 0 },
+            events: [],
+            approvals: [],
+            recoveries: [],
+            checks: [],
+            browser: null,
+          };
+        } else {
+          m = createMission(goal.trim(), { ...opts, preferences });
+        }
         setMissions((ms) => [m, ...ms]);
         setLauncher({ open: false, goal: '' });
         return m.id;
+      },
+      updateLiveMission(live) {
+        if (!live?.id) return;
+        setMissions((ms) => {
+          const exists = ms.some((m) => m.id === live.id);
+          if (exists) {
+            return ms.map((m) => (m.id === live.id ? { ...m, ...live } : m));
+          }
+          return [live, ...ms];
+        });
       },
       decide(missionId, approvalId, decision, edits) {
         update(missionId, (m, now) => resolveApproval(m, approvalId, decision, edits, now));

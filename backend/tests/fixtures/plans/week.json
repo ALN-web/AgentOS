@@ -120,7 +120,7 @@
         "fail": false,
         "app": "google-drive",
         "inputs": {
-          "free_slots": "p2.output.slots"
+          "free_slots": "p2.output.free_slots"
         }
       },
       {

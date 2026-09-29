@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { usePreferences } from '../store/PreferencesStore';
 import { Check, Plus, Trash2, X } from 'lucide-react';
+import GoogleConnectControl from '../live/GoogleConnectControl';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const TONES = ['Friendly', 'Formal'];
@@ -292,6 +293,13 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+        </section>
+
+        {/* Integrations */}
+        <section className="glass-card rounded-2xl p-6">
+          <h2 className="text-base font-bold text-white mb-1">Integrations & Connected Accounts</h2>
+          <p className="text-xs text-gray-400 mb-4">Connect external services to allow AgentOS missions to execute actions on your behalf.</p>
+          <GoogleConnectControl />
         </section>
 
         {/* Save */}

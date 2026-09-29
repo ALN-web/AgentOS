@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BadgeCheck, CheckCircle2, Circle, ChevronDown, ListChecks, ShieldAlert, XCircle, AlertTriangle, RotateCcw, Clock, ShieldCheck, Loader2 } from 'lucide-react';
+import { BadgeCheck, CheckCircle2, Circle, ChevronDown, ListChecks, ShieldAlert, XCircle, AlertTriangle, RotateCcw, Clock, ShieldCheck, Loader2, ExternalLink } from 'lucide-react';
 import { AgentIcon, agentName, formatDuration } from '../../components/ui';
 import { taskCounts, taskDuration } from '../../engine/selectors';
 
@@ -174,7 +174,20 @@ export default function ProofPanel({ m }) {
                             {m.demo ? (
                               <span className="italic text-gray-500 flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> Simulated completion evidence</span>
                             ) : (
-                              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Verified real completion</span>
+                              <div className="space-y-1.5">
+                                <span className="flex items-center gap-1.5 text-emerald-400 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" /> Verified real completion</span>
+                                {t.output?.html_link && (
+                                  <a
+                                    href={t.output.html_link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#eb6920]/40 bg-[#eb6920]/10 hover:bg-[#eb6920]/20 text-[#ff9a5c] hover:text-white text-[11px] font-semibold transition-all mt-1"
+                                  >
+                                    <ExternalLink className="w-3 h-3 text-[#eb6920]" />
+                                    <span>{t.output.html_link.includes('calendar') ? 'Open in Google Calendar' : 'Open in Gmail'}</span>
+                                  </a>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>

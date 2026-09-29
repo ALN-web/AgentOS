@@ -585,7 +585,7 @@ function personal(ctx) {
         title: 'Build weekly plan in Google Drive',
         deps: ['deadlines', 'schedule'],
         app: 'google-drive',
-        inputs: { free_slots: 'schedule.output.slots' },
+        inputs: { free_slots: 'schedule.output.free_slots' },
         why: { objective: 'Draft structured weekly schedule document.', reason: 'This saves the plan to your cloud documents.' },
         out: 'Created "Weekly Focus Plan" in Google Drive.',
         criterion: 'Plan created in Google Drive',

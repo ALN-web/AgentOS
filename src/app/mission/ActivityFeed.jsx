@@ -13,6 +13,9 @@ import {
   ShieldAlert,
   XCircle,
   Zap,
+  Calendar,
+  Mail,
+  ExternalLink,
 } from 'lucide-react';
 import { AgentIcon, EmptyState, agentName, formatClock, formatTime } from '../../components/ui';
 import { AppBadge, appForEvent } from '../../components/AppIcon';
@@ -122,6 +125,43 @@ export default function ActivityFeed({ events, tasks = [], onSelect, selectedId 
                     )}
                   </div>
                   <p className="text-[13px] text-gray-200 leading-relaxed">{e.text}</p>
+                  {e.evidence && e.evidence.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5" onClick={(evt) => evt.stopPropagation()}>
+                      {e.evidence.map((ev, idx) => {
+                        const isCalendar = (ev.url && ev.url.includes('calendar.google.com')) || ev.source === 'google_calendar';
+                        const isGmail = (ev.url && ev.url.includes('mail.google.com')) || ev.source === 'gmail';
+                        const label = ev.label || (isCalendar ? 'Open in Google Calendar' : isGmail ? 'Open in Gmail' : 'View Proof');
+
+                        return ev.url ? (
+                          <a
+                            key={idx}
+                            href={ev.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#eb6920]/40 bg-[#eb6920]/10 hover:bg-[#eb6920]/20 text-[#ff9a5c] hover:text-white text-[11px] font-semibold transition-all shadow-sm"
+                          >
+                            {isCalendar ? (
+                              <Calendar className="w-3 h-3 text-[#eb6920]" />
+                            ) : isGmail ? (
+                              <Mail className="w-3 h-3 text-[#eb6920]" />
+                            ) : (
+                              <ExternalLink className="w-3 h-3 text-[#eb6920]" />
+                            )}
+                            <span>{label}</span>
+                            <ExternalLink className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+                          </a>
+                        ) : (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border border-white/10 bg-white/5 text-[11px] text-gray-300 font-medium"
+                          >
+                            <BadgeCheck className="w-3 h-3 text-emerald-400" />
+                            <span>{label}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </Row>
             </div>

@@ -1,10 +1,15 @@
 """Mission API. Missions are stored and listed; execution arrives in later phases."""
 
+import json
+from datetime import datetime
 from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import current_user
-from app.db.models import Mission, User
+from app.db.models import Evidence, Mission, User
 from app.db.session import get_db
 from app.schemas.mission import EventOut, IntentOut, Metric, MissionCreate, MissionDetail, MissionSummary, TaskOut
 from app.schemas.plan import redact_dict
@@ -90,4 +95,70 @@ def start_mission(
 ):
     from app.services.runner import run_mission
     return _detail(run_mission(db, user, mission_id))
+
+
+class EvidenceItemOut(BaseModel):
+    id: str
+    type: str
+    source: str
+    label: str
+    url: str | None
+    reference_id: str | None
+    created_at: datetime
+
+
+@router.get("/{mission_id}/stream")
+async def stream_events(
+    mission_id: str,
+    after: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    def event_generator():
+        events = svc.list_events(db, user, mission_id, after, 500)
+        for e in events:
+            data = json.dumps({
+                "seq": e.seq,
+                "type": e.type,
+                "agent": e.agent,
+                "payload": e.payload_json,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            })
+            yield f"id: {e.seq}\nevent: {e.type}\ndata: {data}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.get("/{mission_id}/evidence", response_model=list[EvidenceItemOut])
+def list_evidence(
+    mission_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    evs = db.scalars(
+        select(Evidence)
+        .join(Mission, Evidence.mission_id == Mission.id)
+        .where(Evidence.mission_id == mission_id, Mission.user_id == user.id)
+    ).all()
+    return [
+        EvidenceItemOut(
+            id=e.id,
+            type=e.type,
+            source=e.source,
+            label=e.label,
+            url=e.url,
+            reference_id=e.reference_id,
+            created_at=e.created_at,
+        )
+        for e in evs
+    ]
+
 
