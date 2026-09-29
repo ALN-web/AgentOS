@@ -76,7 +76,7 @@ describe('approval branches', () => {
     expect(m.status).toBe('completed');
     expect(m.completedAt).not.toBeNull();
     expect(m.metric.current).toBe(104);
-    expect(texts(m)).toContain('480 of 480 delivered. 3 bounced.');
+    expect(texts(m).some((t) => t.includes('480 of 480 invites delivered in the simulation, 3 bounced'))).toBe(true);
     expect(missionSummary(m).verified).toBe(true);
     expect(m.approvals[0].status).toBe('approved');
   });
@@ -87,9 +87,16 @@ describe('approval branches', () => {
     expect(m.approvals[0].status).toBe('edited');
     expect(m.approvals[0].original.recipients).toBe(480);
     expect(m.approvals[0].payload.recipients).toBe(320);
-    expect(texts(m)).toContain('320 of 320 delivered. 2 bounced.');
+    expect(texts(m).some((t) => t.includes('320 of 320 invites delivered in the simulation, 2 bounced'))).toBe(true);
     expect(texts(m).some((t) => t.includes('480 of 480'))).toBe(false);
     expect(m.tasks.find((t) => t.id === 't5').title).toBe('Email 320 past attendees');
+  });
+
+  it('never claims a real-world effect in the hero mission', () => {
+    const m = finish('approve');
+    const all = texts(m).join(' ');
+    expect(all).not.toMatch(/forms\.gle|Form is live|real registrations|Email sent/i);
+    expect(all).toMatch(/simulat/i);
   });
 
   it('reject: no email is sent, the plan routes around it and still completes', () => {

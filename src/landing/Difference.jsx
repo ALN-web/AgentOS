@@ -52,7 +52,7 @@ function Comparison() {
             Get 100 registrations for our hackathon.
           </div>
           <ul className="mt-4 space-y-2 text-sm text-gray-300">
-            {['Builds and publishes the form', 'Emails 480 past attendees, after you approve', 'Recovers when Discord blocks the post', 'Verifies 104 real sign-ups'].map((line) => (
+            {['Builds and publishes the form', 'Emails 480 past attendees, after you approve', 'Recovers when Discord blocks the post', 'Verifies 104 unique sign-ups (simulated)'].map((line) => (
               <li key={line} className="flex items-center gap-2.5">
                 <ArrowRight className="w-3.5 h-3.5 text-[#eb6920] shrink-0" />
                 {line}

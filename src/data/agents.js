@@ -32,7 +32,7 @@ export const AGENTS = [
     role: 'Runs the mission.',
     description: 'Assigns work to agents, calls APIs and tools, and tracks progress toward the target.',
     capabilities: ['Tool and API calls', 'Coordinates every agent', 'Live progress tracking'],
-    sample: 'Sent 480 invites. 41 registrations so far. Handing off to Browser.',
+    sample: 'Outreach to 480 invitees simulated. 41 registrations so far. Handing off to Browser.',
     confidence: 0.96,
   },
   {
@@ -43,7 +43,7 @@ export const AGENTS = [
     role: 'Uses websites like a person.',
     description: 'Works through websites step by step: navigates, fills forms and publishes, logging every action. In this demo the steps are scripted.',
     capabilities: ['Navigates and clicks', 'Fills and submits forms', 'Step-by-step action log'],
-    sample: 'Created the registration form and published it at forms.gle/agentos-hack.',
+    sample: 'Registration form creation simulated: added fields, published a demo link.',
     confidence: 0.89,
   },
   {
@@ -54,7 +54,7 @@ export const AGENTS = [
     role: 'Checks the work.',
     description: 'Confirms each task really happened and measures progress against the goal.',
     capabilities: ['Checks every output', 'Removes duplicates and bad data', 'Confirms the goal is met'],
-    sample: '98 responses, but 6 duplicates and 2 invalid emails. Real count: 90.',
+    sample: '98 responses, but 6 duplicates and 2 invalid emails. Valid count: 90.',
     confidence: 0.97,
   },
   {
