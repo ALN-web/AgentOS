@@ -140,6 +140,8 @@ class Task(Base):
     gated: Mapped[bool] = mapped_column(Boolean, default=False)
     criterion: Mapped[str | None] = mapped_column(String(300), nullable=True)
     replaced_by_key: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    inputs: Mapped[dict] = mapped_column(JSON, default=dict)
+    output: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
