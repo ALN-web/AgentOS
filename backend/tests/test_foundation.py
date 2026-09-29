@@ -4,6 +4,7 @@ from pydantic import BaseModel, SecretStr
 from app.core.config import Settings
 from app.core.errors import AppError
 from app.main import create_app
+from tests.conftest import make_settings
 
 
 def test_health_reports_status_and_that_live_mode_is_not_available(client):
@@ -109,9 +110,9 @@ def test_settings_read_prefixed_environment_variables(monkeypatch):
     assert s.cors_origins == ["https://agentos.example"]
 
 
-def test_api_docs_are_hidden_in_production():
-    prod = TestClient(create_app(Settings(environment="production", _env_file=None)))
-    assert prod.get("/api/docs").status_code == 404
-    assert prod.get("/api/openapi.json").status_code == 404
-    dev = TestClient(create_app(Settings(environment="development", _env_file=None)))
-    assert dev.get("/api/openapi.json").status_code == 200
+def test_api_docs_are_hidden_in_production(tmp_path):
+    with TestClient(create_app(make_settings(tmp_path, environment="production"))) as prod:
+        assert prod.get("/api/docs").status_code == 404
+        assert prod.get("/api/openapi.json").status_code == 404
+    with TestClient(create_app(make_settings(tmp_path, environment="development"))) as dev:
+        assert dev.get("/api/openapi.json").status_code == 200

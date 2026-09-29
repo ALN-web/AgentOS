@@ -1,0 +1,179 @@
+{
+  "goal": "Get 100 registrations for our college hackathon",
+  "plan": {
+    "kind": "hero",
+    "planner": "curated",
+    "goal": "Get 100 registrations for our college hackathon",
+    "intent": {
+      "goal": "Get 100 registrations for our college hackathon",
+      "objective": "Get 100 registrations for our college hackathon",
+      "domain": "outreach",
+      "domainLabel": "Growth & outreach",
+      "desiredOutcome": "100 verified, unique registrations",
+      "quantity": {
+        "n": 100,
+        "unit": "registrations"
+      },
+      "date": null,
+      "format": "in person",
+      "eventNoun": "hackathon",
+      "deliverable": null,
+      "recipient": null,
+      "constraints": [],
+      "entities": [
+        "college",
+        "hackathon"
+      ],
+      "risks": [],
+      "requiredCapabilities": [
+        "planning",
+        "research",
+        "document",
+        "browser",
+        "communication",
+        "monitoring",
+        "verification"
+      ],
+      "questions": [],
+      "assumptions": [],
+      "answers": {}
+    },
+    "tasks": [
+      {
+        "id": "t1",
+        "type": "research",
+        "title": "Research the audience",
+        "agent": "research",
+        "deps": [],
+        "gated": false,
+        "why": {
+          "objective": "Know who to invite, and when.",
+          "reason": "A target of 100 is only reachable if outreach starts from a real audience instead of guesses."
+        },
+        "capability": "research"
+      },
+      {
+        "id": "t2",
+        "type": "browse",
+        "title": "Build registration form",
+        "agent": "browser",
+        "deps": [
+          "t1"
+        ],
+        "gated": false,
+        "why": {
+          "objective": "Give every invitee one place to sign up.",
+          "reason": "Every outreach channel needs a live link before anything is sent."
+        },
+        "capability": "browser"
+      },
+      {
+        "id": "t3",
+        "type": "draft",
+        "title": "Draft the invite email",
+        "agent": "execution",
+        "deps": [
+          "t1"
+        ],
+        "gated": false,
+        "why": {
+          "objective": "Turn the research into an invite people act on.",
+          "reason": "Past attendees are the warmest audience, and email reaches them directly."
+        },
+        "capability": "document"
+      },
+      {
+        "id": "t4",
+        "type": "compare",
+        "title": "Review the draft",
+        "agent": "critic",
+        "deps": [
+          "t3"
+        ],
+        "gated": false,
+        "why": {
+          "objective": "Raise the invite’s conversion before it goes out.",
+          "reason": "A sent email can’t be improved. Reviewing first is cheap."
+        },
+        "capability": "analysis"
+      },
+      {
+        "id": "t5",
+        "type": "communicate",
+        "title": "Email 480 past attendees",
+        "agent": "execution",
+        "deps": [
+          "t2",
+          "t4"
+        ],
+        "gated": true,
+        "why": {
+          "objective": "Reach every past attendee.",
+          "reason": "Past attendees convert best, but emailing people outside the team needs your sign-off."
+        },
+        "capability": "communication"
+      },
+      {
+        "id": "t6",
+        "type": "browse",
+        "title": "Post in community channels",
+        "agent": "browser",
+        "deps": [
+          "t2"
+        ],
+        "gated": false,
+        "why": {
+          "objective": "Reach students who have never attended.",
+          "reason": "Email only covers past attendees. The clubs’ Discord servers reach new people."
+        },
+        "capability": "browser"
+      },
+      {
+        "id": "t7",
+        "type": "verify",
+        "title": "Verify 100 unique sign-ups",
+        "agent": "verification",
+        "deps": [
+          "t5",
+          "t6"
+        ],
+        "gated": false,
+        "why": {
+          "objective": "Confirm the target with valid, unique sign-ups.",
+          "reason": "Raw form responses include duplicates and bad emails. Only verified sign-ups count toward the goal."
+        },
+        "capability": "verification"
+      }
+    ],
+    "criteria": [
+      {
+        "label": "100 verified, unique registrations",
+        "taskId": "t7"
+      }
+    ],
+    "metric": {
+      "kind": "quantity",
+      "label": "Verified registrations",
+      "target": 100
+    },
+    "approvalPoints": 1,
+    "capabilities": [
+      "planning",
+      "research",
+      "browser",
+      "document",
+      "analysis",
+      "communication",
+      "verification",
+      "recovery",
+      "approval"
+    ],
+    "riskLevel": "medium",
+    "assumptions": [],
+    "failure": {
+      "taskId": "t6",
+      "cls": "access_blocked",
+      "site": "Discord"
+    }
+  }
+}

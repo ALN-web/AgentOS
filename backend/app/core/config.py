@@ -19,8 +19,10 @@ class Settings(BaseSettings):
     # Browser origins allowed to call the API (the Vite dev server and preview by default).
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000", "http://localhost:4173"])
 
-    # Used from Phase 2 on. SQLite for local development; PostgreSQL in production.
+    # SQLite for local development; PostgreSQL in production.
     database_url: str = "sqlite:///./agentos.db"
+    # Apply migrations on startup. Convenient locally; production runs `alembic upgrade head` in deploy.
+    auto_migrate: bool = True
 
     # Used from Phase 6 on to encrypt stored integration tokens. Never sent to clients.
     encryption_key: SecretStr | None = None

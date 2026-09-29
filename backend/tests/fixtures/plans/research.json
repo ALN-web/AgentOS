@@ -1,0 +1,248 @@
+{
+  "goal": "Research the market for AI customer support platforms and create a report.",
+  "plan": {
+    "kind": "dynamic",
+    "planner": "demo",
+    "goal": "Research the market for AI customer support platforms and create a report",
+    "intent": {
+      "goal": "Research the market for AI customer support platforms and create a report",
+      "objective": "Research the market for AI customer support platforms and create a report",
+      "domain": "research",
+      "domainLabel": "Research",
+      "desiredOutcome": "A verified report with sources",
+      "quantity": null,
+      "date": null,
+      "format": null,
+      "eventNoun": "event",
+      "deliverable": {
+        "verb": "Create",
+        "object": "report"
+      },
+      "recipient": null,
+      "constraints": [],
+      "entities": [
+        "research",
+        "market",
+        "report"
+      ],
+      "risks": [],
+      "requiredCapabilities": [
+        "planning",
+        "search",
+        "browser",
+        "analysis",
+        "document",
+        "verification"
+      ],
+      "questions": [],
+      "assumptions": [],
+      "answers": {}
+    },
+    "tasks": [
+      {
+        "id": "p1",
+        "title": "Define the research questions",
+        "type": "analyze",
+        "capability": "planning",
+        "agent": "planner",
+        "deps": [],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Know exactly what to find out.",
+          "reason": "Clear questions keep the research focused."
+        },
+        "out": "Questions: who they are, what they offer, pricing, and where each is strongest. Covering 3.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p2",
+        "title": "Search for sources",
+        "type": "search",
+        "capability": "search",
+        "agent": "browser",
+        "deps": [
+          "p1"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Find credible, current sources.",
+          "reason": "Conclusions are only as good as their sources."
+        },
+        "out": "Collected 14 sources: product pages, reviews and recent news.",
+        "criterion": null,
+        "progress": null,
+        "site": "search.example.com",
+        "siteTitle": "Web search (simulated)",
+        "steps": [
+          "Searched news, product sites and review platforms",
+          "Opened the top results",
+          "Saved 14 relevant sources"
+        ],
+        "payload": null,
+        "fail": true
+      },
+      {
+        "id": "p3",
+        "title": "Collect the data",
+        "type": "browse",
+        "capability": "browser",
+        "agent": "browser",
+        "deps": [
+          "p2"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Pull the facts that answer each question.",
+          "reason": "Structured data makes comparison honest."
+        },
+        "out": "Built a comparison table with a source for every cell.",
+        "criterion": null,
+        "progress": null,
+        "site": "search.example.com",
+        "siteTitle": "Sources (simulated)",
+        "steps": [
+          "Extracted features and pricing",
+          "Captured positioning statements",
+          "Logged sources for each fact"
+        ],
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p4",
+        "title": "Analyze and compare findings",
+        "type": "compare",
+        "capability": "analysis",
+        "agent": "critic",
+        "deps": [
+          "p3"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Turn data into conclusions.",
+          "reason": "A table is not an answer."
+        },
+        "out": "Two clear gaps stand out: onboarding speed and pricing for small teams.",
+        "criterion": "Findings compared",
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p5",
+        "title": "Write the research report",
+        "type": "create",
+        "capability": "document",
+        "agent": "execution",
+        "deps": [
+          "p4"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Deliver something you can act on.",
+          "reason": "Findings need to be shareable."
+        },
+        "out": "Wrote a two-page report with recommendations and cited sources.",
+        "criterion": "Report written with sources",
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p6",
+        "title": "Verify sources and claims",
+        "type": "verify",
+        "capability": "verification",
+        "agent": "verification",
+        "deps": [
+          "p5"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Check every claim against its source.",
+          "reason": "Unverified research is a liability."
+        },
+        "out": null,
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      }
+    ],
+    "criteria": [
+      {
+        "label": "Findings compared",
+        "taskId": "p4"
+      },
+      {
+        "label": "Report written with sources",
+        "taskId": "p5"
+      }
+    ],
+    "metric": {
+      "kind": "criteria",
+      "label": "Success criteria met",
+      "target": 2
+    },
+    "approvalPoints": 0,
+    "capabilities": [
+      "planning",
+      "search",
+      "browser",
+      "analysis",
+      "document",
+      "verification",
+      "recovery"
+    ],
+    "riskLevel": "low",
+    "assumptions": [],
+    "failure": {
+      "taskId": "p2",
+      "cls": "source_unavailable",
+      "site": "search.example.com",
+      "alt": {
+        "id": "p2b",
+        "title": "Search for sources (backup sources)",
+        "type": "search",
+        "capability": "research",
+        "agent": "research",
+        "deps": [
+          "p1"
+        ],
+        "gated": false,
+        "why": {
+          "objective": "Find credible, current sources.",
+          "reason": "Replaces “Search for sources”, which failed (source unavailable). Use the next two sources instead and cross-check what they say."
+        },
+        "countsFor": "p2"
+      }
+    }
+  }
+}

@@ -1,0 +1,278 @@
+{
+  "goal": "Find 20 suitable internship opportunities.",
+  "plan": {
+    "kind": "dynamic",
+    "planner": "demo",
+    "goal": "Find 20 suitable internship opportunities",
+    "intent": {
+      "goal": "Find 20 suitable internship opportunities",
+      "objective": "Find 20 suitable internship opportunities",
+      "domain": "career",
+      "domainLabel": "Career",
+      "desiredOutcome": "20 verified internship opportunities",
+      "quantity": {
+        "n": 20,
+        "unit": "internship opportunities"
+      },
+      "date": null,
+      "format": null,
+      "eventNoun": "event",
+      "deliverable": null,
+      "recipient": null,
+      "constraints": [],
+      "entities": [
+        "internship"
+      ],
+      "risks": [],
+      "requiredCapabilities": [
+        "planning",
+        "search",
+        "analysis",
+        "research",
+        "document",
+        "verification"
+      ],
+      "questions": [
+        {
+          "id": "field",
+          "question": "Which field or role?",
+          "placeholder": "e.g. machine learning"
+        },
+        {
+          "id": "location",
+          "question": "Remote, or a specific city?",
+          "placeholder": "e.g. Remote or Bengaluru"
+        }
+      ],
+      "assumptions": [],
+      "answers": {}
+    },
+    "tasks": [
+      {
+        "id": "p1",
+        "title": "Understand your profile and preferences",
+        "type": "analyze",
+        "capability": "planning",
+        "agent": "planner",
+        "deps": [],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Know what a good match looks like for you.",
+          "reason": "Filtering without criteria just returns noise."
+        },
+        "out": "Looking for 20 internship opportunities. Fit is judged on skills, location and deadline.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p2",
+        "title": "Search for internship opportunities",
+        "type": "search",
+        "capability": "search",
+        "agent": "browser",
+        "deps": [
+          "p1"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Collect candidates from several job boards.",
+          "reason": "One source is never complete."
+        },
+        "out": "Found 34 candidate listings across three boards.",
+        "criterion": null,
+        "progress": null,
+        "site": "jobs.example.com",
+        "siteTitle": "Job board (simulated)",
+        "steps": [
+          "Opened three job boards",
+          "Searched “internship”",
+          "Collected 34 listings"
+        ],
+        "payload": null,
+        "fail": true
+      },
+      {
+        "id": "p3",
+        "title": "Filter by fit",
+        "type": "compare",
+        "capability": "analysis",
+        "agent": "critic",
+        "deps": [
+          "p2"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Keep only listings that match your profile.",
+          "reason": "A short, relevant list is more useful than a long one."
+        },
+        "out": "23 of 34 match your skills and location.",
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p4",
+        "title": "Check each listing is still open",
+        "type": "research",
+        "capability": "research",
+        "agent": "research",
+        "deps": [
+          "p3"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Make sure every opportunity is genuine and current.",
+          "reason": "Closed or duplicate listings waste applications."
+        },
+        "out": "3 listings had closed. 20 verified as open.",
+        "criterion": null,
+        "progress": 1,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p5",
+        "title": "Build the shortlist",
+        "type": "create",
+        "capability": "document",
+        "agent": "execution",
+        "deps": [
+          "p4"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Rank the verified opportunities.",
+          "reason": "You should see the best options first."
+        },
+        "out": "Shortlist ranked by fit and deadline. Top 3 flagged for applications.",
+        "criterion": "20 verified internship opportunities shortlisted",
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p6",
+        "title": "Tailor application materials",
+        "type": "draft",
+        "capability": "document",
+        "agent": "execution",
+        "deps": [
+          "p5"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Match your CV and cover note to each role.",
+          "reason": "Tailored applications get more replies."
+        },
+        "out": "Drafted 3 cover notes and highlighted the matching projects in your CV.",
+        "criterion": "Application materials ready",
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      },
+      {
+        "id": "p7",
+        "title": "Verify 20 internship opportunities",
+        "type": "verify",
+        "capability": "verification",
+        "agent": "verification",
+        "deps": [
+          "p6"
+        ],
+        "gated": false,
+        "risk": null,
+        "category": null,
+        "why": {
+          "objective": "Confirm the target was met with valid, open listings.",
+          "reason": "A count only matters if every item was checked."
+        },
+        "out": null,
+        "criterion": null,
+        "progress": null,
+        "site": null,
+        "siteTitle": null,
+        "steps": null,
+        "payload": null,
+        "fail": false
+      }
+    ],
+    "criteria": [
+      {
+        "label": "20 verified internship opportunities shortlisted",
+        "taskId": "p5"
+      },
+      {
+        "label": "Application materials ready",
+        "taskId": "p6"
+      }
+    ],
+    "metric": {
+      "kind": "quantity",
+      "label": "Verified internship opportunities",
+      "target": 20
+    },
+    "approvalPoints": 0,
+    "capabilities": [
+      "planning",
+      "search",
+      "analysis",
+      "research",
+      "document",
+      "verification",
+      "recovery"
+    ],
+    "riskLevel": "low",
+    "assumptions": [],
+    "failure": {
+      "taskId": "p2",
+      "cls": "access_blocked",
+      "site": "jobs.example.com",
+      "alt": {
+        "id": "p2b",
+        "title": "Search for internship opportunities (alternative source)",
+        "type": "search",
+        "capability": "research",
+        "agent": "research",
+        "deps": [
+          "p1"
+        ],
+        "gated": false,
+        "why": {
+          "objective": "Collect candidates from several job boards.",
+          "reason": "Replaces “Search for internship opportunities”, which failed (access blocked). Switch to a source that offers an export or an API, and cross-check it against a second source."
+        },
+        "countsFor": "p2"
+      }
+    }
+  }
+}
