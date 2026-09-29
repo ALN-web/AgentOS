@@ -109,6 +109,7 @@ function registrations(goal) {
           title: 'Send invite email to 480 people',
           agent: 'approval',
           risk: 'medium',
+          category: 'External communication',
           reason: 'Sends email on your behalf to people outside your team.',
           payload,
         },
@@ -237,6 +238,7 @@ function generic(goal) {
           title: 'Act on your behalf',
           agent: 'approval',
           risk: 'medium',
+          category: 'Acts on your behalf',
           reason: 'Sends a submission to an outside party in your name.',
           payload: {
             from: 'you@yourdomain.com',

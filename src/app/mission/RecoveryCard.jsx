@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, CheckCircle2, GitBranch, Play, Radar, RotateCcw, Search, Workflow, XCircle } from 'lucide-react';
+import { AlertTriangle, BadgeCheck, CheckCircle2, GitBranch, Play, Radar, RotateCcw, Search, Workflow, XCircle } from 'lucide-react';
 import { agentName, formatDuration } from '../../components/ui';
 
 const ORDER = ['diagnosing', 'replanning', 'retrying', 'resolved'];
@@ -21,9 +21,16 @@ export default function RecoveryCard({ recovery, events = [] }) {
   const replan = events.find((e) => e.agent === 'planner' && e.type === 'plan' && e.t >= (recovery.retryingAt ?? Infinity));
   const resumed = events.find((e) => e.agent === 'execution' && e.t >= (recovery.retryingAt ?? Infinity));
   const tookMs = resolved ? recovery.resolvedAt - recovery.startedAt : null;
+  const verified = resolved && events.find((e) => e.type === 'verified' && e.t >= recovery.resolvedAt);
 
   const chain = [
-    { icon: XCircle, tone: 'fail', label: 'Execution failed', text: recovery.error, reached: true },
+    {
+      icon: XCircle,
+      tone: 'fail',
+      label: failure ? `Execution failed · ${agentName(failure.agent)}` : 'Execution failed',
+      text: `Reason: ${recovery.error}`,
+      reached: true,
+    },
     {
       icon: Radar,
       tone: 'fail',
@@ -43,8 +50,16 @@ export default function RecoveryCard({ recovery, events = [] }) {
       text: resolved ? `Back on track ${formatDuration(tookMs)} after the failure.` : null,
       reached: resolved,
     },
+    {
+      icon: BadgeCheck,
+      tone: 'ok',
+      label: 'Verification passed',
+      text: verified ? verified.text : null,
+      reached: !!verified,
+    },
   ];
   const nextIdx = chain.findIndex((c) => !c.reached);
+  const verifying = resolved && !verified;
 
   return (
     <motion.div
@@ -80,7 +95,7 @@ export default function RecoveryCard({ recovery, events = [] }) {
       <ol className="relative">
         {chain.map(({ icon: Icon, tone, label, text, reached }, i) => {
           const last = i === chain.length - 1;
-          const working = i === nextIdx && !resolved;
+          const working = i === nextIdx && (!resolved || verifying);
           return (
             <li key={label} className="relative flex gap-3 pb-3 last:pb-0">
               {!last && (

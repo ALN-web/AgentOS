@@ -1,7 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, ListTodo, RotateCcw, ShieldCheck, Timer, Target } from 'lucide-react';
-import { AgentIcon, ProgressRing, StatusPill, formatClock } from '../../components/ui';
+import { AgentIcon, ProgressRing, StatusPill, formatClock, formatTime } from '../../components/ui';
 import { AGENT_BY_ID } from '../../data/agents';
 import { activeAgents, activeRecovery, approvalState, currentObjective, taskCounts } from '../../engine/selectors';
 
@@ -71,6 +71,7 @@ export default function MissionControl({ m, controls }) {
                 Simulated
               </span>
               <span className="text-[11px] text-gray-500">{m.metric.label}</span>
+              <span className="text-[11px] text-gray-500 font-mono">· started {formatTime(m.createdAt)}</span>
             </div>
           </div>
         </div>

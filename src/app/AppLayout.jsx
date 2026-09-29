@@ -70,7 +70,9 @@ export default function AppLayout() {
             Demo environment
           </div>
           Agents run a scripted simulation in your browser. No emails are sent and no external sites are contacted.
-          <ResetDemoButton className="mt-2" />
+          <div className="mt-2">
+            <ResetDemoButton />
+          </div>
         </div>
       </aside>
 

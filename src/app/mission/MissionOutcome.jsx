@@ -66,7 +66,7 @@ export default function MissionOutcome({ m, onReplay, replaying }) {
             <Stat icon={ShieldCheck} label="Human approvals" value={s.approvals} tone={s.approvals ? 'text-amber-300' : 'text-white'} />
             <Stat icon={BadgeCheck} label="Verification" value={s.verified ? 'Passed' : 'Not run'} tone={s.verified ? 'text-emerald-300' : 'text-gray-400'} />
             <div className="rounded-xl bg-black/40 border border-white/5 px-3.5 py-3 flex items-center">
-              <div className="flex -space-x-1.5">
+              <div className="flex flex-wrap gap-1" aria-label="Agents involved">
                 {s.agents.map((a) => (
                   <AgentIcon key={a} id={a} size="sm" />
                 ))}
@@ -76,7 +76,7 @@ export default function MissionOutcome({ m, onReplay, replaying }) {
         </div>
 
         <div className="mt-6 pt-5 border-t border-white/5">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-3">What AgentOS accomplished</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-3">What AgentOS accomplished · simulated</div>
           <ol className="md:columns-2 gap-x-6">
             {s.items.map((item, i) => (
               <motion.li
