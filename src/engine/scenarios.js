@@ -52,7 +52,7 @@ function registrations(goal) {
     audience: 'past attendees',
     subject: '48 hours, $5,000 in prizes. Registration closes Friday',
     body:
-      "Hi there,\n\nHackOS 2026 is back on Oct 18–19. Build anything in 48 hours, with $5,000 in prizes and mentors from top startups.\n\nRegister in 30 seconds: forms.gle/agentos-hack\n\nSee you there,\nThe HackOS team",
+      "Hi there,\n\nHackOS 2026 is back on Oct 18–19. Build anything in 48 hours, with $5,000 in prizes and mentors from top startups.\n\nRegister in 30 seconds: forms.example.com/hackos-2026\n\nSee you there,\nThe HackOS team",
   };
 
   // The send uses whatever you approved: edit the recipient count and every
@@ -63,9 +63,9 @@ function registrations(goal) {
     return [
       s(600, say('approval', edited ? `Approved with your edits (${n} recipients). Resuming.` : 'Approved. Resuming the mission.', 'approval'),
         status('running'), task('t5', { status: 'running', title: `Email ${n} past attendees` })),
-      s(1400, say('execution', `Sending to ${n} people in batches of 60 to stay under spam limits.`)),
-      s(1600, say('execution', `${n} of ${n} delivered. ${Math.max(1, share(3))} bounced.`, 'action'), task('t5', { status: 'done' }), metricSet(share(18))),
-      s(1200, metricSet(share(41)), say('execution', `${share(41)} registrations from the first wave.`)),
+      s(1400, say('execution', `Simulating the send to ${n} recipients in batches of 60, as a real send would to stay under spam limits.`)),
+      s(1600, say('execution', `Outreach action simulated successfully: ${n} of ${n} invites delivered in the simulation, ${Math.max(1, share(3))} bounced.`, 'action'), task('t5', { status: 'done' }), metricSet(share(18))),
+      s(1200, metricSet(share(41)), say('execution', `${share(41)} simulated registrations from the first wave.`)),
     ];
   };
 
@@ -77,38 +77,39 @@ function registrations(goal) {
         why: { objective: 'Reach past attendees without sending email.', reason: 'You rejected the email, so the plan routes the invite through the three club leads instead.' },
       }),
       task('t7', (t) => ({ deps: [...t.deps.filter((d) => d !== 't5'), 't5b'] }))),
-    s(1800, say('execution', 'All 3 club leads shared the form in their groups.', 'action'), task('t5b', { status: 'done' }), metricSet(29)),
+    s(1800, say('execution', 'Simulated: all 3 club leads shared the form in their groups.', 'action'), task('t5b', { status: 'done' }), metricSet(29)),
   ];
 
   return {
     metric: { label: 'Verified registrations', current: 0, target: 100 },
     script: [
       s(500, say('system', `Mission received: “${goal}”`, 'system')),
-      s(1300, say('planner', 'Reading the goal. Success means 100 real, verified registrations.')),
+      s(1300, say('planner', 'Reading the goal. Success means 100 verified, unique registrations.')),
       ...tasks.map((t) => s(320, addTask(t))),
       s(700, say('planner', 'Plan ready: 7 tasks. The form and the outreach will run in parallel.', 'plan'), status('running')),
       s(800, task('t1', { status: 'running' }), say('execution', 'Research, you’re up. Who should we invite?')),
-      s(1700, say('research', 'Found 480 past attendees in last year’s sign-up sheet and 3 student clubs with active Discord servers.')),
+      s(1700, say('research', 'In the demo data: 480 past attendees from last year’s sign-up sheet and 3 student clubs with active Discord servers.')),
       s(1300, say('research', 'Engagement peaks Tuesday at 6 PM. Similar events convert 20–25% of invites.'), task('t1', { status: 'done' })),
       s(700, task('t2', { status: 'running' }), task('t3', { status: 'running' }),
         say('execution', 'Browser, build the form. I’ll draft the invite in parallel.')),
-      s(900, browse({ url: 'https://docs.google.com/forms', title: 'Google Forms' }), bstep('Opened Google Forms')),
+      s(900, browse({ url: 'https://forms.example.com/new', title: 'Form builder (simulated)' }), bstep('Opened the form builder')),
       s(1000, bstep('Created form “HackOS 2026 Registration”')),
       s(1000, bstep('Added fields: name, email, college, team size')),
       s(1000, bstep('Turned on confirmation emails')),
-      s(900, browse({ url: 'https://forms.gle/agentos-hack' }), bstep('Published the form'),
-        say('browser', 'Form is live at forms.gle/agentos-hack.', 'action'), task('t2', { status: 'done' })),
+      s(900, browse({ url: 'https://forms.example.com/hackos-2026' }), bstep('Published the form'),
+        say('browser', 'Registration form creation simulated. Demo link: forms.example.com/hackos-2026.', 'action'), task('t2', { status: 'done' })),
       s(900, say('execution', 'Draft ready: “You’re invited to HackOS 2026”.'), task('t3', { status: 'done' }), task('t4', { status: 'running' })),
       s(1500, say('critic', 'The subject line is generic and there’s no deadline. Lead with the prize and “closes Friday”.', 'critique')),
       s(1200, say('execution', `Revised subject: “${payload.subject}”.`), task('t4', { status: 'done' })),
       s(900, task('t5', { status: 'awaiting' }),
-        say('approval', 'This emails 480 people from events@hackos.dev. Pausing for your approval.', 'approval')),
+        say('approval', 'This would email 480 people from events@hackos.dev. Pausing for your approval.', 'approval')),
       {
         delay: 300,
         approval: {
           title: 'Send invite email to 480 people',
           agent: 'approval',
           risk: 'medium',
+          category: 'External communication',
           reason: 'Sends email on your behalf to people outside your team.',
           payload,
         },
@@ -117,7 +118,7 @@ function registrations(goal) {
       },
       // Shared tail. The failure below happens on every run: recovery is the point of the demo.
       s(800, task('t6', { status: 'running' }),
-        browse({ url: 'https://discord.com/channels/hackclub/events', title: 'Discord · #events' }),
+        browse({ url: 'https://discord.com/channels/hackclub/events', title: 'Discord · #events (simulated)' }),
         bstep('Opened #events in the Hack Club server')),
       s(1000, bstep('Typed the announcement with the form link')),
       s(1200, bstep('Post rejected: “New members can’t post links”', 'failed'),
@@ -136,23 +137,23 @@ function registrations(goal) {
       s(1100, bstep('Posted the image in #events'), bstep('Asked @mod-riya to pin it')),
       s(1300, bstep('Post pinned by a moderator'), recovery({ id: 'r1', status: 'resolved' }), status('running'),
         task('t6', { status: 'done' }), metricAdd(35),
-        say('recovery', 'Recovered. The post is live and pinned. Mission back on track.', 'recovered')),
-      s(1500, metricAdd(22), say('execution', (m) => `${m.metric.current} registrations. The Discord post is driving traffic.`)),
+        say('recovery', 'Recovered. The simulated post is up and pinned. Mission back on track.', 'recovered')),
+      s(1500, metricAdd(22), say('execution', (m) => `${m.metric.current} simulated registrations. The Discord post is driving sign-ups.`)),
       s(900, task('t7', { status: 'running' }), say('verification', 'Checking every response against the goal…')),
       s(1200, check((m) => `${m.metric.current} form responses received`)),
       s(1000, check('6 duplicate entries removed', 'warn'), check('2 invalid emails removed', 'warn'), metricAdd(-8)),
-      s(1200, say('verification', (m) => `Only ${m.metric.current} real registrations. That’s below the target of 100.`, 'failure'),
+      s(1200, say('verification', (m) => `Only ${m.metric.current} valid registrations. That’s below the target of 100.`, 'failure'),
         check((m) => `${m.metric.current} verified, short of 100`, 'failed'), task('t7', { status: 'failed' })),
       s(1400, say('planner', 'Adding a follow-up: remind the 60 people who opened the form but didn’t submit.', 'plan'),
         addTask({
           id: 't8', title: 'Remind unfinished sign-ups', agent: 'execution', deps: ['t7'], status: 'running',
           why: { objective: 'Close the gap to 100.', reason: 'Verification found too few real sign-ups. People who started the form but didn’t finish are the cheapest to convert.' },
         })),
-      s(1800, say('execution', 'Reminder sent to 60 people who started the form.', 'action'), task('t8', { status: 'done' }), metricSet(104)),
+      s(1800, say('execution', 'Reminder simulated for the 60 people who started the form.', 'action'), task('t8', { status: 'done' }), metricSet(104)),
       s(1300, task('t7', { status: 'running' }), check('Re-counted after the reminder')),
       s(1200, check('104 verified registrations (target: 100)'), task('t7', { status: 'done' }),
-        say('verification', 'Verified: 104 unique, valid registrations. Goal met.', 'verified')),
-      s(800, status('completed'), say('system', 'Mission complete: 104 of 100 registrations.', 'complete')),
+        say('verification', 'Verified: 104 unique, valid registrations in the simulation. Target reached.', 'verified')),
+      s(800, status('completed'), say('system', 'Simulated mission target reached: 104 of 100 registrations.', 'complete')),
     ],
   };
 }
@@ -191,7 +192,7 @@ function generic(goal) {
   const approve = ({ edited }) => [
     s(600, say('approval', edited ? 'Approved with your edits. Resuming.' : 'Approved. Resuming the mission.', 'approval'),
       status('running'), task('g5', { status: 'running' })),
-    s(1600, say('execution', 'Done. Confirmation received and saved.', 'action'), task('g5', { status: 'done' })),
+    s(1600, say('execution', 'Action simulated successfully. Confirmation saved.', 'action'), task('g5', { status: 'done' })),
   ];
 
   const reject = () => [
@@ -222,7 +223,7 @@ function generic(goal) {
       s(1500, recovery({ id: 'r1', plan: 'Switch to the next two sources and cross-check what they say.', status: 'retrying' }),
         say('recovery', 'New plan: use the next two sources and cross-check them.', 'recovery')),
       s(800, say('planner', 'Plan updated: “Collect options from the web” now uses two alternate sources.', 'plan'), task('g2', { status: 'running' })),
-      s(1000, browse({ url: 'https://news.ycombinator.com' }), bstep('Opened alternate source #2')),
+      s(1000, browse({ url: 'https://source-2.example.com' }), bstep('Opened alternate source #2')),
       s(1000, bstep('Opened alternate source #3'), bstep('Extracted 12 candidate options')),
       s(1100, recovery({ id: 'r1', status: 'resolved' }), status('running'), task('g2', { status: 'done' }),
         say('recovery', 'Recovered. 12 options collected from two working sources.', 'recovered')),
@@ -237,6 +238,7 @@ function generic(goal) {
           title: 'Act on your behalf',
           agent: 'approval',
           risk: 'medium',
+          category: 'Acts on your behalf',
           reason: 'Sends a submission to an outside party in your name.',
           payload: {
             from: 'you@yourdomain.com',

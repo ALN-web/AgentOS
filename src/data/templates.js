@@ -1,4 +1,4 @@
-export const DEMO_GOAL = 'Get 100 registrations for our hackathon';
+export const DEMO_GOAL = 'Get 100 registrations for our college hackathon';
 
 export const EXAMPLE_GOALS = [
   DEMO_GOAL,

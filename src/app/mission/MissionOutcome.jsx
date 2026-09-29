@@ -47,13 +47,16 @@ export default function MissionOutcome({ m, onReplay, replaying }) {
             <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Goal</div>
             <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight mb-4">{m.goal}</h2>
 
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Outcome</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Outcome · simulated</div>
             <div className="flex items-baseline gap-2 flex-wrap">
               <span className={`text-4xl sm:text-5xl font-extrabold tabular-nums ${met ? 'text-emerald-300' : 'text-white'}`}>{m.metric.current}</span>
               <span className="text-lg text-gray-500 font-semibold">/ {m.metric.target}</span>
               <span className="text-sm text-gray-400">{m.metric.label.toLowerCase()}</span>
             </div>
             <div className="text-[11px] text-gray-500 mt-1 font-mono">Mission time {formatClock(m.clock)}</div>
+            <p className="text-[11px] text-gray-500 mt-2 max-w-md">
+              This is the verified result of the scripted demo run. No real registrations, emails or posts were created.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2 lg:w-[420px] shrink-0">
@@ -63,7 +66,7 @@ export default function MissionOutcome({ m, onReplay, replaying }) {
             <Stat icon={ShieldCheck} label="Human approvals" value={s.approvals} tone={s.approvals ? 'text-amber-300' : 'text-white'} />
             <Stat icon={BadgeCheck} label="Verification" value={s.verified ? 'Passed' : 'Not run'} tone={s.verified ? 'text-emerald-300' : 'text-gray-400'} />
             <div className="rounded-xl bg-black/40 border border-white/5 px-3.5 py-3 flex items-center">
-              <div className="flex -space-x-1.5">
+              <div className="flex flex-wrap gap-1" aria-label="Agents involved">
                 {s.agents.map((a) => (
                   <AgentIcon key={a} id={a} size="sm" />
                 ))}
@@ -73,7 +76,7 @@ export default function MissionOutcome({ m, onReplay, replaying }) {
         </div>
 
         <div className="mt-6 pt-5 border-t border-white/5">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-3">What AgentOS accomplished</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-3">What AgentOS accomplished · simulated</div>
           <ol className="md:columns-2 gap-x-6">
             {s.items.map((item, i) => (
               <motion.li

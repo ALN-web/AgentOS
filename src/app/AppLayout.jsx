@@ -1,7 +1,9 @@
 import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { Inbox, LayoutDashboard, LayoutTemplate, ListChecks, Network, Plus, Sparkles } from 'lucide-react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { FlaskConical, Inbox, LayoutDashboard, LayoutTemplate, ListChecks, Network, Play, Plus, Sparkles } from 'lucide-react';
 import { Logo } from '../components/ui';
+import ErrorBoundary from '../components/ErrorBoundary';
+import ResetDemoButton from '../components/ResetDemoButton';
 import { useMissions, usePendingApprovals } from '../store/MissionStore';
 
 const NAV = [
@@ -38,8 +40,11 @@ function NavItems({ pending, compact }) {
 }
 
 export default function AppLayout() {
-  const { openLauncher } = useMissions();
+  const { openLauncher, startDemo } = useMissions();
   const pending = usePendingApprovals().length;
+  const navigate = useNavigate();
+  const tryDemo = () => navigate(`/app/missions/${startDemo()}`);
+  const { pathname } = useLocation();
 
   return (
     <div className="min-h-screen lg:pl-60">
@@ -48,24 +53,46 @@ export default function AppLayout() {
         <div className="px-2 mb-8">
           <Logo size="sm" />
         </div>
-        <button onClick={() => openLauncher()} className="btn-orange mb-6 w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
-          <Plus className="w-4 h-4" />
+        <button onClick={tryDemo} className="btn-orange mb-2 w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+          <Play className="w-3.5 h-3.5 fill-current" />
+          Try Demo Mission
+        </button>
+        <button onClick={() => openLauncher()} className="btn-dark mb-6 w-full py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2">
+          <Plus className="w-3.5 h-3.5" />
           New mission
         </button>
         <nav className="flex flex-col gap-1" aria-label="Console">
           <NavItems pending={pending} />
         </nav>
-        <div className="mt-auto px-3 text-[11px] text-gray-600 leading-relaxed">Don’t tell AI what to do. Tell it what you want done.</div>
+        <div className="mt-auto rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2.5 text-[11px] text-gray-500 leading-relaxed">
+          <div className="flex items-center gap-1.5 font-semibold text-gray-300 mb-0.5">
+            <FlaskConical className="w-3 h-3 text-[#eb6920]" />
+            Demo environment
+          </div>
+          Agents run a scripted simulation in your browser. No emails are sent and no external sites are contacted.
+          <div className="mt-2">
+            <ResetDemoButton />
+          </div>
+        </div>
       </aside>
 
       {/* Mobile header */}
       <header className="lg:hidden sticky top-0 z-40 bg-black/85 backdrop-blur-xl border-b border-white/5">
         <div className="px-4 h-14 flex items-center justify-between">
           <Logo size="sm" />
-          <button onClick={() => openLauncher()} className="btn-orange px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5">
-            <Plus className="w-3.5 h-3.5" />
-            New
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => openLauncher()} aria-label="New mission" className="btn-dark w-8 h-8 rounded-lg flex items-center justify-center">
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={tryDemo} className="btn-orange px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+              <Play className="w-3 h-3 fill-current" />
+              Try Demo
+            </button>
+          </div>
+        </div>
+        <div className="px-4 pb-1.5 flex items-center gap-1.5 text-[10px] text-gray-500">
+          <FlaskConical className="w-3 h-3 text-[#eb6920]" />
+          Demo environment · all agent actions are simulated
         </div>
         <nav className="px-3 pb-2 flex gap-1 overflow-x-auto no-scrollbar" aria-label="Console">
           <NavItems pending={pending} compact />
@@ -73,7 +100,10 @@ export default function AppLayout() {
       </header>
 
       <main className="px-4 sm:px-6 lg:px-10 py-6 lg:py-10 max-w-[1400px]">
-        <Outlet />
+        {/* Keyed by route so navigating away from a failed page recovers. */}
+        <ErrorBoundary key={pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   );

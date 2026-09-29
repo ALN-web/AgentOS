@@ -1,20 +1,25 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   advance,
   createMission,
   resolveApproval,
+  restartMission,
   runInstantly,
   setSpeed as setMissionSpeed,
   togglePause as toggleMissionPause,
 } from '../engine/engine';
+import { DEMO_GOAL } from '../data/templates';
+import { clearMissions, loadMissions, saveMissions } from './persistence';
 
 const MissionContext = createContext(null);
 
 const MIN = 60_000;
 
+const normalise = (goal) => goal.trim().toLowerCase().replace(/[.!\s]+$/, '').replace(/\s+/g, ' ');
+
 // Example history so the console never opens empty. The hero demo mission is
 // deliberately not seeded: it should be launched live.
-function seedMissions() {
+export function seedMissions() {
   const now = Date.now();
   return [
     runInstantly('Invoice all clients for September and chase overdue payments', {
@@ -27,8 +32,16 @@ function seedMissions() {
 }
 
 export function MissionProvider({ children }) {
-  const [missions, setMissions] = useState(seedMissions);
+  // Saved demo state from this browser if it is valid, otherwise a fresh start.
+  const [missions, setMissions] = useState(() => loadMissions() ?? seedMissions());
   const [launcher, setLauncher] = useState({ open: false, goal: '' });
+  // Latest missions for event handlers, so a double click can't act on stale state.
+  const latest = useRef(missions);
+  latest.current = missions;
+
+  useEffect(() => {
+    saveMissions(missions);
+  }, [missions]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -48,10 +61,32 @@ export function MissionProvider({ children }) {
 
   const value = useMemo(() => {
     const update = (id, fn) => setMissions((ms) => ms.map((m) => (m.id === id ? fn(m, Date.now()) : m)));
+
+    // "Try Demo Mission": there is only ever one demo run. If it is in
+    // progress, go back to it; if it finished, start it over.
+    const startDemo = () => {
+      setLauncher({ open: false, goal: '' });
+      const existing = latest.current.find((m) => m.demo);
+      if (existing && existing.status !== 'completed') return existing.id;
+      if (existing) {
+        const restarted = restartMission(existing, Date.now());
+        latest.current = latest.current.map((m) => (m.id === existing.id ? restarted : m));
+        setMissions((ms) => ms.map((m) => (m.id === existing.id ? restarted : m)));
+        return existing.id;
+      }
+      const m = createMission(DEMO_GOAL, { demo: true });
+      latest.current = [m, ...latest.current];
+      setMissions((ms) => [m, ...ms]);
+      return m.id;
+    };
+
     return {
       missions,
       launcher,
+      startDemo,
       launch(goal, opts) {
+        // Typing the demo goal runs the demo mission rather than a duplicate of it.
+        if (normalise(goal) === normalise(DEMO_GOAL)) return startDemo();
         const m = createMission(goal.trim(), opts);
         setMissions((ms) => [m, ...ms]);
         setLauncher({ open: false, goal: '' });
@@ -59,6 +94,17 @@ export function MissionProvider({ children }) {
       },
       decide(missionId, approvalId, decision, edits) {
         update(missionId, (m, now) => resolveApproval(m, approvalId, decision, edits, now));
+      },
+      // Wipes saved demo data and returns to the initial example missions.
+      resetDemo() {
+        clearMissions();
+        const seeds = seedMissions();
+        latest.current = seeds;
+        setMissions(seeds);
+        setLauncher({ open: false, goal: '' });
+      },
+      restart(missionId) {
+        update(missionId, (m, now) => restartMission(m, now));
       },
       setSpeed(missionId, speed) {
         update(missionId, (m, now) => setMissionSpeed(m, speed, now));

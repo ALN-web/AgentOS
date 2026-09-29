@@ -8,6 +8,7 @@ import { AGENTS } from '../data/agents';
 import { AgentIcon, EmptyState } from '../components/ui';
 import MissionRow, { MissionHeader } from '../components/MissionRow';
 import { DEMO_GOAL } from '../data/templates';
+import ResetDemoButton from '../components/ResetDemoButton';
 
 const RECENT = 5;
 
@@ -32,7 +33,7 @@ function Stat({ icon: Icon, label, value, tone = 'text-white', to, hint }) {
 }
 
 export default function Dashboard() {
-  const { missions, launch } = useMissions();
+  const { missions, launch, startDemo } = useMissions();
   const navigate = useNavigate();
   const [goal, setGoal] = useState('');
   const now = Date.now();
@@ -50,14 +51,28 @@ export default function Dashboard() {
 
   const start = (e) => {
     e?.preventDefault();
-    navigate(`/app/missions/${launch(goal.trim() || DEMO_GOAL)}`);
+    navigate(`/app/missions/${goal.trim() ? launch(goal) : startDemo()}`);
   };
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Dashboard</h1>
-        <p className="text-sm text-gray-400 mt-1">Tell AgentOS what you want done. It handles the rest.</p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Dashboard</h1>
+          <p className="text-sm text-gray-400 mt-1">Tell AgentOS what you want done. It handles the rest.</p>
+          <p className="text-[11px] text-gray-500 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>Missions are saved in this browser only.</span>
+            <ResetDemoButton />
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate(`/app/missions/${startDemo()}`)}
+          className="btn-orange self-start sm:self-auto px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2"
+        >
+          <Play className="w-3.5 h-3.5 fill-current" />
+          Try Demo Mission
+        </button>
       </div>
 
       <form onSubmit={start} className="glass-card rounded-2xl p-2 flex flex-col sm:flex-row gap-2 mb-8">
@@ -71,8 +86,8 @@ export default function Dashboard() {
             className="flex-1 min-w-0 bg-transparent py-3 text-sm text-white placeholder-gray-500 focus:outline-none"
           />
         </div>
-        <button type="submit" className="btn-orange px-5 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
-          <Play className="w-3.5 h-3.5 fill-current" />
+        <button type="submit" className="btn-dark px-5 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+          <Zap className="w-3.5 h-3.5" />
           Launch
         </button>
       </form>

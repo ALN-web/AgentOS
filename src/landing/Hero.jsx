@@ -88,13 +88,13 @@ function MissionPreview() {
   );
 }
 
-const STEPS = ['Give AgentOS a goal.', 'Its agents do the work.', 'It handles failures and delivers the outcome.'];
+const STEPS = ['Give AgentOS a goal.', 'Agents execute the work.', 'AgentOS handles failure.', 'AgentOS verifies the outcome.'];
 
 export default function Hero() {
-  const { openLauncher, launch } = useMissions();
+  const { openLauncher, startDemo } = useMissions();
   const navigate = useNavigate();
 
-  const runDemo = () => navigate(`/app/missions/${launch(DEMO_GOAL)}`);
+  const runDemo = () => navigate(`/app/missions/${startDemo()}`);
 
   return (
     <section id="home" className="relative pt-36 pb-24 overflow-hidden">
@@ -120,12 +120,12 @@ export default function Hero() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
           <button
-            onClick={() => openLauncher()}
+            onClick={() => openLauncher(DEMO_GOAL)}
             className="w-full sm:w-auto px-8 py-3.5 rounded-full text-sm font-semibold tracking-wide uppercase btn-orange flex items-center justify-center gap-2 group"
           >
-            Launch a mission
+            Launch Mission
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </button>
           <button
@@ -133,13 +133,16 @@ export default function Hero() {
             className="w-full sm:w-auto px-8 py-3.5 rounded-full text-sm font-semibold tracking-wide btn-dark flex items-center justify-center gap-2.5"
           >
             <Play className="w-3.5 h-3.5 fill-current text-[#eb6920]" />
-            Watch it run live
+            Try Demo Mission
           </button>
         </div>
+        <p className="text-center text-xs text-gray-500 mb-10">
+          Runs entirely in your browser as a simulation. No sign-up, no API keys, nothing is sent anywhere.
+        </p>
 
-        <ol className="flex flex-col md:flex-row items-stretch justify-center gap-2 md:gap-3 max-w-3xl mx-auto mb-14" aria-label="How AgentOS works">
+        <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 max-w-4xl mx-auto mb-14" aria-label="How AgentOS works">
           {STEPS.map((text, i) => (
-            <li key={text} className="flex-1 flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/[0.03] border border-white/10">
+            <li key={text} className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/[0.03] border border-white/10">
               <span className="w-7 h-7 rounded-full bg-[#eb6920]/15 border border-[#eb6920]/40 text-[#ff9a5c] text-xs font-bold flex items-center justify-center shrink-0">
                 {i + 1}
               </span>

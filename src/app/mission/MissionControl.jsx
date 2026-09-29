@@ -1,7 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, ListTodo, RotateCcw, ShieldCheck, Timer, Target } from 'lucide-react';
-import { AgentIcon, ProgressRing, StatusPill, formatClock } from '../../components/ui';
+import { AgentIcon, ProgressRing, StatusPill, formatClock, formatTime } from '../../components/ui';
 import { AGENT_BY_ID } from '../../data/agents';
 import { activeAgents, activeRecovery, approvalState, currentObjective, taskCounts } from '../../engine/selectors';
 
@@ -64,7 +64,14 @@ export default function MissionControl({ m, controls }) {
             <h1 className="text-lg sm:text-2xl font-extrabold text-white tracking-tight">{m.goal}</h1>
             <div className="flex flex-wrap items-center gap-2 mt-2.5">
               <StatusPill status={m.status} paused={m.paused} />
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded-full border border-white/10 bg-white/[0.04] text-[10px] font-semibold uppercase tracking-wider text-gray-400"
+                title="This mission is a scripted simulation. No real emails, forms or posts are created."
+              >
+                Simulated
+              </span>
               <span className="text-[11px] text-gray-500">{m.metric.label}</span>
+              <span className="text-[11px] text-gray-500 font-mono">· started {formatTime(m.createdAt)}</span>
             </div>
           </div>
         </div>

@@ -3,7 +3,7 @@ import { CheckCircle2, Cpu, Flag, Globe, RotateCcw, Target, Terminal, UserCheck,
 import { SectionLabel } from '../components/ui';
 
 const STAGES = [
-  { icon: Target, title: 'Goal', text: 'You describe the outcome in one sentence.', example: '“Get 100 registrations for our hackathon.”' },
+  { icon: Target, title: 'Goal', text: 'You describe the outcome in one sentence.', example: '“Get 100 registrations for our college hackathon.”' },
   { icon: Cpu, title: 'Plan', text: 'The Planner builds a task graph and assigns each task to an agent.', example: '7 tasks. The form and the invite email run in parallel.' },
   { icon: Globe, title: 'Research', text: 'The Research agent gathers the facts the plan depends on.', example: 'Finds 480 past attendees and 3 active student clubs.' },
   { icon: Terminal, title: 'Execute', text: 'Execution and Browser agents do the work: forms, emails and posts.', example: 'Publishes a Google Form and drafts the invite.' },

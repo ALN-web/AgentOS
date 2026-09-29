@@ -97,7 +97,7 @@ export default function ApprovalCard({ approval, showMission = false, readOnly =
           </span>
           <div className="min-w-0">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-300/80">
-              {pending ? 'Pending approval' : 'Approval decision'} · {agentName(approval.agent)}
+              {pending ? 'Action requires approval' : 'Approval decision'} · {agentName(approval.agent)}
             </div>
             <div className="text-sm font-semibold text-white">{approval.title}</div>
             {showMission && (
@@ -109,6 +109,7 @@ export default function ApprovalCard({ approval, showMission = false, readOnly =
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full border ${RISK[approval.risk]}`}>{approval.risk} risk</span>
+          {approval.category && <span className="text-[10px] text-gray-400">{approval.category}</span>}
           {resolved && <span className={`text-[11px] font-semibold ${resolved.cls}`}>{resolved.label}</span>}
         </div>
       </div>

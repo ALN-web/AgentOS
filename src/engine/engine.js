@@ -14,12 +14,16 @@ const uid = (prefix) => `${prefix}_${Date.now().toString(36)}${(seq++).toString(
 
 export const ACTIVE_STATUSES = ['planning', 'running', 'awaiting_approval', 'recovering'];
 
-export function createMission(goal, { templateId = null, createdAt = Date.now() } = {}) {
+// `runId` changes on every (re)start, so ids of events and approvals from an
+// earlier run never collide with the current one.
+export function createMission(goal, { templateId = null, createdAt = Date.now(), demo = false } = {}) {
   const { script, metric } = buildScript(goal);
   return {
     id: uid('m'),
+    runId: uid('r'),
     goal,
     templateId,
+    demo,
     status: 'planning',
     createdAt,
     updatedAt: createdAt,
@@ -46,7 +50,7 @@ function applyStep(m, now) {
   if (step.approval) {
     const approval = {
       ...step.approval,
-      id: `${m.id}_a${m.cursor}`,
+      id: `${m.runId}_a${m.cursor}`,
       missionId: m.id,
       goal: m.goal,
       status: 'pending',
@@ -120,8 +124,16 @@ export function resolveApproval(m, approvalId, decision, edits, now) {
 }
 
 export function setSpeed(m, speed, now) {
-  const left = Math.max(0, m.nextAt - now) * (m.speed / speed);
-  return { ...m, speed, nextAt: now + left };
+  const ratio = m.speed / speed;
+  // While paused the time left lives in `remaining`, not `nextAt`.
+  if (m.paused) return { ...m, speed, remaining: m.remaining * ratio };
+  return { ...m, speed, nextAt: now + Math.max(0, m.nextAt - now) * ratio };
+}
+
+// Starts the same mission over from its initial state, keeping its id and speed.
+export function restartMission(m, now) {
+  const fresh = createMission(m.goal, { templateId: m.templateId, createdAt: now, demo: m.demo });
+  return { ...fresh, id: m.id, speed: m.speed, nextAt: now + fresh.script[0].delay / m.speed };
 }
 
 export function togglePause(m, now) {
@@ -157,7 +169,7 @@ const REPLAY_APPROVAL_HOLD = 2500; // how long a replay lingers on each approval
 const DECISION = { approved: 'approve', edited: 'edit', rejected: 'reject' };
 
 export function replayTo(m, until) {
-  let r = { ...createMission(m.goal, { templateId: m.templateId, createdAt: m.createdAt }), id: m.id };
+  let r = { ...createMission(m.goal, { templateId: m.templateId, createdAt: m.createdAt, demo: m.demo }), id: m.id, runId: m.runId };
   while (r.cursor < r.script.length) {
     const step = r.script[r.cursor];
     if (step.approval) {

@@ -15,7 +15,7 @@ import {
 //
 // `see` says where the feature can be seen working:
 //   { to, label }            a page in the console
-//   { demo: true, label }    opens the launcher with the demo mission goal
+//   { demo: true, label }    opens the demo mission (starting it if needed)
 //   { replay: true, label }  opens the latest completed mission (falls back to the demo)
 // `note` is shown when the demo simulates part of the feature.
 
