@@ -21,6 +21,7 @@ router = APIRouter(prefix="/approvals", tags=["approvals"])
 class ApprovalDecisionIn(BaseModel):
     decision: Literal["approve", "edit", "reject"]
     edits: dict[str, Any] | None = None
+    input: Literal["click", "voice"] = "click"
 
 
 class ApprovalOut(BaseModel):
@@ -32,10 +33,12 @@ class ApprovalOut(BaseModel):
     category: str | None
     reason: str
     payload: dict
+    original_payload: dict
     status: str
     requested_at: datetime
     decided_at: datetime | None
     decided_by: str | None
+    input: str | None
 
 
 def _approval_out(a: Approval) -> ApprovalOut:
@@ -48,11 +51,29 @@ def _approval_out(a: Approval) -> ApprovalOut:
         category=a.category,
         reason=a.reason,
         payload=redact_dict(a.payload_json),
+        original_payload=redact_dict(a.original_payload_json),
         status=a.status,
         requested_at=a.requested_at,
         decided_at=a.decided_at,
         decided_by=a.decided_by,
+        input=getattr(a, "input", None),
     )
+
+@router.get("", response_model=list[ApprovalOut])
+def list_approvals(
+    status: str | None = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    stmt = (
+        select(Approval)
+        .join(Mission, Approval.mission_id == Mission.id)
+        .where(Mission.user_id == user.id)
+    )
+    if status:
+        stmt = stmt.where(Approval.status == status)
+    stmt = stmt.order_by(Approval.requested_at.desc())
+    return [_approval_out(a) for a in db.scalars(stmt)]
 
 
 @router.get("/{approval_id}", response_model=ApprovalOut)
@@ -80,5 +101,13 @@ def decide_approval(
     db: Session = Depends(get_db),
     user: User = Depends(current_user),
 ):
-    approval = handle_approval_decision(db, user, approval_id, body.decision, body.edits, request.app.state.google)
+    approval = handle_approval_decision(
+        db=db,
+        user=user,
+        approval_id=approval_id,
+        decision=body.decision,
+        edits=body.edits,
+        google=request.app.state.google,
+        input_type=body.input
+    )
     return _approval_out(approval)

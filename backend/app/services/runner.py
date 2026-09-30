@@ -479,6 +479,7 @@ def handle_approval_decision(
     decision: str,
     edits: dict[str, Any] | None = None,
     google: GoogleConnector | None = None,
+    input_type: str = "click",
 ) -> Approval:
     """Approve, edit or reject; then resume the mission. A decision is accepted only
     while the approval is still pending, so it cannot be replayed or changed."""
@@ -501,16 +502,30 @@ def handle_approval_decision(
 
     if decision == "approve":
         approval.status = "approved"
+        approval.input = input_type
         append_event(db, mission, EventType.APPROVAL_GRANTED, "approval", {"approval_id": approval.id, "edited": False})
     elif decision == "edit":
         approval.status = "edited"
+        approval.input = input_type
         if edits:
             check_no_secrets_or_tokens(edits)
-            # Edits change only the fields the user touched; the rest stays as approved.
-            approval.payload_json = {**(approval.payload_json or {}), **edits}
+            updated_payload = {**(approval.payload_json or {}), **edits}
+
+            # Validate against tool's input_model
+            from app.tools.registry import get_tool
+            tool = get_tool(approval.tool_name)
+            if tool and getattr(tool, "input_model", None):
+                try:
+                    tool.input_model(**updated_payload)
+                except Exception as exc:
+                    raise AppError("validation_error", f"Invalid edits: {exc}", status_code=422)
+
+            approval.payload_json = updated_payload
+
         append_event(db, mission, EventType.APPROVAL_GRANTED, "approval", {"approval_id": approval.id, "edited": True})
     elif decision == "reject":
         approval.status = "rejected"
+        approval.input = input_type
         append_event(db, mission, EventType.APPROVAL_REJECTED, "approval", {"approval_id": approval.id, "edited": False})
     else:
         raise AppError("invalid_decision", f"Invalid decision '{decision}'.", status_code=422)

@@ -108,7 +108,11 @@ export default function ApprovalCard({ approval, showMission = false, readOnly =
       }
       setEditing(false);
     } catch (err) {
-      setError(err.message || `Failed to submit ${decision} decision.`);
+      if (err.status === 409 || err.code === 409) {
+        setError('This approval has already been decided.');
+      } else {
+        setError(err.message || 'Something went wrong.');
+      }
     } finally {
       setInFlight(false);
     }
@@ -128,8 +132,9 @@ export default function ApprovalCard({ approval, showMission = false, readOnly =
             <ShieldAlert className="w-4 h-4" />
           </span>
           <div className="min-w-0">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-300/80">
-              {pending ? 'Action requires approval' : 'Approval decision'} · {agentName(approval.agent)}
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-300/80 flex items-center">
+              {approval.isLive && <span className="bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded mr-1.5 leading-none">LIVE</span>}
+              <span>{pending ? 'Action requires approval' : 'Approval decision'} · {agentName(approval.agent)}</span>
             </div>
             <div className="text-sm font-semibold text-white">{approval.title}</div>
             {showMission && (
