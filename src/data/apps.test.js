@@ -14,14 +14,15 @@ describe('Apps catalogue specification and safety rules', () => {
     expect(ids).toContain('discord');
   });
 
-  it('assigns only valid, honest statuses', () => {
-    const validStatuses = new Set(['connected', 'available', 'demo', 'coming_soon']);
+  it('enforces demo catalogue honesty: no static entry is connected or has a non-null account', () => {
     for (const app of APPS_CATALOGUE) {
-      expect(validStatuses.has(app.status)).toBe(true);
-      if (app.status === 'connected') {
-        expect(app.accountEmail).toBeTruthy();
-        expect(app.disconnectWarning).toBeTruthy();
-      }
+      // In Demo, apps must show 'demo' or 'coming_soon', never 'connected'
+      expect(['demo', 'coming_soon']).toContain(app.status);
+      expect(app.status).not.toBe('connected');
+      // Account must be null (no invented emails or phone numbers)
+      expect(app.accountEmail).toBeNull();
+      // No granted scopes in the static catalogue
+      expect(app.grantedScopes).toEqual([]);
     }
   });
 

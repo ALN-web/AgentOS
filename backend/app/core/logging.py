@@ -20,6 +20,8 @@ def configure_logging(level: str) -> None:
     root.handlers = [handler]
     root.setLevel(level)
     root.propagate = False
+    # httpx logs every request URL at INFO; keep Google calls out of the logs.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 def get_logger(name: str) -> logging.Logger:

@@ -143,7 +143,7 @@ export default function AppCard({ app, onUpdatePermission, onDisconnect, onConne
           {isDemo && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              Demo only
+              Demo
             </span>
           )}
 

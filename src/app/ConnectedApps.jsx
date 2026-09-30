@@ -161,7 +161,7 @@ export default function ConnectedApps() {
       </div>
 
       {/* Google Integration Control */}
-      <GoogleConnectControl />
+      {isLive && <GoogleConnectControl />}
 
       {/* Safety Policy Notice Card */}
       <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#171321] to-[#0f0d16] border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -198,9 +198,8 @@ export default function ConnectedApps() {
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
           {[
             { id: 'all', label: 'All' },
-            { id: 'connected', label: 'Connected' },
-            { id: 'available', label: 'Available' },
-            { id: 'demo', label: 'Demo only' },
+            ...(isLive ? [{ id: 'connected', label: 'Connected' }, { id: 'available', label: 'Available' }] : []),
+            { id: 'demo', label: 'Demo' },
             { id: 'coming_soon', label: 'Coming soon' },
           ].map((tab) => (
             <button

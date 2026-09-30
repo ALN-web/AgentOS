@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ApiError, createApiClient } from './api';
+import { ApiError, createApiClient, formatAuthError } from './api';
 import { planMission } from '../agentos/planner';
 
 const json = (status, data) => ({ ok: status >= 200 && status < 300, status, json: async () => data });
@@ -145,6 +145,68 @@ describe('backend API client', () => {
 
     await api.disconnectGoogle();
     expect(fetchImpl.mock.calls[fetchImpl.mock.calls.length - 1][1].method).toBe('DELETE');
+  });
+
+  it('includes credentials: include on all requests and CSRF header on mutating requests', async () => {
+    const fetchImpl = vi.fn(async () => json(200, { ok: true }));
+    const api = createApiClient('/api', { fetchImpl });
+
+    await api.health();
+    const [, getInit] = fetchImpl.mock.calls[0];
+    expect(getInit.credentials).toBe('include');
+    expect(getInit.headers['X-Requested-With']).toBeUndefined();
+
+    await api.logout();
+    const [, postInit] = fetchImpl.mock.calls[1];
+    expect(postInit.credentials).toBe('include');
+    expect(postInit.headers['X-Requested-With']).toBe('XMLHttpRequest');
+  });
+
+  it('handles auth endpoints and falls back gracefully', async () => {
+    const user = { id: 'u1', email: 'test@example.com', name: 'Tester' };
+    const fetchImpl = vi.fn(async (url, init) => {
+      if (url === '/api/v1/auth/me') return json(200, { user });
+      if (url === '/api/v1/auth/login') return json(200, { user });
+      if (url === '/api/v1/auth/signup') return json(201, { user });
+      if (url === '/api/v1/auth/logout') return json(204, null);
+      return json(404, {});
+    });
+    const api = createApiClient('/api', { fetchImpl });
+
+    const me = await api.getMe();
+    expect(me).toEqual({ user });
+
+    const loggedIn = await api.login({ email: 'test@example.com', password: 'secretpassword' });
+    expect(loggedIn).toEqual({ user });
+
+    const signedUp = await api.signup({ email: 'test@example.com', password: 'secretpassword', name: 'Tester' });
+    expect(signedUp).toEqual({ user });
+
+    await api.logout();
+    expect(fetchImpl.mock.calls[fetchImpl.mock.calls.length - 1][0]).toBe('/api/v1/auth/logout');
+  });
+
+  it('formats auth error codes into user-facing messages', () => {
+    expect(formatAuthError(new ApiError(401, 'invalid_credentials', 'Bad login'))).toBe(
+      'Invalid email or password. Please try again.'
+    );
+    expect(formatAuthError(new ApiError(400, 'email_taken', 'Email exists'))).toBe(
+      'An account with this email address already exists.'
+    );
+    expect(formatAuthError(new ApiError(429, 'rate_limited', 'Too many requests'))).toBe(
+      'Too many attempts. Please wait a moment and try again.'
+    );
+    expect(formatAuthError(new ApiError(0, 'network_error', 'Network fail'))).toBe(
+      'Could not reach the server. Please check your connection.'
+    );
+    expect(formatAuthError(new ApiError(0, 'timeout', 'Timed out'))).toBe(
+      'The backend did not respond in time. Please try again.'
+    );
+    expect(formatAuthError(new ApiError(0, 'not_configured', 'No backend'))).toBe(
+      'The AgentOS backend is not configured.'
+    );
+    expect(formatAuthError(new Error('Custom error'))).toBe('Custom error');
+    expect(formatAuthError(null)).toBeNull();
   });
 });
 

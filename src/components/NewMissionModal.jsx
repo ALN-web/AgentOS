@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Info, Lock, ShieldAlert, Sparkles, Target, X, Mic, Square, AlertCircle, Loader2 } from 'lucide-react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
@@ -12,6 +12,7 @@ import { AgentIcon, agentName } from './ui';
 import { AppBadge, appForTask, getAppMeta } from './AppIcon';
 import { useBackendStatus } from '../live/useBackendStatus';
 import { useGoogleIntegration } from '../live/useGoogleIntegration';
+import { useAuth } from '../live/auth';
 import { api } from '../live/api';
 
 const RISK_TONE = {
@@ -221,6 +222,8 @@ export default function NewMissionModal() {
   const [answers, setAnswers] = useState({});
   const inputRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
 
   const handleSpeechResult = useCallback((transcript) => {
     setGoal((prev) => {
@@ -280,6 +283,11 @@ export default function NewMissionModal() {
     let plan = planMission(goal.trim(), answers, undefined, preferences);
 
     if (isLiveAvailable && executionMode === 'live') {
+      if (!isAuthenticated) {
+        closeLauncher();
+        navigate(`/login?next=${encodeURIComponent(location.pathname + location.search)}`);
+        return;
+      }
       setStarting(true);
       try {
         try {
@@ -569,7 +577,9 @@ export default function NewMissionModal() {
                               <span>Live Mode</span>
                               {executionMode === 'live' && <Check className="w-3 h-3 text-emerald-400" />}
                             </div>
-                            <div className="text-[10px] text-gray-500 mt-0.5">Real Google tools & SSE</div>
+                            <div className="text-[10px] text-gray-500 mt-0.5">
+                              Real Google tools & SSE{!isAuthenticated ? ' · Sign-in required' : ''}
+                            </div>
                           </button>
                         ) : (
                           <div className="px-3 py-2 rounded-xl text-xs font-semibold text-left border border-white/5 bg-white/[0.02] text-gray-500 opacity-70">

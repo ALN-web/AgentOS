@@ -16,7 +16,6 @@ function getStoredLocalApps() {
       if (!saved) return app;
       return {
         ...app,
-        status: saved.status !== undefined ? saved.status : app.status,
         actions: app.actions.map((act) => ({
           ...act,
           mode: saved.actions?.[act.id] !== undefined ? saved.actions[act.id] : act.mode,
@@ -34,7 +33,6 @@ function saveLocalApps(apps) {
     const serialized = {};
     for (const app of apps) {
       serialized[app.id] = {
-        status: app.status,
         actions: Object.fromEntries(app.actions.map((a) => [a.id, a.mode])),
       };
     }
@@ -149,9 +147,9 @@ export function useConnectedApps() {
     [isLive]
   );
 
-  // Connect an app (in Demo Mode: simulates connecting; in Live Mode: triggers OAuth for Google apps)
+  // Connect an app (in Live Mode: triggers OAuth for Google apps; in Demo Mode: catalogue stays honest)
   const connect = useCallback(
-    async (appId, email = 'alex.chen@agentos.org') => {
+    async (appId) => {
       if (isLive && (appId.startsWith('google-') || appId === 'gmail')) {
         try {
           const res = await api.connectGoogle();
@@ -164,19 +162,6 @@ export function useConnectedApps() {
           throw err;
         }
       }
-
-      setApps((prevApps) => {
-        const next = prevApps.map((app) => {
-          if (app.id !== appId) return app;
-          return {
-            ...app,
-            status: 'connected',
-            accountEmail: email,
-          };
-        });
-        saveLocalApps(next);
-        return next;
-      });
     },
     [isLive]
   );

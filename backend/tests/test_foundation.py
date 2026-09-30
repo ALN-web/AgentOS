@@ -7,14 +7,14 @@ from app.main import create_app
 from tests.conftest import make_settings
 
 
-def test_health_reports_status_and_that_live_mode_is_available(client):
+def test_health_reports_status_and_that_live_mode_is_not_available(client):
     res = client.get("/api/health")
     assert res.status_code == 200
     body = res.json()
     assert body["status"] == "ok"
     assert body["service"] == "agentos-backend"
     assert body["environment"] == "test"
-    assert body["live_mode"]["available"] is True
+    assert body["live_mode"]["available"] is False
     assert body["live_mode"]["reason"]
 
 
