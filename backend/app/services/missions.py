@@ -18,6 +18,31 @@ def ensure_reference_data(db: Session) -> None:
     db.commit()
 
 
+import asyncio
+from collections import defaultdict
+
+_mission_listeners: dict[str, set[tuple[asyncio.AbstractEventLoop, asyncio.Event]]] = defaultdict(set)
+
+
+def register_mission_listener(mission_id: str, loop: asyncio.AbstractEventLoop, event: asyncio.Event) -> None:
+    _mission_listeners[mission_id].add((loop, event))
+
+
+def unregister_mission_listener(mission_id: str, loop: asyncio.AbstractEventLoop, event: asyncio.Event) -> None:
+    entry = (loop, event)
+    _mission_listeners[mission_id].discard(entry)
+    if not _mission_listeners[mission_id]:
+        _mission_listeners.pop(mission_id, None)
+
+
+def notify_mission_event(mission_id: str) -> None:
+    for loop, ev in list(_mission_listeners.get(mission_id, [])):
+        try:
+            loop.call_soon_threadsafe(ev.set)
+        except Exception:
+            pass
+
+
 def append_event(db: Session, mission: Mission, type_: EventType, agent: str | None = None, payload: dict | None = None) -> MissionEvent:
     """Add the next event for a mission. `seq` is unique per mission (enforced by the schema)."""
     db_last = db.scalar(select(func.max(MissionEvent.seq)).where(MissionEvent.mission_id == mission.id)) or 0
@@ -26,6 +51,7 @@ def append_event(db: Session, mission: Mission, type_: EventType, agent: str | N
     event = MissionEvent(mission_id=mission.id, seq=last + 1, type=str(type_), agent=agent, payload_json=payload or {})
     db.add(event)
     db.flush()
+    notify_mission_event(mission.id)
     return event
 
 
