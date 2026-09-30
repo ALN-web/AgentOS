@@ -41,6 +41,7 @@ export default function App() {
                 <Route index element={<Dashboard />} />
                 <Route path="missions" element={<Missions />} />
                 <Route path="missions/:id" element={<MissionDetail />} />
+                <Route path="live/missions/:id" element={<MissionDetail />} />
                 <Route path="apps" element={<ConnectedApps />} />
                 <Route path="features" element={<FeaturesPage />} />
                 <Route path="workforce" element={<Workforce />} />

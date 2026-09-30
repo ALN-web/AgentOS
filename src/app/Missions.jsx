@@ -4,7 +4,9 @@ import { useMissions } from '../store/MissionStore';
 import { usePreferences } from '../store/PreferencesStore';
 import MissionRow, { MissionHeader } from '../components/MissionRow';
 import { EmptyState, STATUS_META } from '../components/ui';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { api } from '../live/api';
+import { useBackendStatus } from '../live/useBackendStatus';
 
 const FILTERS = ['all', ...Object.keys(STATUS_META)];
 
@@ -17,6 +19,42 @@ export default function Missions() {
   const shown = filter === 'all' ? missions : missions.filter((m) => m.status === filter);
   
   const showNudge = !preferences.dismissedNudge && !preferences.displayName && preferences.groups.length === 0 && !preferences.signature;
+
+  const navigate = useNavigate();
+  const backendStatus = useBackendStatus();
+  const isLiveAvailable = Boolean(backendStatus?.liveMode?.available);
+  const [liveMissions, setLiveMissions] = useState([]);
+  const [liveLoading, setLiveLoading] = useState(isLiveAvailable);
+  const [liveError, setLiveError] = useState(null);
+
+  useEffect(() => {
+    if (!isLiveAvailable) {
+      setLiveLoading(false);
+      return;
+    }
+    let active = true;
+    api.listMissions()
+      .then(res => {
+        if (active) {
+          setLiveMissions(Array.isArray(res) ? res : []);
+          setLiveLoading(false);
+        }
+      })
+      .catch(err => {
+        if (active) {
+          setLiveError(err.message || 'Failed to load Live missions');
+          setLiveLoading(false);
+        }
+      });
+    return () => { active = false; };
+  }, [isLiveAvailable]);
+
+  const liveShown = filter === 'all' ? liveMissions : liveMissions.filter((m) => m.status === filter);
+  const getCount = (f) => {
+    const demoC = (f === 'all' ? missions.length : missions.filter((m) => m.status === f).length);
+    const liveC = (f === 'all' ? liveMissions.length : liveMissions.filter((m) => m.status === f).length);
+    return demoC + liveC;
+  };
 
   return (
     <div>
@@ -70,29 +108,65 @@ export default function Missions() {
             }`}
           >
             {f === 'all' ? 'All' : STATUS_META[f].label}
-            <span className="ml-1.5 tabular-nums text-gray-500">{count(f)}</span>
+            <span className="ml-1.5 tabular-nums text-gray-500">{getCount(f)}</span>
           </button>
         ))}
       </div>
 
-      <div className="glass-card rounded-2xl overflow-hidden">
-        {shown.length > 0 && <MissionHeader />}
-        {shown.map((m) => (
-          <MissionRow key={m.id} m={m} now={now} />
-        ))}
-        {shown.length === 0 && (
-          <EmptyState
-            icon={Rocket}
-            title={filter === 'all' ? 'No missions yet' : `No ${STATUS_META[filter].label.toLowerCase()} missions`}
-            action={
-              <button onClick={() => openLauncher()} className="btn-orange px-4 py-2 rounded-xl text-xs font-semibold">
-                Launch a mission
-              </button>
-            }
-          >
-            Launch a mission and let AgentOS take it from here.
-          </EmptyState>
-        )}
+      <div className="flex flex-col gap-8">
+        <div>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-emerald-400 mb-4 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            Live Missions
+          </h2>
+          <div className="glass-card rounded-2xl overflow-hidden">
+            {!isLiveAvailable ? (
+              <div className="p-8 text-center text-sm text-gray-500">Live Mode is unavailable. AgentOS backend cannot be reached or is not configured.</div>
+            ) : liveLoading ? (
+              <div className="p-8 text-center text-sm text-gray-500">Loading Live missions...</div>
+            ) : liveError ? (
+              <div className="p-8 text-center text-sm text-red-400">{liveError}</div>
+            ) : liveShown.length > 0 ? (
+              <>
+                <MissionHeader />
+                {liveShown.map((m) => (
+                  <div key={m.id}>
+                    <MissionRow m={{...m, isLive: true, createdAt: m.created_at ? new Date(m.created_at).getTime() : Date.now()}} now={now} />
+                  </div>
+                ))}
+              </>
+            ) : (
+              <div className="p-8 text-center text-sm text-gray-500">No Live missions yet.</div>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
+            Demo Missions
+          </h2>
+          <div className="glass-card rounded-2xl overflow-hidden">
+            {shown.length > 0 && <MissionHeader />}
+            {shown.map((m) => (
+              <div key={m.id}>
+                <MissionRow m={m} now={now} />
+              </div>
+            ))}
+            {shown.length === 0 && (
+              <EmptyState
+                icon={Rocket}
+                title={filter === 'all' ? 'No missions yet' : `No ${STATUS_META[filter].label.toLowerCase()} missions`}
+                action={
+                  <button onClick={() => openLauncher()} className="btn-orange px-4 py-2 rounded-xl text-xs font-semibold">
+                    Launch a mission
+                  </button>
+                }
+              >
+                Launch a mission and let AgentOS take it from here.
+              </EmptyState>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

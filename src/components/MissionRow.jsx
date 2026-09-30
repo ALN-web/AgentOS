@@ -21,7 +21,7 @@ export default function MissionRow({ m, now }) {
   const agents = involvedAgents(m);
   return (
     <Link
-      to={`/app/missions/${m.id}`}
+      to={m.isLive ? `/app/live/missions/${m.id}` : `/app/missions/${m.id}`}
       className={`grid ${ROW_GRID} gap-3 xl:gap-6 items-center px-5 py-4 hover:bg-white/[0.03] transition-colors border-b border-white/5 last:border-0 focus:outline-none focus-visible:bg-white/[0.05]`}
     >
       <div className="min-w-0">

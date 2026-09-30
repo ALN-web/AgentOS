@@ -19,6 +19,11 @@ export default function MissionBrief({ plan }) {
         <span className="flex items-center gap-2">
           <Brain className="w-4 h-4 text-[#eb6920]" />
           Mission understanding
+          {plan.plannerSource && (
+            <span className={`px-1.5 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ml-2 ${plan.plannerSource === 'llm' ? 'border-[#eb6920]/30 bg-[#eb6920]/10 text-[#ff9a5c]' : 'border-gray-500/30 bg-gray-500/10 text-gray-400'}`}>
+              Planner: {plan.plannerSource}
+            </span>
+          )}
         </span>
         <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
