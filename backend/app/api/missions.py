@@ -67,8 +67,19 @@ class AnalyzeRequest(BaseModel):
 
 @router.post("/analyze")
 def analyze_mission(body: AnalyzeRequest, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    # Minimal contract: always fallback to deterministic planning in this phase
-    return {"plan": None}
+    from app.services.planner import get_planner
+    
+    planner = get_planner()
+    plan = planner.plan(goal=body.goal, answers=body.answers or {}, db=db, user=user)
+    
+    if plan:
+        return {
+            "intent": plan.intent.model_dump(),
+            "plan": plan.model_dump(),
+            "planner": "llm"
+        }
+        
+    return {"plan": None, "planner": "fallback"}
 
 
 @router.post("", response_model=MissionDetail, status_code=status.HTTP_201_CREATED)

@@ -70,7 +70,7 @@ def test_analyze_mission_returns_deterministic_fallback(client):
     req = {"goal": "Analyze this", "answers": {"test": "yes"}}
     res = client.post("/api/missions/analyze", json=req)
     assert res.status_code == 200, res.text
-    assert res.json() == {"plan": None}
+    assert res.json() == {"plan": None, "planner": "fallback"}
 
 
 def test_missions_are_listed_newest_first(client):
