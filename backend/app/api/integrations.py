@@ -2,9 +2,9 @@
 
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Query, Request, Response, status
+from fastapi import APIRouter, Body, Depends, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -21,9 +21,13 @@ log = get_logger("integrations")
 
 class IntegrationOut(BaseModel):
     provider: str
-    status: str  # connected | not_connected
+    status: str  # connected | not_connected | needs_reconnect
     scopes: list[str]
     account_email: str | None
+
+
+class ConnectIn(BaseModel):
+    apps: list[str] = Field(default_factory=list)
 
 
 class ConnectOut(BaseModel):
@@ -38,21 +42,27 @@ def google_connector(request: Request) -> GoogleConnector:
 def list_integrations(db: Session = Depends(get_db), user: User = Depends(current_user)):
     g = db.scalar(select(Integration).where(Integration.user_id == user.id, Integration.provider == "google"))
     connected = g is not None and g.status == "connected" and g.encrypted_token is not None
+    needs_reconnect = g is not None and g.status == "needs_reconnect"
     return [
         IntegrationOut(
             provider="google",
-            status="connected" if connected else "not_connected",
-            scopes=list(g.scopes or []) if connected else [],
-            account_email=g.account_email if connected else None,
+            status="connected" if connected else ("needs_reconnect" if needs_reconnect else "not_connected"),
+            scopes=list(g.scopes or []) if (connected or needs_reconnect) else [],
+            account_email=g.account_email if (connected or needs_reconnect) else None,
         )
     ]
 
 
 @router.post("/google/connect", response_model=ConnectOut)
-def connect_google(user: User = Depends(current_user), google: GoogleConnector = Depends(google_connector)):
+def connect_google(
+    body: ConnectIn | None = Body(default=None),
+    user: User = Depends(current_user),
+    google: GoogleConnector = Depends(google_connector),
+):
     if not google.configured:
         raise AppError("google_not_configured", google.problem or "Google is not configured.", status_code=503)
-    return ConnectOut(authorization_url=google.authorization_url(user))
+    apps = body.apps if body and body.apps else None
+    return ConnectOut(authorization_url=google.authorization_url(user, apps=apps))
 
 
 @router.get("/google/callback")

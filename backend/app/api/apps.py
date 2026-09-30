@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -86,5 +86,11 @@ def app_activity(
 
 
 @router.delete("/{app_id}", response_model=DisconnectOut)
-def disconnect(app_id: str = AppId, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    return svc.disconnect(db, user, app_id)
+def disconnect(
+    request: Request,
+    app_id: str = AppId,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    google = getattr(request.app.state, "google", None)
+    return svc.disconnect(db, user, app_id, google=google)

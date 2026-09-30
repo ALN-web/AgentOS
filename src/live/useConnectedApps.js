@@ -118,30 +118,45 @@ export function useConnectedApps() {
   // Disconnect an app
   const disconnect = useCallback(
     async (appId) => {
-      setApps((prevApps) => {
-        const next = prevApps.map((app) => {
-          if (app.id !== appId) return app;
-          return {
-            ...app,
-            status: 'available',
-            accountEmail: null,
-          };
-        });
-        saveLocalApps(next);
-        return next;
-      });
-
       if (isLive) {
         try {
-          if (appId.startsWith('google-') || appId === 'gmail') {
-            await api.disconnectGoogle().catch(() => {});
-          }
-          await api.disconnectApp(appId).catch(() => {});
+          const res = await api.disconnectApp(appId);
+          const affected = res?.affected_apps && res.affected_apps.length > 0 ? res.affected_apps : [appId];
+          setApps((prevApps) => {
+            const next = prevApps.map((app) => {
+              if (affected.includes(app.id)) {
+                return {
+                  ...app,
+                  status: 'available',
+                  accountEmail: null,
+                  grantedScopes: [],
+                };
+              }
+              return app;
+            });
+            saveLocalApps(next);
+            return next;
+          });
+          return res;
         } catch (err) {
           setError(err.message || 'Failed to disconnect app on server');
           setApps(getStoredLocalApps);
           throw err;
         }
+      } else {
+        setApps((prevApps) => {
+          const next = prevApps.map((app) => {
+            if (app.id !== appId) return app;
+            return {
+              ...app,
+              status: 'available',
+              accountEmail: null,
+              grantedScopes: [],
+            };
+          });
+          saveLocalApps(next);
+          return next;
+        });
       }
     },
     [isLive]
@@ -152,7 +167,7 @@ export function useConnectedApps() {
     async (appId) => {
       if (isLive && (appId.startsWith('google-') || appId === 'gmail')) {
         try {
-          const res = await api.connectGoogle();
+          const res = await api.connectGoogle([appId]);
           if (res?.authorization_url) {
             window.location.href = res.authorization_url;
             return;

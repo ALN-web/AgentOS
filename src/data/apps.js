@@ -56,6 +56,29 @@ export const PERMISSION_MODES = {
   },
 };
 
+export const SCOPE_LABELS = {
+  'https://www.googleapis.com/auth/calendar.events': 'Calendar Events',
+  'calendar.events': 'Calendar Events',
+  'https://www.googleapis.com/auth/gmail.compose': 'Gmail (Draft & Send)',
+  'gmail.compose': 'Gmail (Draft & Send)',
+  'https://www.googleapis.com/auth/drive.file': 'Drive Files',
+  'drive.file': 'Drive Files',
+  'https://www.googleapis.com/auth/forms.body': 'Google Forms',
+  'forms.body': 'Google Forms',
+  'https://www.googleapis.com/auth/forms.responses.readonly': 'Form Responses',
+  'forms.responses.readonly': 'Form Responses',
+  'openid': 'Account ID',
+  'email': 'Account Email',
+  'https://www.googleapis.com/auth/userinfo.email': 'Account Email',
+};
+
+export function formatScope(scope) {
+  if (!scope) return '';
+  if (SCOPE_LABELS[scope]) return SCOPE_LABELS[scope];
+  const short = scope.split('/').pop();
+  return SCOPE_LABELS[short] || short;
+}
+
 export const APPS_CATALOGUE = [
   {
     id: 'google-calendar',

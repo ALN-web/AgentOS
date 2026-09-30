@@ -33,12 +33,26 @@ def _modes(db: Session, user: User, app: AppDef) -> dict[str, str]:
     return {a.id: max_mode(a.risk, stored.get(a.id, default_mode(a.risk))) for a in app.actions}
 
 
+def _has_required_scopes(granted_scopes: list[str], app_scopes: tuple[str, ...]) -> bool:
+    if not app_scopes:
+        return True
+    granted_norm = {s.split("/")[-1] for s in granted_scopes}
+    return all(s.split("/")[-1] in granted_norm for s in app_scopes)
+
+
 def app_status(db: Session, user: User, app: AppDef) -> tuple[str, Integration | None]:
     """connected: a real tool exists and the account is connected; available: a real tool
     exists but the account is not connected; demo: simulated in Demo Mode; else coming_soon."""
     has_real_tool = any(a.id in registered_tools() for a in app.actions)
     integ = _integration(db, user, app.integration)
+    if integ is not None and integ.status == "needs_reconnect":
+        scopes = integ.scopes or []
+        if (has_real_tool or app.integration == "google") and (not scopes or _has_required_scopes(scopes, app.scopes)):
+            return "needs_reconnect", integ
     connected = integ is not None and integ.status == "connected"
+    if connected and integ.scopes and app.scopes:
+        if not _has_required_scopes(integ.scopes, app.scopes):
+            connected = False
     if has_real_tool and connected:
         return "connected", integ
     if has_real_tool:
@@ -109,15 +123,19 @@ def update_permissions(db: Session, user: User, app_id: str, changes: dict[str, 
     return serialise(db, user, app)
 
 
-def disconnect(db: Session, user: User, app_id: str) -> dict:
+def disconnect(db: Session, user: User, app_id: str, google=None) -> dict:
     """Idempotent. Apps that share a provider (all Google apps) share one connection."""
     app = _app(app_id)
     integ = _integration(db, user, app.integration)
-    was_connected = integ is not None and integ.status == "connected"
-    if integ is not None:
+    was_connected = integ is not None and integ.status in ("connected", "needs_reconnect")
+    if app.integration == "google" and google is not None:
+        google.disconnect(db, user)
+    elif integ is not None:
         integ.status = "disconnected"
         integ.encrypted_token = None
         integ.token_expires_at = None
+        integ.scopes = []
+        integ.account_email = None
         db.commit()
     affected = [a.id for a in APPS if app.integration and a.integration == app.integration]
     return {"id": app_id, "disconnected": was_connected, "affected_apps": affected}

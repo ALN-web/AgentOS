@@ -113,7 +113,11 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
       }),
     getMissionEvidence: (missionId) => request(`/missions/${id(missionId)}/evidence`),
     listIntegrations: () => request('/integrations'),
-    connectGoogle: () => request('/integrations/google/connect', { method: 'POST' }),
+    connectGoogle: (apps) =>
+      request('/integrations/google/connect', {
+        method: 'POST',
+        body: apps && apps.length > 0 ? { apps } : undefined,
+      }),
     disconnectGoogle: () => request('/integrations/google', { method: 'DELETE' }),
   };
 }

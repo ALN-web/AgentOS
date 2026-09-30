@@ -4,7 +4,9 @@ import { api } from './api';
 
 export function useGoogleIntegration() {
   const [connected, setConnected] = useState(false);
+  const [status, setStatus] = useState('not_connected'); // 'connected' | 'needs_reconnect' | 'not_connected'
   const [accountEmail, setAccountEmail] = useState(null);
+  const [scopes, setScopes] = useState([]);
   const [loading, setLoading] = useState(Boolean(LIVE_API_URL));
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState(null);
@@ -16,16 +18,26 @@ export function useGoogleIntegration() {
       const h = await api.health();
       if (!h?.live_mode?.available) {
         setConnected(false);
+        setStatus('not_connected');
         return;
       }
       const integs = await api.listIntegrations();
       const g = Array.isArray(integs) ? integs.find((i) => i.provider === 'google') : null;
       if (g && g.status === 'connected') {
         setConnected(true);
+        setStatus('connected');
         setAccountEmail(g.account_email || null);
+        setScopes(g.scopes || []);
+      } else if (g && g.status === 'needs_reconnect') {
+        setConnected(false);
+        setStatus('needs_reconnect');
+        setAccountEmail(g.account_email || null);
+        setScopes(g.scopes || []);
       } else {
         setConnected(false);
+        setStatus('not_connected');
         setAccountEmail(null);
+        setScopes([]);
       }
     } catch (err) {
       setError(err.message || 'Failed to check Google connection.');
@@ -61,11 +73,11 @@ export function useGoogleIntegration() {
     refresh();
   }, [refresh]);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (apps = null) => {
     setConnecting(true);
     setError(null);
     try {
-      const res = await api.connectGoogle();
+      const res = await api.connectGoogle(apps);
       if (res?.authorization_url) {
         window.location.href = res.authorization_url;
       } else {
@@ -86,7 +98,9 @@ export function useGoogleIntegration() {
     try {
       await api.disconnectGoogle();
       setConnected(false);
+      setStatus('not_connected');
       setAccountEmail(null);
+      setScopes([]);
       setNotification({
         type: 'info',
         message: 'Google Workspace disconnected.',
@@ -105,6 +119,9 @@ export function useGoogleIntegration() {
 
   return {
     connected,
+    status,
+    needsReconnect: status === 'needs_reconnect',
+    scopes,
     accountEmail,
     loading,
     connecting,
