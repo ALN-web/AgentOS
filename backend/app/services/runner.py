@@ -30,9 +30,9 @@ from app.db.models import (
     User,
 )
 from app.domain import EventType, MissionStatus, RiskLevel, TaskStatus
-from app.integrations.catalog import ACTION_BY_ID
+
 from app.integrations.google import GoogleConnector
-from app.policy.permissions import check_action
+from app.policy.engine import decide
 from app.schemas.plan import check_no_secrets_or_tokens, redact_dict
 from app.services.missions import append_event, get_mission
 from app.services.preferences import UnknownGroupError, apply_preferences, load_preferences
@@ -287,62 +287,10 @@ def run_mission(db: Session, user: User, mission_id: str, google: GoogleConnecto
             return mission
         task.inputs = resolved_inputs
 
-        # Policy engine: no tool runs without it. Catalogue actions follow the user's
-        # per-app permissions (#11); CRITICAL actions are refused by default.
-        action_id = tool.action_id or tool.name
-        decision = check_action(db, user, action_id) if action_id in ACTION_BY_ID else None
-        refusal = None
-        if decision is not None and not decision.permitted:
-            refusal = decision.reason
-        elif decision is None and tool.risk == RiskLevel.CRITICAL:
-            refusal = f"'{tool.name}' is a critical action and is never run automatically."
-        if refusal:
-            append_event(db, mission, EventType.TASK_FAILED, task.agent, {"task_key": task.key, "error_class": "permission_denied", "message": refusal})
-            _skip(db, mission, task, "skipped_permission_denied", refusal)
-            continue
-
-        # We've already resolved real vs simulated up top.
-        if real and tool.integration == "google" and google_client is None:
-            return _fail(db, mission, task, "authentication_failed", "Connect Google in Apps to run this step for real, then start the mission again.", pause=True)
-
-        # Check Approval Gateway
-        needs_approval = task.gated or tool.risk == RiskLevel.HIGH or bool(decision and decision.requires_approval)
-        if needs_approval:
-            existing_approval = db.scalar(select(Approval).where(Approval.task_id == task.id))
-            if existing_approval is None:
-                approval = Approval(
-                    mission_id=mission.id,
-                    task_id=task.id,
-                    tool_name=tool.name,
-                    risk=str(tool.risk),
-                    category="External action",
-                    reason=f"Action '{tool.name}' interacts with an external app and requires approval.",
-                    payload_json=redact_dict(resolved_inputs),
-                    original_payload_json=redact_dict(resolved_inputs),
-                    status="pending",
-                )
-                db.add(approval)
-                task.status = TaskStatus.AWAITING
-                mission.status = MissionStatus.AWAITING_APPROVAL
-                db.flush()
-                append_event(
-                    db, mission, EventType.APPROVAL_REQUESTED, "approval",
-                    {
-                        "approval_id": approval.id,
-                        "task_key": task.key,
-                        "tool": tool.name,
-                        "risk": str(tool.risk),
-                        "category": approval.category,
-                        "reason": approval.reason,
-                        "payload": redact_dict(resolved_inputs),
-                        "applied_preferences": applied_prefs,
-                        "simulated": not real,
-                    },
-                )
-                db.commit()
-                return mission
-            elif existing_approval.status == "pending":
-                # Pending approvals are never auto-approved, not even after a restart.
+        # 1. Existing Approval Gateway -> update inputs before policy check
+        existing_approval = db.scalar(select(Approval).where(Approval.task_id == task.id))
+        if existing_approval:
+            if existing_approval.status == "pending":
                 task.status = TaskStatus.AWAITING
                 mission.status = MissionStatus.AWAITING_APPROVAL
                 db.commit()
@@ -351,14 +299,55 @@ def run_mission(db: Session, user: User, mission_id: str, google: GoogleConnecto
                 _skip(db, mission, task, "skipped_due_to_rejection", "You rejected this action, so it was not performed.")
                 continue
             elif existing_approval.status in ("approved", "edited"):
-                # Run exactly what was approved: preference-derived values such as a
-                # free slot must not be recomputed after the user said yes.
                 if existing_approval.payload_json:
                     resolved_inputs.update(existing_approval.payload_json)
                     task.inputs = resolved_inputs
             else:
                 _skip(db, mission, task, "skipped_approval_closed", f"The approval was {existing_approval.status}.")
                 continue
+
+        # 2. Policy Engine: one decision point before every tool call (#42)
+        decision = decide(db, user, real, tool, task.gated, resolved_inputs)
+        if not decision.permitted:
+            refusal = decision.reason or "Permission denied."
+            error_class = decision.error_class or "permission_denied"
+            append_event(db, mission, EventType.TASK_FAILED, task.agent, {"task_key": task.key, "error_class": error_class, "message": refusal})
+            _skip(db, mission, task, "skipped_permission_denied", refusal)
+            continue
+
+        # 3. New Approval Gateway
+        if decision.requires_approval and not existing_approval:
+            approval = Approval(
+                mission_id=mission.id,
+                task_id=task.id,
+                tool_name=tool.name,
+                risk=str(tool.risk),
+                category="External action",
+                reason=f"Action '{tool.name}' interacts with an external app and requires approval.",
+                payload_json=redact_dict(resolved_inputs),
+                original_payload_json=redact_dict(resolved_inputs),
+                status="pending",
+            )
+            db.add(approval)
+            task.status = TaskStatus.AWAITING
+            mission.status = MissionStatus.AWAITING_APPROVAL
+            db.flush()
+            append_event(
+                db, mission, EventType.APPROVAL_REQUESTED, "approval",
+                {
+                    "approval_id": approval.id,
+                    "task_key": task.key,
+                    "tool": tool.name,
+                    "risk": str(tool.risk),
+                    "category": approval.category,
+                    "reason": approval.reason,
+                    "payload": redact_dict(resolved_inputs),
+                    "applied_preferences": applied_prefs,
+                    "simulated": not real,
+                },
+            )
+            db.commit()
+            return mission
 
         if _tool_calls(db, mission) >= MAX_TOOL_CALLS_PER_MISSION:
             return _fail(db, mission, task, "budget_exceeded", f"This mission used its budget of {MAX_TOOL_CALLS_PER_MISSION} tool calls.")
