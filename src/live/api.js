@@ -105,12 +105,24 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
     getAppActivity: (appId, limit = 20) => request(`/apps/${id(appId)}/activity?limit=${Number(limit) || 20}`),
     disconnectApp: (appId) => request(`/apps/${id(appId)}`, { method: 'DELETE' }),
     startMission: (missionId) => request(`/missions/${id(missionId)}/start`, { method: 'POST' }),
-    getApproval: (approvalId) => request(`/approvals/${id(approvalId)}`),
+    listApprovals: (status = 'pending') => request(`/v1/approvals?status=${status}`).catch((err) =>
+      err.status === 404 ? request(`/approvals?status=${status}`) : Promise.reject(err)
+    ),
+    getApproval: (approvalId) => request(`/v1/approvals/${id(approvalId)}`).catch((err) =>
+      err.status === 404 ? request(`/approvals/${id(approvalId)}`) : Promise.reject(err)
+    ),
     decideApproval: (approvalId, decision, edits = null) =>
-      request(`/approvals/${id(approvalId)}/decision`, {
+      request(`/v1/approvals/${id(approvalId)}/decision`, {
         method: 'POST',
-        body: { decision, ...(edits ? { edits } : {}) },
-      }),
+        body: { decision, input: 'click', ...(edits ? { edits } : {}) },
+      }).catch((err) =>
+        err.status === 404
+          ? request(`/approvals/${id(approvalId)}/decision`, {
+              method: 'POST',
+              body: { decision, input: 'click', ...(edits ? { edits } : {}) },
+            })
+          : Promise.reject(err)
+      ),
     getMissionEvidence: (missionId) => request(`/missions/${id(missionId)}/evidence`),
     listIntegrations: () => request('/integrations'),
     connectGoogle: () => request('/integrations/google/connect', { method: 'POST' }),

@@ -9,6 +9,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from pydantic import BaseModel, Field, EmailStr, validator
+
 from app.domain import RiskLevel
 from app.integrations.google import GoogleError, event_id_for
 from app.schemas.preferences import Preferences
@@ -130,6 +132,26 @@ class SimulatedCalendarListEventsTool(Tool):
             evidence=_simulated_evidence({"type": "calendar_availability", "label": "Found open slot on Saturday 7:00 PM", "reference_id": "slot_sat_19"}),
         )
 
+class CalendarCreateEventInput(BaseModel):
+    summary: str | None = None
+    title: str | None = None
+    start: str | None = None
+    end: str | None = None
+    timezone: str | None = None
+    description: str | None = None
+    location: str | None = None
+    attendees: str | list[str] | None = None
+
+    @validator('attendees', pre=True)
+    def validate_attendees(cls, v):
+        if not v: return v
+        items = v if isinstance(v, list) else str(v).split(",")
+        for e in items:
+            e = e.strip()
+            if e and "@" not in e:
+                raise ValueError(f"Invalid attendee email: {e}")
+        return v
+
 class CalendarCreateEventTool(Tool):
     name = "calendar.create_event"
     capability = "calendar"
@@ -140,6 +162,7 @@ class CalendarCreateEventTool(Tool):
     risk = RiskLevel.HIGH
     output_fields = ("event_id", "html_link", "start", "end", "summary", "status", "idempotency_key", "hangout_link", "attendees")
     supports_idempotency = True
+    input_model = CalendarCreateEventInput
 
     def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
         summary = args.get("summary") or args.get("title") or "Birthday dinner for 8"
@@ -191,6 +214,7 @@ class SimulatedCalendarCreateEventTool(Tool):
     risk = RiskLevel.HIGH
     output_fields = ("event_id", "html_link", "start", "end", "summary", "status", "idempotency_key", "hangout_link", "attendees")
     supports_idempotency = True
+    input_model = CalendarCreateEventInput
 
     def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
         summary = args.get("summary") or args.get("title") or "Birthday dinner for 8"
@@ -209,6 +233,25 @@ class SimulatedCalendarCreateEventTool(Tool):
         return {"verified": False, "simulated": True, "detail": "Simulated; nothing to re-read."}
 
 
+class GmailCreateDraftInput(BaseModel):
+    subject: str | None = None
+    body_link: str | None = None
+    html_link: str | None = None
+    event_link: str | None = None
+    body: str | None = None
+    signature: str | None = None
+    to: str | list[str] | None = None
+
+    @validator('to', pre=True)
+    def validate_recipients(cls, v):
+        if not v: return v
+        items = v if isinstance(v, list) else str(v).split(",")
+        for e in items:
+            e = e.strip()
+            if e and "@" not in e:
+                raise ValueError(f"Invalid recipient email: {e}")
+        return v
+
 class GmailCreateDraftTool(Tool):
     name = "gmail.create_draft"
     capability = "document"
@@ -219,6 +262,7 @@ class GmailCreateDraftTool(Tool):
     risk = RiskLevel.MEDIUM
     output_fields = ("draft_id", "message_id", "thread_id", "subject", "body", "to", "html_link")
     supports_idempotency = True
+    input_model = GmailCreateDraftInput
 
     def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
         subject = args.get("subject", "Birthday Dinner Invitation")
@@ -263,6 +307,7 @@ class SimulatedGmailCreateDraftTool(Tool):
     risk = RiskLevel.MEDIUM
     output_fields = ("draft_id", "message_id", "thread_id", "subject", "body", "to", "html_link")
     supports_idempotency = True
+    input_model = GmailCreateDraftInput
 
     def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
         subject = args.get("subject", "Birthday Dinner Invitation")
@@ -294,6 +339,23 @@ class SimulatedGmailCreateDraftTool(Tool):
         return {"verified": False, "simulated": True, "detail": "Simulated; nothing to re-read."}
 
 
+class GmailSendDraftInput(BaseModel):
+    draft_id: str | None = None
+    message_id: str | None = None
+    body: str | None = None
+    subject: str | None = None
+    to: str | list[str] | None = None
+
+    @validator('to', pre=True)
+    def validate_recipients(cls, v):
+        if not v: return v
+        items = v if isinstance(v, list) else str(v).split(",")
+        for e in items:
+            e = e.strip()
+            if e and "@" not in e:
+                raise ValueError(f"Invalid recipient email: {e}")
+        return v
+
 class GmailSendDraftTool(Tool):
     name = "gmail.send_draft"
     capability = "communication"
@@ -304,6 +366,7 @@ class GmailSendDraftTool(Tool):
     risk = RiskLevel.HIGH
     output_fields = ("message_id", "thread_id", "status", "sent_at", "body", "subject", "to")
     supports_idempotency = True
+    input_model = GmailSendDraftInput
 
     def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
         body, subject, to = args.get("body", ""), args.get("subject", ""), args.get("to", "")
@@ -346,6 +409,7 @@ class SimulatedGmailSendDraftTool(Tool):
     risk = RiskLevel.HIGH
     output_fields = ("message_id", "thread_id", "status", "sent_at", "body", "subject", "to")
     supports_idempotency = True
+    input_model = GmailSendDraftInput
 
     def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
         body, subject, to = args.get("body", ""), args.get("subject", ""), args.get("to", "")

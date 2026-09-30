@@ -3,6 +3,8 @@ import { CheckCircle2, History, Pencil, ShieldAlert, ShieldCheck, XCircle } from
 import { useMissions } from '../store/MissionStore';
 import ApprovalCard from '../components/ApprovalCard';
 import { EmptyState } from '../components/ui';
+import { api } from '../live/api';
+import { useAuth } from '../live/auth';
 
 function Count({ icon: Icon, label, value, tone }) {
   return (
@@ -18,10 +20,39 @@ function Count({ icon: Icon, label, value, tone }) {
 
 export default function Approvals() {
   const { missions } = useMissions();
-  const all = missions.flatMap((m) => m.approvals);
+  const { user } = useAuth();
+  const [livePending, setLivePending] = useState([]);
+
+  useEffect(() => {
+    if (user) {
+      api.listApprovals('pending').then(data => {
+        const live = data.map(a => ({
+          ...a,
+          missionId: a.mission_id,
+          taskId: a.task_id,
+          title: a.reason,
+          agent: 'approval',
+          isLive: true,
+          original: a.original_payload,
+          requestedAt: new Date(a.requested_at).getTime()
+        }));
+        setLivePending(live);
+      }).catch(console.error);
+    } else {
+      setLivePending([]);
+    }
+  }, [user]);
+
+  const demoApprovals = missions.flatMap((m) => m.approvals);
+  const all = [...demoApprovals, ...livePending];
   const pending = all.filter((a) => a.status === 'pending').sort((a, b) => b.requestedAt - a.requestedAt);
-  const history = all.filter((a) => a.status !== 'pending').sort((a, b) => b.resolvedAt - a.resolvedAt);
-  const count = (s) => all.filter((a) => a.status === s).length;
+  const history = demoApprovals.filter((a) => a.status !== 'pending').sort((a, b) => b.resolvedAt - a.resolvedAt);
+  const count = (s) => demoApprovals.filter((a) => a.status === s).length;
+
+  const handleLiveDecide = async (id, decision, edits) => {
+    await api.decideApproval(id, decision, edits);
+    setLivePending(prev => prev.filter(a => a.id !== id));
+  };
 
   return (
     <div className="max-w-4xl">
@@ -50,7 +81,7 @@ export default function Approvals() {
       ) : (
         <div className="space-y-4 mb-10">
           {pending.map((a) => (
-            <ApprovalCard key={a.id} approval={a} showMission />
+            <ApprovalCard key={a.id} approval={a} showMission onDecide={a.isLive ? handleLiveDecide : undefined} />
           ))}
         </div>
       )}

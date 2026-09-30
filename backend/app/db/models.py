@@ -219,6 +219,7 @@ class Approval(Base):
     requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     decided_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    input: Mapped[str | None] = mapped_column(String(20), nullable=True, default="click")
 
     mission: Mapped[Mission] = relationship(back_populates="approvals")
 
