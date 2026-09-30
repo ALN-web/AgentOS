@@ -17,6 +17,10 @@ import Missions from './app/Missions';
 import FeaturesPage from './app/FeaturesPage';
 import SettingsPage from './app/SettingsPage';
 import ConnectedApps from './app/ConnectedApps';
+import { AuthProvider } from './live/auth';
+import ProtectedRoute from './live/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -31,31 +35,56 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <BrowserRouter>
-          <MotionConfig reducedMotion="user">
-            <PreferencesProvider>
-              <MissionProvider>
-                <ScrollToTop />
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/app" element={<AppLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="missions" element={<Missions />} />
-                <Route path="missions/:id" element={<MissionDetail />} />
-                <Route path="apps" element={<ConnectedApps />} />
-                <Route path="features" element={<FeaturesPage />} />
-                <Route path="workforce" element={<Workforce />} />
-                <Route path="approvals" element={<Approvals />} />
-                <Route path="templates" element={<TemplatesPage />} />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route path="*" element={<Navigate to="/app" replace />} />
-              </Route>
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-            <NewMissionModal />
-          </MissionProvider>
-          </PreferencesProvider>
-        </MotionConfig>
-      </BrowserRouter>
+          <AuthProvider>
+            <MotionConfig reducedMotion="user">
+              <PreferencesProvider>
+                <MissionProvider>
+                  <ScrollToTop />
+                  <Routes>
+                    <Route path="/" element={<Landing />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/signup" element={<SignupPage />} />
+                    {/* Protected Live console routes */}
+                    <Route
+                      path="/app/live/*"
+                      element={
+                        <ProtectedRoute>
+                          <AppLayout />
+                        </ProtectedRoute>
+                      }
+                    >
+                      <Route index element={<Dashboard />} />
+                      <Route path="missions" element={<Missions />} />
+                      <Route path="missions/:id" element={<MissionDetail />} />
+                      <Route path="apps" element={<ConnectedApps />} />
+                      <Route path="features" element={<FeaturesPage />} />
+                      <Route path="workforce" element={<Workforce />} />
+                      <Route path="approvals" element={<Approvals />} />
+                      <Route path="templates" element={<TemplatesPage />} />
+                      <Route path="settings" element={<SettingsPage />} />
+                      <Route path="*" element={<Navigate to="/app/live" replace />} />
+                    </Route>
+                    {/* Public Demo console routes */}
+                    <Route path="/app" element={<AppLayout />}>
+                      <Route index element={<Dashboard />} />
+                      <Route path="missions" element={<Missions />} />
+                      <Route path="missions/:id" element={<MissionDetail />} />
+                      <Route path="apps" element={<ConnectedApps />} />
+                      <Route path="features" element={<FeaturesPage />} />
+                      <Route path="workforce" element={<Workforce />} />
+                      <Route path="approvals" element={<Approvals />} />
+                      <Route path="templates" element={<TemplatesPage />} />
+                      <Route path="settings" element={<SettingsPage />} />
+                      <Route path="*" element={<Navigate to="/app" replace />} />
+                    </Route>
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                  <NewMissionModal />
+                </MissionProvider>
+              </PreferencesProvider>
+            </MotionConfig>
+          </AuthProvider>
+        </BrowserRouter>
       </ThemeProvider>
     </ErrorBoundary>
   );

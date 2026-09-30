@@ -30,9 +30,15 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
+      const isWrite = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase());
       const res = await fetchImpl(`${baseUrl}${path}`, {
         method,
-        headers: body === undefined ? { Accept: 'application/json' } : { Accept: 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: {
+          Accept: 'application/json',
+          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+          ...(isWrite ? { 'X-Requested-With': 'XMLHttpRequest' } : {}),
+        },
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: controller.signal,
       });
@@ -56,6 +62,23 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
   const id = (v) => encodeURIComponent(v);
   return {
     health: () => request('/health'),
+    // Auth endpoints (fallback between /v1/auth and /auth)
+    getMe: () =>
+      request('/v1/auth/me').catch((err) =>
+        err.status === 404 ? request('/auth/me') : Promise.reject(err)
+      ),
+    signup: (credentials) =>
+      request('/v1/auth/signup', { method: 'POST', body: credentials }).catch((err) =>
+        err.status === 404 ? request('/auth/signup', { method: 'POST', body: credentials }) : Promise.reject(err)
+      ),
+    login: (credentials) =>
+      request('/v1/auth/login', { method: 'POST', body: credentials }).catch((err) =>
+        err.status === 404 ? request('/auth/login', { method: 'POST', body: credentials }) : Promise.reject(err)
+      ),
+    logout: () =>
+      request('/v1/auth/logout', { method: 'POST' }).catch((err) =>
+        err.status === 404 ? request('/auth/logout', { method: 'POST' }) : Promise.reject(err)
+      ),
     // source: 'typed' | 'voice' | 'template' (templateId required for 'template').
     createMission: (goal, plan, { source, templateId } = {}) =>
       request('/missions', {
@@ -88,6 +111,27 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
     connectGoogle: () => request('/integrations/google/connect', { method: 'POST' }),
     disconnectGoogle: () => request('/integrations/google', { method: 'DELETE' }),
   };
+}
+
+export function formatAuthError(error) {
+  if (!error) return null;
+  const code = error?.code || (error instanceof ApiError ? error.code : null);
+  switch (code) {
+    case 'invalid_credentials':
+      return 'Invalid email or password. Please try again.';
+    case 'email_taken':
+      return 'An account with this email address already exists.';
+    case 'rate_limited':
+      return 'Too many attempts. Please wait a moment and try again.';
+    case 'not_configured':
+      return 'The AgentOS backend is not configured.';
+    case 'timeout':
+      return 'The backend did not respond in time. Please try again.';
+    case 'network_error':
+      return 'Could not reach the server. Please check your connection.';
+    default:
+      return error.message || 'An unexpected error occurred. Please try again.';
+  }
 }
 
 export const api = createApiClient(LIVE_API_URL);

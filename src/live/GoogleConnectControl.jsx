@@ -1,8 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Check, CheckCircle2, Loader2, LogOut, ShieldCheck, Unplug, X, AlertCircle } from 'lucide-react';
 import { useGoogleIntegration } from './useGoogleIntegration';
+import { useAuth } from './auth';
 
 export default function GoogleConnectControl({ className = '', compact = false }) {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const {
     connected,
     accountEmail,
@@ -13,6 +17,14 @@ export default function GoogleConnectControl({ className = '', compact = false }
     disconnect,
     dismissNotification,
   } = useGoogleIntegration();
+
+  const handleConnect = () => {
+    if (!isAuthenticated) {
+      navigate(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      return;
+    }
+    connect();
+  };
 
   return (
     <div className={`space-y-3 ${className}`}>
@@ -99,7 +111,7 @@ export default function GoogleConnectControl({ className = '', compact = false }
           ) : (
             <button
               type="button"
-              onClick={connect}
+              onClick={handleConnect}
               disabled={connecting || loading}
               className="btn-orange px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm disabled:opacity-50"
             >
