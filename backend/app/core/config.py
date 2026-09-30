@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     def google_configured(self) -> bool:
         return bool(self.google_client_id and self.google_client_secret and self.encryption_key)
 
+    anthropic_api_key: SecretStr | None = None
+    anthropic_model: str = "claude-3-7-sonnet-latest"
+    anthropic_timeout_seconds: float = 20.0
+    
     @property
     def is_production(self) -> bool:
         return self.environment == "production"

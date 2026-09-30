@@ -294,9 +294,9 @@ export default function NewMissionModal() {
           const analysis = await api.analyzeMission(goal.trim(), answers);
           if (analysis && analysis.plan) {
             plan = analysis.plan;
-            plan.plannerSource = 'llm';
+            plan.plannerSource = analysis.planner || 'llm';
           } else {
-            plan.plannerSource = 'fallback';
+            plan.plannerSource = analysis?.planner || 'fallback';
           }
         } catch (err) {
           plan.plannerSource = 'fallback';
