@@ -1,12 +1,15 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { LIVE_API_URL } from './config';
 import { api } from './api';
+import { getConnectedServicesStatus } from '../data/apps';
 
 export function useGoogleIntegration() {
   const [connected, setConnected] = useState(false);
   const [status, setStatus] = useState('not_connected'); // 'connected' | 'needs_reconnect' | 'not_connected'
   const [accountEmail, setAccountEmail] = useState(null);
   const [scopes, setScopes] = useState([]);
+  const [integrations, setIntegrations] = useState([]);
+  const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(Boolean(LIVE_API_URL));
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState(null);
@@ -21,7 +24,12 @@ export function useGoogleIntegration() {
         setStatus('not_connected');
         return;
       }
-      const integs = await api.listIntegrations();
+      const [integs, liveApps] = await Promise.all([
+        api.listIntegrations().catch(() => []),
+        api.listApps().catch(() => []),
+      ]);
+      setIntegrations(integs || []);
+      setApps(liveApps || []);
       const g = Array.isArray(integs) ? integs.find((i) => i.provider === 'google') : null;
       if (g && g.status === 'connected') {
         setConnected(true);
@@ -117,12 +125,20 @@ export function useGoogleIntegration() {
     }
   }, [refresh]);
 
+  const servicesStatus = useMemo(
+    () => getConnectedServicesStatus(integrations, apps),
+    [integrations, apps]
+  );
+
   return {
     connected,
     status,
     needsReconnect: status === 'needs_reconnect',
     scopes,
     accountEmail,
+    integrations,
+    apps,
+    servicesStatus,
     loading,
     connecting,
     error,

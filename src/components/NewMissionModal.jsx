@@ -31,12 +31,26 @@ function Stat({ value, label }) {
 }
 
 // "Mission understood": what AgentOS made of the goal, before anything runs.
-function Understanding({ goal, answers, setAnswers, preferences }) {
+function Understanding({ goal, answers, setAnswers, preferences, livePlan }) {
   const [showPlan, setShowPlan] = useState(false);
   // Questions come from the goal alone, so answering one doesn't hide it mid-typing.
-  const questions = useMemo(() => planMission(goal, {}, undefined, preferences).intent.questions, [goal, preferences]);
-  const plan = useMemo(() => planMission(goal, answers, undefined, preferences), [goal, answers, preferences]);
-  const { intent } = plan;
+  const questions = useMemo(() => {
+    if (livePlan?.intent?.questions) return livePlan.intent.questions;
+    return planMission(goal, {}, undefined, preferences).intent.questions;
+  }, [goal, preferences, livePlan]);
+
+  const plan = useMemo(() => {
+    if (livePlan) return livePlan;
+    return planMission(goal, answers, undefined, preferences);
+  }, [goal, answers, preferences, livePlan]);
+
+  const intent = plan.intent || {};
+  const isLlmPlan = plan.plannerSource === 'llm' || plan.planner === 'llm';
+  const approvalPoints = plan.approvalPoints ?? plan.approval_points ?? 0;
+  const riskLevel = plan.riskLevel || plan.risk_level || 'low';
+  const tasks = plan.tasks || [];
+  const criteria = plan.criteria || [];
+  const capabilities = plan.capabilities || [];
 
   return (
     <div className="mt-5 space-y-4">
@@ -44,16 +58,18 @@ function Understanding({ goal, answers, setAnswers, preferences }) {
         <div className="flex items-center justify-between gap-2 mb-2">
           <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#eb6920]">
             <Check className="w-3 h-3" />
-            Mission understood
+            {isLlmPlan ? 'Mission planned (AI planner)' : 'Mission understood'}
           </span>
-          <span className="text-[10px] font-semibold text-gray-400 px-2 py-0.5 rounded-full border border-white/10">{intent.domainLabel}</span>
+          <span className="text-[10px] font-semibold text-gray-400 px-2 py-0.5 rounded-full border border-white/10">
+            {intent.domainLabel || intent.domain || 'general'}
+          </span>
         </div>
-        <div className="text-base font-bold text-white">{intent.objective}</div>
+        <div className="text-base font-bold text-white">{intent.objective || goal}</div>
         <div className="flex items-start gap-1.5 text-xs text-gray-300 mt-1.5">
           <Target className="w-3.5 h-3.5 mt-0.5 text-[#ff9a5c] shrink-0" />
           <span>
             <span className="text-gray-500">Success means: </span>
-            {intent.desiredOutcome}
+            {intent.desiredOutcome || intent.desired_outcome || 'Goal fulfilled'}
           </span>
         </div>
       </div>
@@ -61,10 +77,10 @@ function Understanding({ goal, answers, setAnswers, preferences }) {
       <div>
         <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-2">Likely capabilities</div>
         <div className="flex flex-wrap gap-1.5">
-          {plan.capabilities.map((c) => (
+          {capabilities.map((c) => (
             <span key={c} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-white/10 bg-white/[0.03] text-[11px] text-gray-200">
               <Check className="w-3 h-3 text-emerald-400" />
-              {CAPABILITY_BY_ID[c]?.name}
+              {CAPABILITY_BY_ID[c]?.name || c}
             </span>
           ))}
         </div>
@@ -73,11 +89,13 @@ function Understanding({ goal, answers, setAnswers, preferences }) {
       <div>
         <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-2">Estimated execution plan</div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <Stat value={plan.tasks.length} label="tasks" />
-          <Stat value={plan.approvalPoints} label={plan.approvalPoints === 1 ? 'approval point' : 'approval points'} />
-          <Stat value={plan.criteria.length} label="success criteria" />
+          <Stat value={tasks.length} label="tasks" />
+          <Stat value={approvalPoints} label={approvalPoints === 1 ? 'approval point' : 'approval points'} />
+          <Stat value={criteria.length} label="success criteria" />
           <div className="rounded-xl bg-black/40 border border-white/5 px-3 py-2.5 flex flex-col justify-center">
-            <span className={`self-start text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${RISK_TONE[plan.riskLevel]}`}>{plan.riskLevel}</span>
+            <span className={`self-start text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${RISK_TONE[riskLevel] || RISK_TONE.low}`}>
+              {riskLevel}
+            </span>
             <span className="text-[10px] text-gray-500 mt-1">risk</span>
           </div>
         </div>
@@ -241,6 +259,8 @@ export default function NewMissionModal() {
       setGoal(launcher.goal);
       setStage('input');
       setAnswers({});
+      setLivePlan(null);
+      setIsPlanning(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [launcher.open, launcher.goal]);
@@ -266,21 +286,40 @@ export default function NewMissionModal() {
 
   const [executionMode, setExecutionMode] = useState('demo');
   const [starting, setStarting] = useState(false);
+  const [isPlanning, setIsPlanning] = useState(false);
+  const [livePlan, setLivePlan] = useState(null);
   const [startError, setStartError] = useState(null);
 
   const ready = goal.trim().length > 2;
 
-  const analyze = (e) => {
+  const analyze = async (e) => {
     e?.preventDefault();
-    if (!ready) return;
+    if (!ready || isPlanning || starting) return;
+    setStartError(null);
+
+    if (isLiveAvailable && executionMode === 'live' && isAuthenticated) {
+      setIsPlanning(true);
+      try {
+        const analysis = await api.analyzeMission(goal.trim(), answers);
+        if (analysis && analysis.plan) {
+          const p = analysis.plan;
+          p.plannerSource = analysis.planner || 'llm';
+          setLivePlan(p);
+        }
+      } catch (err) {
+        // Fall back gracefully to client planner if live planner is unavailable
+      } finally {
+        setIsPlanning(false);
+      }
+    }
     setAnswers({});
     setStage('review');
   };
 
   const start = async () => {
-    if (!ready || starting) return;
+    if (!ready || starting || isPlanning) return;
     setStartError(null);
-    let plan = planMission(goal.trim(), answers, undefined, preferences);
+    let plan = livePlan || planMission(goal.trim(), answers, undefined, preferences);
 
     if (isLiveAvailable && executionMode === 'live') {
       if (!isAuthenticated) {
@@ -290,16 +329,22 @@ export default function NewMissionModal() {
       }
       setStarting(true);
       try {
-        try {
-          const analysis = await api.analyzeMission(goal.trim(), answers);
-          if (analysis && analysis.plan) {
-            plan = analysis.plan;
-            plan.plannerSource = analysis.planner || 'llm';
-          } else {
-            plan.plannerSource = analysis?.planner || 'fallback';
+        if (!livePlan) {
+          setIsPlanning(true);
+          try {
+            const analysis = await api.analyzeMission(goal.trim(), answers);
+            if (analysis && analysis.plan) {
+              plan = analysis.plan;
+              plan.plannerSource = analysis.planner || 'llm';
+              setLivePlan(plan);
+            } else {
+              plan.plannerSource = analysis?.planner || 'fallback';
+            }
+          } catch (err) {
+            plan.plannerSource = 'fallback';
+          } finally {
+            setIsPlanning(false);
           }
-        } catch (err) {
-          plan.plannerSource = 'fallback';
         }
 
         const source = speechSupported && speechListening ? 'voice' : 'typed';
@@ -310,6 +355,7 @@ export default function NewMissionModal() {
       } catch (err) {
         setStartError(err.message || 'Failed to start live mission.');
         setStarting(false);
+        setIsPlanning(false);
       }
     } else {
       const id = launch(goal, { plan });
@@ -496,6 +542,15 @@ export default function NewMissionModal() {
                     </div>
                   )}
 
+                  {isPlanning && (
+                    <div className="mt-3 p-3.5 rounded-2xl bg-[#eb6920]/10 border border-[#eb6920]/30 flex items-center gap-3">
+                      <Loader2 className="w-4 h-4 text-[#eb6920] animate-spin shrink-0" />
+                      <div className="text-xs text-[#ff9a5c] leading-snug">
+                        <span className="font-bold">Planning…</span> Running AI planner (takes about 10 s).
+                      </div>
+                    </div>
+                  )}
+
                   {startError && (
                     <div className="mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-xs text-red-300 flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
@@ -509,10 +564,15 @@ export default function NewMissionModal() {
                       <button
                         type="button"
                         onClick={start}
-                        disabled={!ready || starting}
+                        disabled={!ready || starting || isPlanning}
                         className="btn-dark px-4 py-2.5 rounded-full text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-1.5"
                       >
-                        {starting ? (
+                        {isPlanning ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Planning…</span>
+                          </>
+                        ) : starting ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                             <span>Starting...</span>
@@ -523,11 +583,20 @@ export default function NewMissionModal() {
                       </button>
                       <button
                         type="submit"
-                        disabled={!ready || starting}
+                        disabled={!ready || starting || isPlanning}
                         className="btn-orange px-5 py-2.5 rounded-full text-xs font-semibold uppercase tracking-wider flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
                       >
-                        Analyze goal
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        {isPlanning ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Planning…</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Analyze goal</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -535,7 +604,16 @@ export default function NewMissionModal() {
               ) : (
                 <>
                   <p className="text-sm text-gray-400 mt-1 truncate">“{goal.trim()}”</p>
-                  <Understanding goal={goal.trim()} answers={answers} setAnswers={setAnswers} preferences={preferences} />
+                  <Understanding goal={goal.trim()} answers={answers} setAnswers={setAnswers} preferences={preferences} livePlan={livePlan} />
+
+                  {isPlanning && (
+                    <div className="mt-3 p-3.5 rounded-2xl bg-[#eb6920]/10 border border-[#eb6920]/30 flex items-center gap-3">
+                      <Loader2 className="w-4 h-4 text-[#eb6920] animate-spin shrink-0" />
+                      <div className="text-xs text-[#ff9a5c] leading-snug">
+                        <span className="font-bold">Planning…</span> Running AI planner (takes about 10 s).
+                      </div>
+                    </div>
+                  )}
 
                   {backendStatus?.configured && (
                     <div className="mt-4 p-3 rounded-2xl bg-black/40 border border-white/10">
@@ -611,10 +689,15 @@ export default function NewMissionModal() {
                     </button>
                     <button
                       type="submit"
-                      disabled={starting}
+                      disabled={starting || isPlanning}
                       className="btn-orange px-6 py-2.5 rounded-full text-xs font-semibold uppercase tracking-wider flex items-center gap-2 disabled:opacity-40"
                     >
-                      {starting ? (
+                      {isPlanning ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Planning…</span>
+                        </>
+                      ) : starting ? (
                         <>
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           <span>Starting...</span>

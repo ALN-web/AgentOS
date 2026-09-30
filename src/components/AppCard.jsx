@@ -150,7 +150,7 @@ export default function AppCard({ app, onUpdatePermission, onDisconnect, onConne
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30">
                 <AlertTriangle className="w-3 h-3 text-amber-400" />
-                Needs Reconnect
+                Reconnect
               </span>
               <button
                 type="button"
@@ -171,15 +171,20 @@ export default function AppCard({ app, onUpdatePermission, onDisconnect, onConne
             </div>
           )}
 
-          {isAvailable && (
-            <button
-              type="button"
-              onClick={() => (isLive ? onConnect(app.id) : setConnectModalOpen(true))}
-              className="btn-orange px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm"
-            >
-              <Plug className="w-3 h-3" />
-              <span>Connect</span>
-            </button>
+          {(isAvailable || app.status === 'not_connected') && (
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold text-gray-400 bg-white/[0.04] border border-white/10">
+                Not connected
+              </span>
+              <button
+                type="button"
+                onClick={() => (isLive ? onConnect(app.id) : setConnectModalOpen(true))}
+                className="btn-orange px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+              >
+                <Plug className="w-3 h-3" />
+                <span>Connect</span>
+              </button>
+            </div>
           )}
 
           {isDemo && (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { APPS_CATALOGUE, RISK_LEVELS } from './apps';
+import { APPS_CATALOGUE, RISK_LEVELS, toConnectedStatus, getConnectedServicesStatus } from './apps';
 
 describe('Apps catalogue specification and safety rules', () => {
   it('contains all required everyday apps', () => {
@@ -44,5 +44,70 @@ describe('Apps catalogue specification and safety rules', () => {
     expect(RISK_LEVELS.CRITICAL.allowedModes).not.toContain('allowed');
     expect(RISK_LEVELS.LOW.allowedModes).toContain('allowed');
     expect(RISK_LEVELS.MEDIUM.allowedModes).toContain('allowed');
+  });
+
+  describe('Connected Apps status derivation (#66)', () => {
+    it('maps raw status to the 3 required states: Connected, Not connected, or Reconnect', () => {
+      expect(toConnectedStatus('connected')).toBe('Connected');
+      expect(toConnectedStatus('needs_reconnect')).toBe('Reconnect');
+      expect(toConnectedStatus('available')).toBe('Not connected');
+      expect(toConnectedStatus('demo')).toBe('Not connected');
+      expect(toConnectedStatus('coming_soon')).toBe('Not connected');
+      expect(toConnectedStatus(null)).toBe('Not connected');
+      expect(toConnectedStatus(undefined)).toBe('Not connected');
+    });
+
+    it('derives Google, Gmail, Calendar, Drive, and Forms statuses from /api/integrations and /api/apps', () => {
+      const integrations = [
+        { provider: 'google', status: 'connected', scopes: ['calendar.events', 'gmail.compose'], account_email: 'alex@agentos.org' },
+      ];
+      const apps = [
+        { id: 'gmail', status: 'connected' },
+        { id: 'google-calendar', status: 'connected' },
+        { id: 'google-drive', status: 'available' },
+        { id: 'google-forms', status: 'available' },
+      ];
+
+      const statuses = getConnectedServicesStatus(integrations, apps);
+      expect(statuses).toEqual({
+        google: 'Connected',
+        gmail: 'Connected',
+        calendar: 'Connected',
+        drive: 'Not connected',
+        forms: 'Not connected',
+      });
+    });
+
+    it('handles Reconnect status when credentials need refresh', () => {
+      const integrations = [
+        { provider: 'google', status: 'needs_reconnect', scopes: [], account_email: 'alex@agentos.org' },
+      ];
+      const apps = [
+        { id: 'gmail', status: 'needs_reconnect' },
+        { id: 'google-calendar', status: 'needs_reconnect' },
+        { id: 'google-drive', status: 'needs_reconnect' },
+        { id: 'google-forms', status: 'needs_reconnect' },
+      ];
+
+      const statuses = getConnectedServicesStatus(integrations, apps);
+      expect(statuses).toEqual({
+        google: 'Reconnect',
+        gmail: 'Reconnect',
+        calendar: 'Reconnect',
+        drive: 'Reconnect',
+        forms: 'Reconnect',
+      });
+    });
+
+    it('returns Not connected for all services when empty or disconnected', () => {
+      const statuses = getConnectedServicesStatus([], []);
+      expect(statuses).toEqual({
+        google: 'Not connected',
+        gmail: 'Not connected',
+        calendar: 'Not connected',
+        drive: 'Not connected',
+        forms: 'Not connected',
+      });
+    });
   });
 });

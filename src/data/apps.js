@@ -79,6 +79,50 @@ export function formatScope(scope) {
   return SCOPE_LABELS[short] || short;
 }
 
+/**
+ * Maps raw backend status to one of the 3 canonical states for Connected Apps (#66):
+ * - 'Connected'
+ * - 'Not connected'
+ * - 'Reconnect'
+ *
+ * @param {string} rawStatus - Status from /api/integrations or /api/apps
+ * @returns {'Connected' | 'Not connected' | 'Reconnect'}
+ */
+export function toConnectedStatus(rawStatus) {
+  if (rawStatus === 'connected') return 'Connected';
+  if (rawStatus === 'needs_reconnect') return 'Reconnect';
+  return 'Not connected';
+}
+
+/**
+ * Derives the honest connection status for Google, Gmail, Calendar, Drive, and Forms
+ * from /api/integrations and /api/apps without storing or exposing tokens.
+ *
+ * @param {Array} integrations - Integration list from /api/integrations
+ * @param {Array} apps - App list from /api/apps
+ * @returns {{ google: string, gmail: string, calendar: string, drive: string, forms: string }}
+ */
+export function getConnectedServicesStatus(integrations = [], apps = []) {
+  const googleInteg = Array.isArray(integrations)
+    ? integrations.find((i) => i.provider === 'google')
+    : null;
+
+  const findApp = (id) => (Array.isArray(apps) ? apps.find((a) => a.id === id) : null);
+
+  const gmailApp = findApp('gmail');
+  const calendarApp = findApp('google-calendar');
+  const driveApp = findApp('google-drive');
+  const formsApp = findApp('google-forms');
+
+  return {
+    google: toConnectedStatus(googleInteg?.status),
+    gmail: toConnectedStatus(gmailApp?.status),
+    calendar: toConnectedStatus(calendarApp?.status),
+    drive: toConnectedStatus(driveApp?.status),
+    forms: toConnectedStatus(formsApp?.status),
+  };
+}
+
 export const APPS_CATALOGUE = [
   {
     id: 'google-calendar',
