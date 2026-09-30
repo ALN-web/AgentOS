@@ -4,14 +4,18 @@ Secrets are SecretStr, so they never appear in reprs, logs or error output.
 """
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="AGENTOS_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    # Always backend/.env, whichever folder the server is started from.
+    model_config = SettingsConfigDict(env_prefix="AGENTOS_", env_file=BACKEND_DIR / ".env", env_file_encoding="utf-8", extra="ignore")
 
     environment: Literal["development", "test", "production"] = "development"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
