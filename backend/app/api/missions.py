@@ -1,8 +1,8 @@
-"""Mission API. Missions are stored and listed; execution arrives in later phases."""
+"""Mission API: store, list, run, cancel, stream events and read evidence."""
 
 import json
 from datetime import datetime
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -90,11 +90,19 @@ def list_events(
 @router.post("/{mission_id}/start", response_model=MissionDetail)
 def start_mission(
     mission_id: str,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(current_user),
 ):
     from app.services.runner import run_mission
-    return _detail(run_mission(db, user, mission_id))
+    return _detail(run_mission(db, user, mission_id, request.app.state.google))
+
+
+@router.post("/{mission_id}/cancel", response_model=MissionDetail)
+def cancel_mission(mission_id: str, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Stops the mission. Pending approvals are closed, so nothing more can run."""
+    from app.services.runner import cancel_mission
+    return _detail(cancel_mission(db, user, mission_id))
 
 
 class EvidenceItemOut(BaseModel):

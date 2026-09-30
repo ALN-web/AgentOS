@@ -1,7 +1,7 @@
 """Liveness and capability reporting.
 
-The frontend will use `live_mode.available` to decide whether a Live Mode
-option may be shown at all. It stays false until real execution works.
+`live_mode.available` is true only when real Google actions can run: the OAuth
+client and the token encryption key are configured (#6). The reason says why not.
 """
 
 from fastapi import APIRouter, Depends, Request
@@ -50,7 +50,9 @@ def health(request: Request, settings: Settings = Depends(_settings)) -> Health:
         environment=settings.environment,
         database="ok" if _database_ok(request) else "unavailable",
         live_mode=LiveModeStatus(
-            available=False,
-            reason="Live execution is not implemented yet. Missions can be stored, but nothing runs.",
+            available=request.app.state.google.configured,
+            reason="Google Calendar and Gmail actions run for real after you connect Google and approve them."
+            if request.app.state.google.configured
+            else f"{request.app.state.google.problem} Missions run, but Google steps are simulated.",
         ),
     )

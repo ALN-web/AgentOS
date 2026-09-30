@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -76,8 +76,9 @@ def get_approval(
 def decide_approval(
     approval_id: str,
     body: ApprovalDecisionIn,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(current_user),
 ):
-    approval = handle_approval_decision(db, user, approval_id, body.decision, body.edits)
+    approval = handle_approval_decision(db, user, approval_id, body.decision, body.edits, request.app.state.google)
     return _approval_out(approval)

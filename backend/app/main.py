@@ -10,13 +10,16 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
-from app.api import apps, approvals, capabilities, health, integrations, missions, preferences
+from app.api import apps, approvals, capabilities, health, integrations, missions, preferences, tools
 from app.core.config import Settings, get_settings
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger, request_id_var
 from app.db.migrate import upgrade_to_head
 from app.db.session import make_engine, make_session_factory
+from app.integrations.google import GoogleConnector
 from app.services.missions import ensure_reference_data
+from app.tools.google import GOOGLE_TOOLS
+from app.tools.registry import register_tool, unregister_tool
 
 log = get_logger("http")
 
@@ -73,6 +76,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     with app.state.session_factory() as db:
         ensure_reference_data(db)
 
+    # Real Google tools exist only when OAuth and token encryption are configured (#6).
+    app.state.google = GoogleConnector(settings)
+    for tool in GOOGLE_TOOLS:
+        for name in {tool.name, tool.action_id or tool.name}:
+            unregister_tool(name)
+        if app.state.google.configured:
+            register_tool(tool)
+            register_tool(tool.action_id or tool.name)
+
     install_error_handlers(app)
     app.include_router(health.router, prefix="/api")
     app.include_router(missions.router, prefix="/api")
@@ -81,6 +93,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(apps.router, prefix="/api")
     app.include_router(integrations.router, prefix="/api")
     app.include_router(preferences.router, prefix="/api")
+    app.include_router(tools.router, prefix="/api")
     log.info("AgentOS API %s started (%s)", __version__, settings.environment)
     return app
 
