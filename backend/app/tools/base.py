@@ -25,6 +25,8 @@ class ToolResult:
     timestamp: datetime = field(default_factory=utcnow)
     verification: dict[str, Any] | None = None
     error_class: str | None = None
+    # True when no real app was touched (e.g. Google is not configured on this server).
+    simulated: bool = False
 
 
 @dataclass
@@ -40,6 +42,9 @@ class ToolContext:
     # The user's preferences (timezone, working hours, signature, ...), already
     # applied to the arguments by the runner; available for tools that need more.
     preferences: dict | None = None
+    # A client for the user's connected Google account (#6), or None. It hides the
+    # token: tools call methods on it and never see credentials.
+    google: Any = None
 
 
 class Tool(ABC):
@@ -53,6 +58,8 @@ class Tool(ABC):
     integration: str | None = None
     output_fields: tuple[str, ...] = ()
     supports_idempotency: bool = False
+    # The catalogue action the policy engine checks (#11). Defaults to the tool name.
+    action_id: str | None = None
 
     @abstractmethod
     def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
@@ -65,4 +72,4 @@ class Tool(ABC):
 
     def classify(self, exc: Exception) -> str:
         """Map an unhandled exception to a standardized failure class."""
-        return "service_unavailable"
+        return getattr(exc, "error_class", None) or "service_unavailable"

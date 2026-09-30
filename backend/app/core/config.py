@@ -24,8 +24,22 @@ class Settings(BaseSettings):
     # Apply migrations on startup. Convenient locally; production runs `alembic upgrade head` in deploy.
     auto_migrate: bool = True
 
-    # Used from Phase 6 on to encrypt stored integration tokens. Never sent to clients.
+    # Fernet key that encrypts stored integration tokens (#6). Never sent to clients.
+    # Generate one with:
+    #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     encryption_key: SecretStr | None = None
+
+    # Google OAuth client (type "Web") for real Calendar and Gmail actions (#6).
+    # Without it, Google steps run simulated and are marked as such.
+    google_client_id: str | None = None
+    google_client_secret: SecretStr | None = None
+    google_redirect_uri: str = "http://localhost:8000/api/integrations/google/callback"
+    # Where the OAuth callback sends the browser back to.
+    frontend_url: str = "http://localhost:3000"
+
+    @property
+    def google_configured(self) -> bool:
+        return bool(self.google_client_id and self.google_client_secret and self.encryption_key)
 
     @property
     def is_production(self) -> bool:

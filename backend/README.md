@@ -56,4 +56,49 @@ Environment variables, prefixed `AGENTOS_`, can also go in `backend/.env`. That 
 | `AGENTOS_CORS_ORIGINS` | `["http://localhost:3000","http://localhost:4173"]` | JSON list |
 | `AGENTOS_DATABASE_URL` | `sqlite:///./agentos.db` | e.g. `postgresql+psycopg://…` in production |
 | `AGENTOS_AUTO_MIGRATE` | `true` | apply migrations at startup |
-| `AGENTOS_ENCRYPTION_KEY` | none | used from Phase 6 to encrypt integration tokens |
+| `AGENTOS_ENCRYPTION_KEY` | none | Fernet key that encrypts stored Google tokens |
+| `AGENTOS_GOOGLE_CLIENT_ID` | none | Google OAuth client id (type **Web**) |
+| `AGENTOS_GOOGLE_CLIENT_SECRET` | none | its secret |
+| `AGENTOS_GOOGLE_REDIRECT_URI` | `http://localhost:8000/api/integrations/google/callback` | must match the OAuth client |
+| `AGENTOS_FRONTEND_URL` | `http://localhost:3000` | where the OAuth callback returns the browser |
+
+## Real Gmail and Google Calendar (#6)
+
+Without the three Google/encryption settings, missions still run, but every Google
+step is **simulated** and marked so (`simulated: true` in events, no proof links), and
+`/api/health` reports `live_mode.available: false`. With them, Google steps are real.
+
+1. In Google Cloud Console: create a project, enable the **Google Calendar API** and
+   the **Gmail API**, configure the OAuth consent screen (External, Testing), and add
+   the Google accounts you will demo with as **test users**.
+2. Create an OAuth client ID of type **Web application** with the authorised redirect
+   URI `http://localhost:8000/api/integrations/google/callback`.
+3. Put the settings in `backend/.env` (git-ignored, never commit it):
+
+   ```
+   AGENTOS_GOOGLE_CLIENT_ID=....apps.googleusercontent.com
+   AGENTOS_GOOGLE_CLIENT_SECRET=...
+   AGENTOS_ENCRYPTION_KEY=<output of the command below>
+   ```
+
+   ```bash
+   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+   ```
+
+4. Restart the backend, open the app in Live Mode, go to **Apps** and connect Google.
+
+How it behaves:
+- Scopes are only `calendar.events` and `gmail.compose`. OAuth uses PKCE and an
+  encrypted, expiring `state`. Tokens are encrypted at rest, refreshed when needed,
+  revoked on disconnect, and never appear in responses, events or logs.
+- Every tool call passes the policy engine (your per-app permissions). Creating an
+  event and sending an email always wait for your approval; a draft runs on its own
+  because nothing leaves your account. Rejecting a step skips it (and anything that
+  needs it), and the mission still completes with that criterion left open.
+- Failures are classified (`authentication_failed`, `permission_denied`, `rate_limited`,
+  `service_unavailable`, `validation_error`, `timeout`, `network_error`); transient ones
+  are retried at most twice. Budgets: 30 tool calls per mission, 120 s per run.
+- Proof is re-read from Google: the event by its id, the draft by its id, and a sent
+  email by Gmail's `SENT` label plus the draft having left Drafts. Calendar events use
+  an id derived from the mission step, so a retry can never create a duplicate.
+
