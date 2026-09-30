@@ -110,6 +110,10 @@ class FakeGoogle:
         if path.startswith("/gmail/v1/users/me/drafts/"):
             d = self.drafts.get(path.rsplit("/", 1)[1])
             return httpx.Response(200, json={"id": d["id"], "message": d["message"]}) if d else httpx.Response(404, json={"error": {"code": 404}})
+        if path.startswith("/gmail/v1/users/me/messages/"):
+            mid = path.rsplit("/", 1)[1]
+            msg = next((d["message"] for d in self.sent if d.get("message", {}).get("id") == mid or d.get("id") == mid), None)
+            return httpx.Response(200, json=msg) if msg else httpx.Response(404, json={"error": {"code": 404}})
         return httpx.Response(404, json={"error": {"code": 404, "message": f"fake has no {m} {path}"}})
 
 
@@ -539,7 +543,64 @@ def test_tokens_never_appear_in_responses_events_or_logs(live, fake, caplog):
     client.post(f"/api/approvals/{pending_approval(client, mid)['approval_id']}/decision", json={"decision": "approve"})
     seen = json.dumps([
         client.get("/api/integrations").json(), client.get(f"/api/missions/{mid}").json(), events(client, mid),
-        client.get(f"/api/missions/{mid}/evidence").json(), client.get("/api/health").json(),
+        client.get(f"/api/missions/{mid}/evidence").json(), client.get(f"/api/missions/{mid}/proof").json(), client.get("/api/health").json(),
     ]) + client.get(f"/api/missions/{mid}/stream").text + caplog.text
     assert fake.issued and not any(t in seen for t in fake.issued)
     assert "shh-client-secret" not in seen
+
+
+def test_proof_bundle_and_reverification_on_demand(live, fake):
+    _, client = live
+    connect(client, fake)
+    mid = start_dinner(client)
+
+    # Approve Calendar and Gmail send
+    client.post(f"/api/approvals/{pending_approval(client, mid)['approval_id']}/decision", json={"decision": "approve"})
+    client.post(f"/api/approvals/{pending_approval(client, mid)['approval_id']}/decision", json={"decision": "approve"})
+
+    # Check proof bundle via both /api and /api/v1
+    for prefix in ("/api", "/api/v1"):
+        proof = client.get(f"{prefix}/missions/{mid}/proof").json()
+        assert "criteria" in proof
+        assert len(proof["criteria"]) >= 1
+        criterion = proof["criteria"][0]
+        assert criterion["status"] == "verified"
+        assert len(criterion["evidence"]) >= 2
+        for ev in criterion["evidence"]:
+            assert ev["status"] == "verified"
+            assert ev["verified_at"] is not None
+            assert ev["method"] is not None
+            assert "reference_id" in ev
+
+    # Re-verify on demand against real app: everything still intact
+    reverify_res = client.post(f"/api/missions/{mid}/verify").json()
+    assert reverify_res["criteria"][0]["status"] == "verified"
+
+    # Now simulate deleting the event in Google Calendar
+    fake.events.clear()
+
+    # Re-verify on demand: must mark the deleted event failed and criterion turns open
+    reverify_after_delete = client.post(f"/api/missions/{mid}/verify").json()
+    crit_after = reverify_after_delete["criteria"][0]
+    assert crit_after["status"] == "open"
+    cal_ev = next(e for e in crit_after["evidence"] if e["type"] == "calendar_event")
+    assert cal_ev["status"] == "failed"
+    assert "not found" in cal_ev["method"].lower() or "missing" in cal_ev["method"].lower()
+
+    # Proof bundle GET reflects the updated state
+    proof_after = client.get(f"/api/missions/{mid}/proof").json()
+    assert proof_after["criteria"][0]["status"] == "open"
+
+
+def test_proof_bundle_with_rejected_step(live, fake):
+    _, client = live
+    connect(client, fake)
+    mid = start_dinner(client)
+
+    # Approve event, reject send
+    client.post(f"/api/approvals/{pending_approval(client, mid)['approval_id']}/decision", json={"decision": "approve"})
+    client.post(f"/api/approvals/{pending_approval(client, mid)['approval_id']}/decision", json={"decision": "reject"})
+
+    proof = client.get(f"/api/missions/{mid}/proof").json()
+    assert any(c["status"] == "open" for c in proof["criteria"])
+

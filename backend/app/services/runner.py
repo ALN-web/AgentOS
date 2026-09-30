@@ -423,6 +423,9 @@ def run_mission(db: Session, user: User, mission_id: str, google: GoogleConnecto
         te.status = "success"
         te.output_json = redact_dict(result.output)
 
+        ev_status = "verified" if (verification.get("verified") or verification.get("simulated")) else "failed"
+        ev_verified_at = utcnow() if (verification.get("verified") or verification.get("simulated")) else None
+        ev_method = verification.get("method") or verification.get("detail")
         for ev in result.evidence:
             db.add(Evidence(
                 mission_id=mission.id,
@@ -433,6 +436,9 @@ def run_mission(db: Session, user: User, mission_id: str, google: GoogleConnecto
                 reference_id=ev.get("reference_id"),
                 label=ev.get("label", ""),
                 url=ev.get("url"),
+                status=ev.get("status") or ev_status,
+                verified_at=ev.get("verified_at") or ev_verified_at,
+                method=ev.get("method") or ev_method,
             ))
 
         append_event(

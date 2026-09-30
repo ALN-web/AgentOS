@@ -118,6 +118,26 @@ def cancel_mission(mission_id: str, db: Session = Depends(get_db), user: User = 
     return _detail(cancel_mission(db, user, mission_id))
 
 
+class ProofEvidenceOut(BaseModel):
+    type: str
+    label: str
+    url: str | None = None
+    reference_id: str | None = None
+    status: str
+    verified_at: datetime | None = None
+    method: str | None = None
+
+
+class CriterionProofOut(BaseModel):
+    label: str
+    status: str
+    evidence: list[ProofEvidenceOut] = []
+
+
+class ProofBundleOut(BaseModel):
+    criteria: list[CriterionProofOut] = []
+
+
 class EvidenceItemOut(BaseModel):
     id: str
     type: str
@@ -125,6 +145,9 @@ class EvidenceItemOut(BaseModel):
     label: str
     url: str | None
     reference_id: str | None
+    status: str = "unverified"
+    verified_at: datetime | None = None
+    method: str | None = None
     created_at: datetime
 
 
@@ -228,9 +251,33 @@ def list_evidence(
             label=e.label,
             url=e.url,
             reference_id=e.reference_id,
+            status=e.status,
+            verified_at=e.verified_at,
+            method=e.method,
             created_at=e.created_at,
         )
         for e in evs
     ]
+
+
+@router.get("/{mission_id}/proof", response_model=ProofBundleOut)
+def get_mission_proof(
+    mission_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    from app.services.verification import build_proof_bundle
+    return build_proof_bundle(db, user, mission_id)
+
+
+@router.post("/{mission_id}/verify", response_model=ProofBundleOut)
+def reverify_mission_endpoint(
+    mission_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    from app.services.verification import reverify_mission
+    return reverify_mission(db, user, mission_id, getattr(request.app.state, "google", None))
 
 
