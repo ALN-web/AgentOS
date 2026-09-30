@@ -58,6 +58,17 @@ def _detail(m: Mission) -> MissionDetail:
     )
 
 
+class AnalyzeRequest(BaseModel):
+    goal: str
+    answers: dict | None = None
+
+
+@router.post("/analyze")
+def analyze_mission(body: AnalyzeRequest, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    # Minimal contract: always fallback to deterministic planning in this phase
+    return {"plan": None}
+
+
 @router.post("", response_model=MissionDetail, status_code=status.HTTP_201_CREATED)
 def create_mission(body: MissionCreate, db: Session = Depends(get_db), user: User = Depends(current_user)):
     return _detail(svc.create_mission(db, user, body))

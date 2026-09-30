@@ -66,6 +66,13 @@ def test_frontend_plans_are_accepted_and_stored_faithfully(client, name):
     assert client.get(f"/api/missions/{m['id']}/events", params={"after": 1}).json() == []
 
 
+def test_analyze_mission_returns_deterministic_fallback(client):
+    req = {"goal": "Analyze this", "answers": {"test": "yes"}}
+    res = client.post("/api/missions/analyze", json=req)
+    assert res.status_code == 200, res.text
+    assert res.json() == {"plan": None}
+
+
 def test_missions_are_listed_newest_first(client):
     first = client.post("/api/missions", json=body("research")).json()
     second = client.post("/api/missions", json=body("launch")).json()

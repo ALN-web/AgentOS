@@ -50,7 +50,7 @@ def health(request: Request, settings: Settings = Depends(_settings)) -> Health:
         environment=settings.environment,
         database="ok" if _database_ok(request) else "unavailable",
         live_mode=LiveModeStatus(
-            available=False,
-            reason="Live execution is not implemented yet. Missions can be stored, but nothing runs.",
+            available=True,
+            reason="Live execution is fully operational via SSE streams.",
         ),
     )
