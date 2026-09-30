@@ -234,6 +234,9 @@ class Evidence(Base):
     reference_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
     label: Mapped[str] = mapped_column(String(300))
     url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="unverified", server_default="unverified")
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    method: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 

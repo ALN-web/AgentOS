@@ -402,6 +402,9 @@ class GoogleClient:
     def send_draft(self, draft_id: str) -> dict:
         return self._call("POST", f"{GMAIL_API}/users/me/drafts/send", json={"id": draft_id})
 
+    def get_message(self, message_id: str) -> dict:
+        return self._call("GET", f"{GMAIL_API}/users/me/messages/{quote(message_id)}")
+
 
 def event_id_for(idempotency_key: str) -> str:
     """A valid Calendar event id (base32hex alphabet) derived from the idempotency key."""
