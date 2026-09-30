@@ -244,6 +244,7 @@ def run_mission(db: Session, user: User, mission_id: str, google: GoogleConnecto
             task.finished_at = utcnow()
             task.output = {"simulated": True, "title": task.title}
             completed_outputs[task.key] = task.output
+            append_event(db, mission, EventType.AGENT_ASSIGNED, task.agent, {"task_key": task.key, "agent": task.agent})
             append_event(db, mission, EventType.TASK_STARTED, task.agent, {"task_key": task.key, "simulated": True})
             append_event(
                 db, mission, EventType.TOOL_COMPLETED, task.agent,
@@ -349,6 +350,7 @@ def run_mission(db: Session, user: User, mission_id: str, google: GoogleConnecto
         # Execute Tool
         task.status = TaskStatus.RUNNING
         task.started_at = utcnow()
+        append_event(db, mission, EventType.AGENT_ASSIGNED, task.agent, {"task_key": task.key, "agent": task.agent})
         append_event(db, mission, EventType.TASK_STARTED, task.agent, {"task_key": task.key, "simulated": not real})
         append_event(
             db, mission, EventType.TOOL_CALLED, task.agent,

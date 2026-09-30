@@ -88,6 +88,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_error_handlers(app)
     app.include_router(health.router, prefix="/api")
     app.include_router(missions.router, prefix="/api")
+    app.include_router(missions.router, prefix="/api/v1")
     app.include_router(approvals.router, prefix="/api")
     app.include_router(capabilities.router, prefix="/api")
     app.include_router(apps.router, prefix="/api")

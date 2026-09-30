@@ -1,12 +1,14 @@
-"""Mission API: store, list, run, cancel, stream events and read evidence."""
-
+import asyncio
 import json
+import time
 from datetime import datetime
 from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+from app.domain import MissionStatus
 
 from app.api.deps import current_user
 from app.db.models import Evidence, Mission, User
@@ -118,21 +120,72 @@ class EvidenceItemOut(BaseModel):
 @router.get("/{mission_id}/stream")
 async def stream_events(
     mission_id: str,
+    request: Request,
     after: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     user: User = Depends(current_user),
 ):
-    def event_generator():
-        events = svc.list_events(db, user, mission_id, after, 500)
-        for e in events:
-            data = json.dumps({
-                "seq": e.seq,
-                "type": e.type,
-                "agent": e.agent,
-                "payload": e.payload_json,
-                "created_at": e.created_at.isoformat() if e.created_at else None,
-            })
-            yield f"id: {e.seq}\nevent: {e.type}\ndata: {data}\n\n"
+    # Owner-only verification: raises 404 AppError if not found or belongs to another user
+    svc.get_mission(db, user, mission_id)
+
+    # Respect Last-Event-ID header from EventSource reconnect
+    last_event_id_hdr = request.headers.get("last-event-id")
+    if last_event_id_hdr and last_event_id_hdr.strip().isdigit():
+        after = max(after, int(last_event_id_hdr.strip()))
+
+    session_factory = request.app.state.session_factory
+    is_live_stream = (
+        "text/event-stream" in request.headers.get("accept", "")
+        or request.query_params.get("stream", "").lower() in ("true", "1")
+        or request.query_params.get("live", "").lower() in ("true", "1")
+    )
+
+    async def event_generator():
+        current_seq = after
+        loop = asyncio.get_running_loop()
+        notify_event = asyncio.Event()
+        if is_live_stream:
+            svc.register_mission_listener(mission_id, loop, notify_event)
+        last_heartbeat = time.monotonic()
+
+        try:
+            while True:
+                if is_live_stream and await request.is_disconnected():
+                    break
+
+                with session_factory() as s_db:
+                    m = svc.get_mission(s_db, user, mission_id)
+                    events = svc.list_events(s_db, user, mission_id, after=current_seq, limit=200)
+
+                for e in events:
+                    current_seq = max(current_seq, e.seq)
+                    data = json.dumps({
+                        "seq": e.seq,
+                        "type": e.type,
+                        "agent": e.agent,
+                        "payload": e.payload_json,
+                        "created_at": e.created_at.isoformat() if e.created_at else None,
+                    })
+                    yield f"id: {e.seq}\nevent: {e.type}\ndata: {data}\n\n"
+
+                # If non-streaming snapshot request, or mission reached terminal state, stop
+                if not is_live_stream or m.status in (MissionStatus.COMPLETED, MissionStatus.FAILED, MissionStatus.CANCELLED):
+                    break
+
+                notify_event.clear()
+                try:
+                    await asyncio.wait_for(notify_event.wait(), timeout=0.5)
+                except asyncio.TimeoutError:
+                    pass
+
+                now = time.monotonic()
+                if now - last_heartbeat >= 15.0:
+                    last_heartbeat = now
+                    yield ": heartbeat\n\n"
+
+        finally:
+            if is_live_stream:
+                svc.unregister_mission_listener(mission_id, loop, notify_event)
 
     return StreamingResponse(
         event_generator(),
