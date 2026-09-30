@@ -79,11 +79,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Real Google tools exist only when OAuth and token encryption are configured (#6).
     app.state.google = GoogleConnector(settings)
     for tool in GOOGLE_TOOLS:
-        for name in {tool.name, tool.action_id or tool.name}:
-            unregister_tool(name)
-        if app.state.google.configured:
+        is_sim = getattr(tool, "kind", "real") == "simulated"
+        if is_sim:
             register_tool(tool)
-            register_tool(tool.action_id or tool.name)
+        if app.state.google.configured and not is_sim:
+            register_tool(tool)
+            if hasattr(tool, "action_id") and tool.action_id:
+                register_tool(tool.action_id)
 
     install_error_handlers(app)
     app.include_router(health.router, prefix="/api")
@@ -93,6 +95,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(apps.router, prefix="/api")
     app.include_router(integrations.router, prefix="/api")
     app.include_router(preferences.router, prefix="/api")
+    app.include_router(tools.router, prefix="/api/v1")
     app.include_router(tools.router, prefix="/api")
     log.info("AgentOS API %s started (%s)", __version__, settings.environment)
     return app

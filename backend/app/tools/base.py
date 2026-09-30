@@ -52,6 +52,8 @@ class Tool(ABC):
 
     name: str
     capability: str
+    kind: str = "real"  # "real" | "simulated"
+    input_model: Any = None
     description: str = ""
     risk: RiskLevel = RiskLevel.LOW
     required_scopes: tuple[str, ...] = ()

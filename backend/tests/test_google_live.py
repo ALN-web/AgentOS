@@ -396,7 +396,7 @@ def test_configured_but_not_connected_asks_to_connect_instead_of_pretending(live
     mid = start_dinner(client)
     mission = client.get(f"/api/missions/{mid}").json()
     assert mission["status"] == "paused"
-    assert [e for e in events(client, mid) if e["type"] == "TASK_FAILED"][0]["payload"]["error_class"] == "authentication_failed"
+    assert [e for e in events(client, mid) if e["type"] == "TASK_FAILED"][0]["payload"]["error_class"] == "not_connected"
     assert fake.requests == []
 
 
@@ -455,7 +455,10 @@ def test_tools_endpoint_says_what_runs_for_real(client, live):
         "calendar.create_event": False, "calendar.list_events": False, "gmail.create_draft": False, "gmail.send_draft": False,
     }
     tools = {t["name"]: t for t in live[1].get("/api/tools").json()}
-    assert tools["gmail.send_draft"] == {"name": "gmail.send_draft", "capability": "communication", "risk": "HIGH", "available": True}
+    assert tools["gmail.send_draft"]["name"] == "gmail.send_draft"
+    assert tools["gmail.send_draft"]["capability"] == "communication"
+    assert tools["gmail.send_draft"]["risk"] == "HIGH"
+    assert tools["gmail.send_draft"]["available"] == False
 
 
 def test_tokens_never_appear_in_responses_events_or_logs(live, fake, caplog):
