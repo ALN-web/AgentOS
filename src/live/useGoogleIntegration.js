@@ -22,7 +22,7 @@ export function useGoogleIntegration() {
       const g = Array.isArray(integs) ? integs.find((i) => i.provider === 'google') : null;
       if (g && g.status === 'connected') {
         setConnected(true);
-        setAccountEmail(g.account_email || 'alex.chen@agentos.org');
+        setAccountEmail(g.account_email || null);
       } else {
         setConnected(false);
         setAccountEmail(null);
@@ -41,7 +41,7 @@ export function useGoogleIntegration() {
       if (params.get('connected') === 'google') {
         setNotification({
           type: 'success',
-          message: 'Google connected successfully (alex.chen@agentos.org)',
+          message: 'Google connected successfully',
         });
         params.delete('connected');
         const nextUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '');
