@@ -23,7 +23,7 @@ import {
   Plug,
   Info,
 } from 'lucide-react';
-import { RISK_LEVELS, PERMISSION_MODES } from '../data/apps';
+import { RISK_LEVELS, PERMISSION_MODES, formatScope } from '../data/apps';
 
 // Map icon names to Lucide icons
 const APP_ICONS = {
@@ -37,7 +37,7 @@ const APP_ICONS = {
   Radio,
 };
 
-export default function AppCard({ app, onUpdatePermission, onDisconnect, onConnect, isLive }) {
+export default function AppCard({ app, onUpdatePermission, onDisconnect, onConnect, isLive, allApps = [] }) {
   const [activeTab, setActiveTab] = useState('permissions'); // 'permissions' | 'activity'
   const [expanded, setExpanded] = useState(true);
   const [disconnectModalOpen, setDisconnectModalOpen] = useState(false);
@@ -47,9 +47,22 @@ export default function AppCard({ app, onUpdatePermission, onDisconnect, onConne
   const IconComponent = APP_ICONS[app.icon] || Plug;
 
   const isConnected = app.status === 'connected';
+  const isNeedsReconnect = app.status === 'needs_reconnect';
   const isAvailable = app.status === 'available';
   const isDemo = app.status === 'demo';
   const isComingSoon = app.status === 'coming_soon';
+
+  const isGoogleApp = app.provider === 'Google' || app.id.startsWith('google-') || app.id === 'gmail';
+  const affectedApps = isGoogleApp
+    ? (allApps.filter((a) => a.provider === 'Google' || a.id.startsWith('google-') || a.id === 'gmail').length > 0
+        ? allApps.filter((a) => a.provider === 'Google' || a.id.startsWith('google-') || a.id === 'gmail')
+        : [
+            { id: 'google-calendar', name: 'Google Calendar' },
+            { id: 'gmail', name: 'Gmail' },
+            { id: 'google-drive', name: 'Google Drive' },
+            { id: 'google-forms', name: 'Google Forms' },
+          ])
+    : [app];
 
   const handleModeChange = (actionId, risk, targetMode) => {
     // Safety check: HIGH and CRITICAL can never be set to 'allowed'
@@ -77,6 +90,8 @@ export default function AppCard({ app, onUpdatePermission, onDisconnect, onConne
     <div className={`glass-card rounded-2xl p-5 sm:p-6 relative overflow-hidden transition-all duration-200 border ${
       isConnected
         ? 'border-white/10 hover:border-[#eb6920]/40 shadow-[0_4px_24px_rgba(0,0,0,0.5)]'
+        : isNeedsReconnect
+        ? 'border-amber-500/35 bg-amber-500/[0.02] shadow-[0_0_20px_rgba(245,158,11,0.06)]'
         : isAvailable
         ? 'border-white/10 hover:border-white/20'
         : isDemo
@@ -90,6 +105,8 @@ export default function AppCard({ app, onUpdatePermission, onDisconnect, onConne
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border transition-all ${
             isConnected
               ? 'bg-[#15121c] border-[#eb6920]/40 text-[#eb6920] shadow-[0_0_15px_rgba(235,105,32,0.25)]'
+              : isNeedsReconnect
+              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
               : isAvailable
               ? 'bg-white/[0.04] border-white/10 text-white'
               : isDemo
@@ -129,10 +146,35 @@ export default function AppCard({ app, onUpdatePermission, onDisconnect, onConne
             </div>
           )}
 
+          {isNeedsReconnect && (
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30">
+                <AlertTriangle className="w-3 h-3 text-amber-400" />
+                Needs Reconnect
+              </span>
+              <button
+                type="button"
+                onClick={() => (isLive ? onConnect(app.id) : setConnectModalOpen(true))}
+                className="btn-orange px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+              >
+                <Plug className="w-3 h-3" />
+                <span>Reconnect</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDisconnectModalOpen(true)}
+                className="px-2 py-1 rounded-lg text-[11px] font-semibold text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                title="Disconnect app"
+              >
+                <Unplug className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+
           {isAvailable && (
             <button
               type="button"
-              onClick={() => setConnectModalOpen(true)}
+              onClick={() => (isLive ? onConnect(app.id) : setConnectModalOpen(true))}
               className="btn-orange px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm"
             >
               <Plug className="w-3 h-3" />
@@ -157,7 +199,7 @@ export default function AppCard({ app, onUpdatePermission, onDisconnect, onConne
       </div>
 
       {/* Connected Account & Scopes Row (Honest status info) */}
-      {isConnected && (
+      {(isConnected || isNeedsReconnect) && (
         <div className="mb-4 px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 text-gray-300">
             <span className="text-gray-500 font-medium">Account:</span>
@@ -167,9 +209,17 @@ export default function AppCard({ app, onUpdatePermission, onDisconnect, onConne
           </div>
 
           {app.grantedScopes && app.grantedScopes.length > 0 && (
-            <div className="flex items-center gap-1.5 text-gray-500 text-[11px] overflow-x-auto no-scrollbar">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>{app.grantedScopes.length} OAuth scopes granted</span>
+            <div className="flex items-center gap-1.5 text-gray-400 text-[11px] flex-wrap">
+              <span className="text-gray-500 font-medium">Scopes:</span>
+              {app.grantedScopes.map((sc) => (
+                <span
+                  key={sc}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-white/[0.05] border border-white/10 text-gray-300"
+                >
+                  <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
+                  <span>{formatScope(sc)}</span>
+                </span>
+              ))}
             </div>
           )}
         </div>
@@ -409,10 +459,29 @@ export default function AppCard({ app, onUpdatePermission, onDisconnect, onConne
 
             <h4 className="text-lg font-bold text-white mb-2">Disconnect {app.name}?</h4>
             
-            <p className="text-xs text-gray-400 leading-relaxed mb-6">
+            <p className="text-xs text-gray-400 leading-relaxed mb-4">
               {app.disconnectWarning ||
                 `Disconnecting ${app.name} will revoke AgentOS access. Any scheduled tasks or live missions using this app will be paused and require manual intervention.`}
             </p>
+
+            {isGoogleApp && (
+              <div className="mb-5">
+                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block mb-2">
+                  All affected Google Workspace apps:
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {affectedApps.map((a) => (
+                    <div
+                      key={a.id}
+                      className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 flex items-center gap-2 text-xs text-gray-300"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#eb6920]" />
+                      <span>{a.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center justify-end gap-3">
               <button
@@ -428,7 +497,7 @@ export default function AppCard({ app, onUpdatePermission, onDisconnect, onConne
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-red-600 hover:bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all flex items-center gap-1.5"
               >
                 <Unplug className="w-3.5 h-3.5" />
-                <span>Disconnect</span>
+                <span>{isGoogleApp ? 'Disconnect All Google Apps' : 'Disconnect'}</span>
               </button>
             </div>
           </div>

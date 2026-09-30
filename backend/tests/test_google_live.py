@@ -226,6 +226,79 @@ def test_disconnect_revokes_and_wipes_tokens(live, fake):
     assert client.get("/api/integrations").json()[0]["status"] == "not_connected"
 
 
+def test_state_replay_is_rejected(live, fake):
+    app, client = live
+    url = client.post("/api/integrations/google/connect").json()["authorization_url"]
+    q = parse_qs(urlparse(url).query)
+    fake.challenge = q["code_challenge"][0]
+    res1 = client.get("/api/integrations/google/callback", params={"code": "good-code", "state": q["state"][0]}, follow_redirects=False)
+    assert res1.status_code == 303 and "connected=google" in res1.headers["location"]
+    # Replaying the exact same state must be rejected
+    res2 = client.get("/api/integrations/google/callback", params={"code": "good-code", "state": q["state"][0]}, follow_redirects=False)
+    assert res2.headers["location"].endswith("?error=invalid_state")
+
+
+def test_incremental_scopes_and_accumulation(live, fake):
+    app, client = live
+    # 1. Connect requesting only calendar
+    url = client.post("/api/v1/integrations/google/connect", json={"apps": ["google-calendar"]}).json()["authorization_url"]
+    q = parse_qs(urlparse(url).query)
+    assert q["scope"] == ["https://www.googleapis.com/auth/calendar.events"]
+    fake.challenge = q["code_challenge"][0]
+    fake.scope = "https://www.googleapis.com/auth/calendar.events"
+    res1 = client.get("/api/integrations/google/callback", params={"code": "good-code", "state": q["state"][0]}, follow_redirects=False)
+    assert res1.status_code == 303 and "connected=google" in res1.headers["location"]
+
+    integ1 = client.get("/api/v1/integrations").json()[0]
+    assert integ1["scopes"] == ["https://www.googleapis.com/auth/calendar.events"]
+
+    # 2. Incrementally request gmail
+    url2 = client.post("/api/v1/integrations/google/connect", json={"apps": ["gmail"]}).json()["authorization_url"]
+    q2 = parse_qs(urlparse(url2).query)
+    assert q2["scope"] == ["https://www.googleapis.com/auth/gmail.compose"]
+    fake.challenge = q2["code_challenge"][0]
+    fake.scope = "https://www.googleapis.com/auth/gmail.compose"
+    res2 = client.get("/api/integrations/google/callback", params={"code": "good-code", "state": q2["state"][0]}, follow_redirects=False)
+    assert res2.status_code == 303 and "connected=google" in res2.headers["location"]
+
+    integ2 = client.get("/api/v1/integrations").json()[0]
+    assert set(integ2["scopes"]) == {
+        "https://www.googleapis.com/auth/calendar.events",
+        "https://www.googleapis.com/auth/gmail.compose",
+    }
+
+
+def test_invalid_grant_marks_integration_needs_reconnect(live, fake):
+    app, client = live
+    connect(client, fake)
+    fake.refresh_ok = False
+    with app.state.session_factory() as db:
+        integ = db.query(Integration).one()
+        integ.token_expires_at = datetime.now(timezone.utc) - timedelta(hours=1)
+        db.commit()
+
+    # Triggering access_token will fail refresh and mark needs_reconnect
+    with pytest.raises(Exception):
+        with app.state.session_factory() as db:
+            integ = db.query(Integration).one()
+            app.state.google.access_token(db, integ)
+
+    integ_data = client.get("/api/integrations").json()[0]
+    assert integ_data["status"] == "needs_reconnect"
+
+
+def test_app_disconnect_revokes_token_at_google_and_affects_google_apps(live, fake):
+    app, client = live
+    connect(client, fake)
+    res = client.delete("/api/apps/google-calendar")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["disconnected"] is True
+    assert data["affected_apps"] == ["google-calendar", "gmail", "google-drive", "google-forms"]
+    assert fake.revoked and fake.revoked[0] in fake.issued
+    assert client.get("/api/integrations").json()[0]["status"] == "not_connected"
+
+
 # ---------------------------------------------------------------- the birthday dinner, for real
 
 def test_birthday_dinner_runs_end_to_end_against_google(live, fake):
@@ -342,7 +415,7 @@ def test_revoked_access_surfaces_as_authentication_failed(live, fake):
     failed = [e for e in events(client, mid) if e["type"] == "TASK_FAILED"][0]["payload"]
     assert failed["error_class"] == "authentication_failed"
     assert "Reconnect Google" in failed["message"]
-    assert client.get("/api/integrations").json()[0]["status"] == "not_connected"
+    assert client.get("/api/integrations").json()[0]["status"] == "needs_reconnect"
 
 
 def test_an_expired_access_token_is_refreshed_transparently(live, fake):
