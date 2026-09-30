@@ -1,7 +1,7 @@
 """Add input to Approval
 
 Revision ID: 855d14dfed73
-Revises: 0005
+Revises: 0006
 Create Date: 2026-09-30 12:53:10.669698
 """
 from alembic import op
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 
 
 revision = '855d14dfed73'
-down_revision = '0005'
+down_revision = '0006'
 branch_labels = None
 depends_on = None
 
