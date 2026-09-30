@@ -37,10 +37,7 @@ from app.schemas.plan import check_no_secrets_or_tokens, redact_dict
 from app.services.missions import append_event, get_mission
 from app.services.preferences import UnknownGroupError, apply_preferences, load_preferences
 from app.tools.base import Tool, ToolContext, ToolResult
-from app.tools.google import GOOGLE_TOOLS
-from app.tools.registry import get_tool
-
-DEFAULT_TOOLS: dict[str, Tool] = {t.name: t for t in GOOGLE_TOOLS}
+from app.tools.registry import get_tool, get_simulated_tool, resolve
 
 
 def utcnow() -> datetime:
@@ -74,13 +71,11 @@ def resolve_inputs(data: Any, completed_outputs: dict[str, dict[str, Any]]) -> A
     return data
 
 
-def find_tool_for_task(task: Task) -> Tool | None:
-    """Select the appropriate tool for a task based on registry and defaults."""
+def find_tool_name_for_task(task: Task) -> str | None:
+    """Select the appropriate tool for a task based on registry."""
     # Explicit tool in task inputs or plan
     if task.inputs and isinstance(task.inputs, dict) and "tool" in task.inputs:
-        tool_from_input = get_tool(task.inputs["tool"]) or DEFAULT_TOOLS.get(task.inputs["tool"])
-        if tool_from_input:
-            return tool_from_input
+        return str(task.inputs["tool"])
 
     # Check registered tool by task capability or task type
     cap = task.capability or TASK_TYPES.get(task.type or "")
@@ -102,17 +97,13 @@ def find_tool_for_task(task: Task) -> Tool | None:
         tool_name = "gmail.send_draft"
 
     if tool_name:
-        registered = get_tool(tool_name)
-        if registered:
-            return registered
-        if tool_name in DEFAULT_TOOLS:
-            return DEFAULT_TOOLS[tool_name]
+        return tool_name
 
     # Check if a custom tool was registered matching capability or task key
     if task.capability and get_tool(task.capability):
-        return get_tool(task.capability)
+        return task.capability
     if get_tool(task.key):
-        return get_tool(task.key)
+        return task.key
 
     return None
 
@@ -236,8 +227,8 @@ def run_mission(db: Session, user: User, mission_id: str, google: GoogleConnecto
         if is_verification:
             return _run_verification(db, mission, task)
 
-        tool = find_tool_for_task(task)
-        if tool is None:
+        tool_name = find_tool_name_for_task(task)
+        if tool_name is None:
             # No real tool exists for this step: run it as a clearly marked simulation.
             task.status = TaskStatus.DONE
             task.started_at = task.started_at or utcnow()
@@ -252,6 +243,33 @@ def run_mission(db: Session, user: User, mission_id: str, google: GoogleConnecto
             )
             db.commit()
             continue
+        real = google_live
+        if not real:
+            # Demo Mode: we use the simulated version if available
+            tool = get_simulated_tool(tool_name) or get_tool(tool_name)
+            if not tool:
+                task.status = TaskStatus.DONE
+                task.started_at = task.started_at or utcnow()
+                task.finished_at = utcnow()
+                task.output = {"simulated": True, "title": task.title}
+                completed_outputs[task.key] = task.output
+                append_event(db, mission, EventType.TASK_STARTED, task.agent, {"task_key": task.key, "simulated": True})
+                append_event(
+                    db, mission, EventType.TOOL_COMPLETED, task.agent,
+                    {"task_key": task.key, "tool": None, "status": "success", "simulated": True, "output": task.output, "evidence": []},
+                )
+                db.commit()
+                continue
+        else:
+            # Live Mode: MUST NOT silently simulate. Use real tool or fail correctly.
+            resolution = resolve(tool_name, db, user)
+            if not resolution.available:
+                reason = resolution.reason or "tool_unavailable"
+                pause = reason == "not_connected"
+                return _fail(db, mission, task, reason, "Could not use the tool. Connect the required integration and try again." if pause else "The required tool is unavailable.", pause=pause)
+            tool = resolution.tool
+            if not tool:
+                return _fail(db, mission, task, "tool_unavailable", "Tool not found.")
 
         # Apply the user's preferences (#18) before approval, so the approval shows
         # exactly what will run. Unknown contact groups are asked about, never guessed.
@@ -283,10 +301,8 @@ def run_mission(db: Session, user: User, mission_id: str, google: GoogleConnecto
             _skip(db, mission, task, "skipped_permission_denied", refusal)
             continue
 
-        # Real or simulated: Google steps are real whenever Google is configured on the
-        # server. Then the user must have connected it; we never fall back to pretending.
-        real = tool.integration != "google" or google_live
-        if tool.integration == "google" and google_live and google_client is None:
+        # We've already resolved real vs simulated up top.
+        if real and tool.integration == "google" and google_client is None:
             return _fail(db, mission, task, "authentication_failed", "Connect Google in Apps to run this step for real, then start the mission again.", pause=True)
 
         # Check Approval Gateway

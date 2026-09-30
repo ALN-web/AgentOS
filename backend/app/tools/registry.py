@@ -3,12 +3,23 @@
 Priority 2 (#6) and Priority 5 (#12) register real tools here.
 """
 
+from dataclasses import dataclass
 from typing import Union
 
+from sqlalchemy.orm import Session
+from sqlalchemy import select
+
+from app.db.models import Integration, User
 from app.tools.base import Tool
 
-_REGISTERED: set[str] = set()
-_TOOL_INSTANCES: dict[str, Tool] = {}
+@dataclass
+class ToolResolution:
+    tool: Tool | None
+    available: bool
+    reason: str | None = None
+
+_REGISTERED_REAL: dict[str, Tool] = {}
+_REGISTERED_SIMULATED: dict[str, Tool] = {}
 
 KNOWN_TOOL_OUTPUT_FIELDS: dict[str, set[str]] = {
     "calendar.list_events": {"events", "free_slots", "count", "start", "end"},
@@ -41,27 +52,53 @@ KNOWN_CAPABILITY_OUTPUT_FIELDS: dict[str, set[str]] = {
 
 def register_tool(tool: Union[str, Tool]) -> None:
     if isinstance(tool, Tool):
-        _REGISTERED.add(tool.name)
-        _TOOL_INSTANCES[tool.name] = tool
+        if getattr(tool, "kind", "real") == "simulated":
+            _REGISTERED_SIMULATED[tool.name] = tool
+        else:
+            _REGISTERED_REAL[tool.name] = tool
     else:
-        _REGISTERED.add(str(tool))
+        # Register a string token (like an action_id) so it shows up in registered_tools()
+        _REGISTERED_REAL[str(tool)] = None # type: ignore
 
 
 def unregister_tool(name: str) -> None:
-    _REGISTERED.discard(name)
-    _TOOL_INSTANCES.pop(name, None)
+    _REGISTERED_REAL.pop(name, None)
+    _REGISTERED_SIMULATED.pop(name, None)
 
 
 def registered_tools() -> frozenset[str]:
-    return frozenset(_REGISTERED)
+    return frozenset(_REGISTERED_REAL.keys())
 
 
 def get_tool(name: str) -> Tool | None:
-    return _TOOL_INSTANCES.get(name)
+    return _REGISTERED_REAL.get(name) or _REGISTERED_SIMULATED.get(name)
+
+
+def get_simulated_tool(name: str) -> Tool | None:
+    return _REGISTERED_SIMULATED.get(name)
 
 
 def get_all_tools() -> dict[str, Tool]:
-    return dict(_TOOL_INSTANCES)
+    tools = {k: v for k, v in _REGISTERED_SIMULATED.items() if v is not None}
+    tools.update({k: v for k, v in _REGISTERED_REAL.items() if v is not None})
+    return tools
+
+
+def resolve(tool_name: str, db: Session, user: User) -> ToolResolution:
+    tool = _REGISTERED_REAL.get(tool_name)
+    if not tool:
+        return ToolResolution(tool=None, available=False, reason="tool_unavailable")
+
+    if tool.integration == "google":
+        integ = db.scalar(select(Integration).where(Integration.user_id == user.id, Integration.provider == "google"))
+        if integ is None or integ.status != "connected" or not integ.encrypted_token:
+            return ToolResolution(tool=None, available=False, reason="not_connected")
+
+        granted = set(integ.scopes or [])
+        if any(s not in granted for s in tool.required_scopes):
+            return ToolResolution(tool=None, available=False, reason="missing_scope")
+
+    return ToolResolution(tool=tool, available=True, reason=None)
 
 
 def get_known_output_fields(capability: str | None = None, tool_name: str | None = None) -> set[str]:
@@ -69,13 +106,13 @@ def get_known_output_fields(capability: str | None = None, tool_name: str | None
     if tool_name:
         if tool_name in KNOWN_TOOL_OUTPUT_FIELDS:
             fields.update(KNOWN_TOOL_OUTPUT_FIELDS[tool_name])
-        tool_obj = _TOOL_INSTANCES.get(tool_name)
+        tool_obj = _REGISTERED_REAL.get(tool_name) or _REGISTERED_SIMULATED.get(tool_name)
         if tool_obj and tool_obj.output_fields:
             fields.update(tool_obj.output_fields)
     if capability:
         if capability in KNOWN_CAPABILITY_OUTPUT_FIELDS:
             fields.update(KNOWN_CAPABILITY_OUTPUT_FIELDS[capability])
-        for tool_obj in _TOOL_INSTANCES.values():
-            if tool_obj.capability == capability and tool_obj.output_fields:
+        for tool_obj in _REGISTERED_REAL.values():
+            if tool_obj and tool_obj.capability == capability and tool_obj.output_fields:
                 fields.update(tool_obj.output_fields)
     return fields

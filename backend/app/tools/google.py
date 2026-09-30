@@ -1,9 +1,8 @@
 """Google Workspace everyday tools (Calendar and Gmail), #6.
 
 With a connected Google account (`ctx.google`), every tool calls the real API and
-`verify` re-reads the result from Google independently. Without one (Google not
-configured on this server), the tools return a clearly marked simulation:
-`simulated=True`, and the evidence carries no link, so nothing fake looks real.
+`verify` re-reads the result from Google independently. Simulated versions
+return a clearly marked simulation: `simulated=True`, and the evidence carries no link.
 """
 
 import uuid
@@ -58,21 +57,14 @@ class CalendarListEventsTool(Tool):
     action_id = "calendar.read"
     capability = "calendar"
     integration = "google"
+    kind = "real"
+    required_scopes = ("https://www.googleapis.com/auth/calendar.events",)
     description = "List calendar events and find a free slot."
     risk = RiskLevel.LOW
     output_fields = ("events", "free_slots", "count", "start", "end")
     supports_idempotency = True
 
     def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
-        if ctx.google is None:
-            start = args.get("start", SIM_START)
-            end = args.get("end", SIM_END)
-            return ToolResult(
-                status="success", tool=self.name, simulated=True,
-                output={"free_slots": [start], "start": start, "end": end, "events": [], "count": 0},
-                evidence=_simulated_evidence({"type": "calendar_availability", "label": "Found open slot on Saturday 7:00 PM", "reference_id": "slot_sat_19"}),
-            )
-
         from app.services.preferences import next_free_slot
 
         prefs = _prefs(ctx)
@@ -118,11 +110,32 @@ class CalendarListEventsTool(Tool):
             evidence=[{"type": "calendar_availability", "source": "google_calendar", "label": label, "reference_id": start.isoformat()}],
         )
 
+class SimulatedCalendarListEventsTool(Tool):
+    name = "calendar.list_events"
+    action_id = "calendar.read"
+    capability = "calendar"
+    integration = "google"
+    kind = "simulated"
+    description = "List calendar events and find a free slot."
+    risk = RiskLevel.LOW
+    output_fields = ("events", "free_slots", "count", "start", "end")
+    supports_idempotency = True
+
+    def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+        start = args.get("start", SIM_START)
+        end = args.get("end", SIM_END)
+        return ToolResult(
+            status="success", tool=self.name, simulated=True,
+            output={"free_slots": [start], "start": start, "end": end, "events": [], "count": 0},
+            evidence=_simulated_evidence({"type": "calendar_availability", "label": "Found open slot on Saturday 7:00 PM", "reference_id": "slot_sat_19"}),
+        )
 
 class CalendarCreateEventTool(Tool):
     name = "calendar.create_event"
     capability = "calendar"
     integration = "google"
+    kind = "real"
+    required_scopes = ("https://www.googleapis.com/auth/calendar.events",)
     description = "Create a calendar event."
     risk = RiskLevel.HIGH
     output_fields = ("event_id", "html_link", "start", "end", "summary", "status", "idempotency_key", "hangout_link", "attendees")
@@ -131,16 +144,6 @@ class CalendarCreateEventTool(Tool):
     def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
         summary = args.get("summary") or args.get("title") or "Birthday dinner for 8"
         event_id = event_id_for(ctx.idempotency_key) if ctx.idempotency_key else f"ag{uuid.uuid4().hex}"
-
-        if ctx.google is None:
-            html_link = f"https://calendar.google.com/calendar/event?eid={event_id}"
-            start, end = args.get("start", SIM_START), args.get("end", SIM_END)
-            return ToolResult(
-                status="success", tool=self.name, simulated=True,
-                output={"event_id": event_id, "html_link": html_link, "start": start, "end": end,
-                        "summary": summary, "status": "confirmed", "idempotency_key": ctx.idempotency_key},
-                evidence=_simulated_evidence({"type": "calendar_event", "label": f"Created event '{summary}'", "reference_id": event_id}),
-            )
 
         start = _parse(args.get("start"))
         if start is None:
@@ -175,17 +178,43 @@ class CalendarCreateEventTool(Tool):
         )
 
     def verify(self, ctx: ToolContext, result: ToolResult) -> dict[str, Any]:
-        if result.simulated or ctx.google is None:
-            return {"verified": False, "simulated": True, "detail": "Simulated; nothing to re-read."}
         ev = ctx.google.get_event(result.output["event_id"])
         ok = ev.get("status") != "cancelled" and ev.get("id") == result.output["event_id"]
         return {"verified": ok, "detail": "Re-read the event from Google Calendar." if ok else "The event is missing or cancelled.", "method": "re-fetched event by id"}
+
+class SimulatedCalendarCreateEventTool(Tool):
+    name = "calendar.create_event"
+    capability = "calendar"
+    integration = "google"
+    kind = "simulated"
+    description = "Create a calendar event."
+    risk = RiskLevel.HIGH
+    output_fields = ("event_id", "html_link", "start", "end", "summary", "status", "idempotency_key", "hangout_link", "attendees")
+    supports_idempotency = True
+
+    def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+        summary = args.get("summary") or args.get("title") or "Birthday dinner for 8"
+        event_id = event_id_for(ctx.idempotency_key) if ctx.idempotency_key else f"ag{uuid.uuid4().hex}"
+
+        html_link = f"https://calendar.google.com/calendar/event?eid={event_id}"
+        start, end = args.get("start", SIM_START), args.get("end", SIM_END)
+        return ToolResult(
+            status="success", tool=self.name, simulated=True,
+            output={"event_id": event_id, "html_link": html_link, "start": start, "end": end,
+                    "summary": summary, "status": "confirmed", "idempotency_key": ctx.idempotency_key},
+            evidence=_simulated_evidence({"type": "calendar_event", "label": f"Created event '{summary}'", "reference_id": event_id}),
+        )
+
+    def verify(self, ctx: ToolContext, result: ToolResult) -> dict[str, Any]:
+        return {"verified": False, "simulated": True, "detail": "Simulated; nothing to re-read."}
 
 
 class GmailCreateDraftTool(Tool):
     name = "gmail.create_draft"
     capability = "document"
     integration = "google"
+    kind = "real"
+    required_scopes = ("https://www.googleapis.com/auth/gmail.compose",)
     description = "Create a Gmail draft with invitation details."
     risk = RiskLevel.MEDIUM
     output_fields = ("draft_id", "message_id", "thread_id", "subject", "body", "to", "html_link")
@@ -207,17 +236,6 @@ class GmailCreateDraftTool(Tool):
         if signature and signature not in body:
             body = f"{body.rstrip()}\n\n{signature}"
 
-        if ctx.google is None:
-            to = args.get("to", "guest@example.com")
-            draft_id = f"draft_{uuid.uuid4().hex[:12]}"
-            message_id = f"msg_{uuid.uuid4().hex[:12]}"
-            return ToolResult(
-                status="success", tool=self.name, simulated=True,
-                output={"draft_id": draft_id, "message_id": message_id, "thread_id": f"th_{message_id}", "subject": subject,
-                        "body": body, "to": to, "html_link": f"https://mail.google.com/mail/#drafts/{draft_id}"},
-                evidence=_simulated_evidence({"type": "gmail_draft", "label": f"Draft: {subject}", "reference_id": draft_id}),
-            )
-
         to = ", ".join(_emails(args.get("to")))
         if not to:
             raise GoogleError("validation_error", "The email has no recipients. Name them, or add a contact group in Settings.")
@@ -232,17 +250,56 @@ class GmailCreateDraftTool(Tool):
         )
 
     def verify(self, ctx: ToolContext, result: ToolResult) -> dict[str, Any]:
-        if result.simulated or ctx.google is None:
-            return {"verified": False, "simulated": True, "detail": "Simulated; nothing to re-read."}
         d = ctx.google.get_draft(result.output["draft_id"])
         ok = d.get("id") == result.output["draft_id"]
         return {"verified": ok, "detail": "Re-read the draft from Gmail." if ok else "The draft is missing.", "method": "re-fetched draft by id"}
+
+class SimulatedGmailCreateDraftTool(Tool):
+    name = "gmail.create_draft"
+    capability = "document"
+    integration = "google"
+    kind = "simulated"
+    description = "Create a Gmail draft with invitation details."
+    risk = RiskLevel.MEDIUM
+    output_fields = ("draft_id", "message_id", "thread_id", "subject", "body", "to", "html_link")
+    supports_idempotency = True
+
+    def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+        subject = args.get("subject", "Birthday Dinner Invitation")
+        event_link = args.get("body_link") or args.get("html_link") or args.get("event_link") or ""
+
+        body = args.get("body")
+        if not body:
+            body = (
+                f"Hi,\n\nYou are invited to the birthday dinner for 8 on Saturday!\n"
+                f"Event details & link: {event_link}\n\nHope you can make it!"
+            )
+        elif event_link and event_link not in body:
+            body = f"{body}\n\nEvent link: {event_link}"
+        signature = args.get("signature")
+        if signature and signature not in body:
+            body = f"{body.rstrip()}\n\n{signature}"
+
+        to = args.get("to", "guest@example.com")
+        draft_id = f"draft_{uuid.uuid4().hex[:12]}"
+        message_id = f"msg_{uuid.uuid4().hex[:12]}"
+        return ToolResult(
+            status="success", tool=self.name, simulated=True,
+            output={"draft_id": draft_id, "message_id": message_id, "thread_id": f"th_{message_id}", "subject": subject,
+                    "body": body, "to": to, "html_link": f"https://mail.google.com/mail/#drafts/{draft_id}"},
+            evidence=_simulated_evidence({"type": "gmail_draft", "label": f"Draft: {subject}", "reference_id": draft_id}),
+        )
+
+    def verify(self, ctx: ToolContext, result: ToolResult) -> dict[str, Any]:
+        return {"verified": False, "simulated": True, "detail": "Simulated; nothing to re-read."}
 
 
 class GmailSendDraftTool(Tool):
     name = "gmail.send_draft"
     capability = "communication"
     integration = "google"
+    kind = "real"
+    required_scopes = ("https://www.googleapis.com/auth/gmail.compose",)
     description = "Send a prepared Gmail draft."
     risk = RiskLevel.HIGH
     output_fields = ("message_id", "thread_id", "status", "sent_at", "body", "subject", "to")
@@ -250,14 +307,6 @@ class GmailSendDraftTool(Tool):
 
     def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
         body, subject, to = args.get("body", ""), args.get("subject", ""), args.get("to", "")
-        if ctx.google is None:
-            message_id = args.get("message_id") or args.get("draft_id") or f"msg_{uuid.uuid4().hex[:12]}"
-            return ToolResult(
-                status="success", tool=self.name, simulated=True,
-                output={"message_id": message_id, "thread_id": f"th_{message_id}", "status": "sent",
-                        "sent_at": datetime.now(timezone.utc).isoformat(), "body": body, "subject": subject, "to": to},
-                evidence=_simulated_evidence({"type": "gmail_message", "label": "Sent invitation email", "reference_id": message_id}),
-            )
 
         draft_id = args.get("draft_id")
         if not draft_id:
@@ -266,7 +315,6 @@ class GmailSendDraftTool(Tool):
             sent = ctx.google.send_draft(draft_id)
         except GoogleError as err:
             if err.error_class == "not_found":
-                # The draft is gone: it may already have been sent. Never send a second copy.
                 raise GoogleError("validation_error", "The draft no longer exists; it may already have been sent.") from None
             raise
         labels = sent.get("labelIds") or []
@@ -279,10 +327,6 @@ class GmailSendDraftTool(Tool):
         )
 
     def verify(self, ctx: ToolContext, result: ToolResult) -> dict[str, Any]:
-        if result.simulated or ctx.google is None:
-            return {"verified": False, "simulated": True, "detail": "Simulated; nothing to re-read."}
-        # gmail.compose cannot read messages, but it can read drafts: a sent draft
-        # disappears from Drafts, and Gmail labelled the message SENT.
         try:
             ctx.google.get_draft(result.output["draft_id"])
             still_draft = True
@@ -293,10 +337,36 @@ class GmailSendDraftTool(Tool):
         ok = not still_draft and result.output.get("status") == "sent"
         return {"verified": ok, "detail": "Gmail labelled the message SENT and the draft left Drafts." if ok else "The email still looks unsent.", "method": "message found in Sent by id"}
 
+class SimulatedGmailSendDraftTool(Tool):
+    name = "gmail.send_draft"
+    capability = "communication"
+    integration = "google"
+    kind = "simulated"
+    description = "Send a prepared Gmail draft."
+    risk = RiskLevel.HIGH
+    output_fields = ("message_id", "thread_id", "status", "sent_at", "body", "subject", "to")
+    supports_idempotency = True
+
+    def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+        body, subject, to = args.get("body", ""), args.get("subject", ""), args.get("to", "")
+        message_id = args.get("message_id") or args.get("draft_id") or f"msg_{uuid.uuid4().hex[:12]}"
+        return ToolResult(
+            status="success", tool=self.name, simulated=True,
+            output={"message_id": message_id, "thread_id": f"th_{message_id}", "status": "sent",
+                    "sent_at": datetime.now(timezone.utc).isoformat(), "body": body, "subject": subject, "to": to},
+            evidence=_simulated_evidence({"type": "gmail_message", "label": "Sent invitation email", "reference_id": message_id}),
+        )
+    def verify(self, ctx: ToolContext, result: ToolResult) -> dict[str, Any]:
+        return {"verified": False, "simulated": True, "detail": "Simulated; nothing to re-read."}
+
 
 GOOGLE_TOOLS: tuple[Tool, ...] = (
     CalendarListEventsTool(),
+    SimulatedCalendarListEventsTool(),
     CalendarCreateEventTool(),
+    SimulatedCalendarCreateEventTool(),
     GmailCreateDraftTool(),
+    SimulatedGmailCreateDraftTool(),
     GmailSendDraftTool(),
+    SimulatedGmailSendDraftTool(),
 )
