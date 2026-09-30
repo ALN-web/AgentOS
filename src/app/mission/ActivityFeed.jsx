@@ -43,7 +43,7 @@ const ROW = {
   complete: 'border-emerald-500/40 bg-emerald-500/[0.08]',
 };
 
-export default function ActivityFeed({ events, tasks = [], onSelect, selectedId }) {
+export default function ActivityFeed({ events, tasks = [], isLive = false, onSelect, selectedId }) {
   const scroller = useRef(null);
 
   useEffect(() => {
@@ -111,7 +111,7 @@ export default function ActivityFeed({ events, tasks = [], onSelect, selectedId 
                     {type && (
                       <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[9px] font-bold uppercase tracking-wider shrink-0 ${type.cls}`}>
                         <TypeIcon className="w-2.5 h-2.5" />
-                        {type.tag}
+                        {isLive && type.tag === 'Action' ? 'LIVE · ' + type.tag : type.tag}
                       </span>
                     )}
                     {appId && (

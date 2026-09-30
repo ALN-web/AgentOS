@@ -11,6 +11,7 @@ import { CAPABILITY_BY_ID } from '../agentos/capabilities';
 import { AgentIcon, agentName } from './ui';
 import { AppBadge, appForTask, getAppMeta } from './AppIcon';
 import { useBackendStatus } from '../live/useBackendStatus';
+import { useGoogleIntegration } from '../live/useGoogleIntegration';
 import { useAuth } from '../live/auth';
 import { api } from '../live/api';
 
@@ -252,7 +253,17 @@ export default function NewMissionModal() {
   }, [launcher.open, closeLauncher]);
 
   const backendStatus = useBackendStatus();
+  const { connected: googleConnected } = useGoogleIntegration();
   const isLiveAvailable = Boolean(backendStatus?.liveMode?.available);
+  
+  let missingCaps = [];
+  if (stage === 'review' && !googleConnected) {
+    const planPreview = planMission(goal.trim(), answers, undefined, preferences);
+    const googleCaps = ['calendar', 'email', 'reminders', 'communication'];
+    missingCaps = planPreview.capabilities.filter(c => googleCaps.includes(c));
+  }
+  const hasMissingCapabilities = missingCaps.length > 0;
+
   const [executionMode, setExecutionMode] = useState('demo');
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState(null);
@@ -269,7 +280,7 @@ export default function NewMissionModal() {
   const start = async () => {
     if (!ready || starting) return;
     setStartError(null);
-    const plan = planMission(goal.trim(), answers, undefined, preferences);
+    let plan = planMission(goal.trim(), answers, undefined, preferences);
 
     if (isLiveAvailable && executionMode === 'live') {
       if (!isAuthenticated) {
@@ -279,11 +290,23 @@ export default function NewMissionModal() {
       }
       setStarting(true);
       try {
+        try {
+          const analysis = await api.analyzeMission(goal.trim(), answers);
+          if (analysis && analysis.plan) {
+            plan = analysis.plan;
+            plan.plannerSource = 'llm';
+          } else {
+            plan.plannerSource = 'fallback';
+          }
+        } catch (err) {
+          plan.plannerSource = 'fallback';
+        }
+
         const source = speechSupported && speechListening ? 'voice' : 'typed';
         const backendMission = await api.createMission(goal.trim(), plan, { source });
         await api.startMission(backendMission.id);
         const id = launch(goal, { plan, isLive: true, backendMission });
-        navigate(`/app/missions/${id}`);
+        navigate(`/app/live/missions/${id}`);
       } catch (err) {
         setStartError(err.message || 'Failed to start live mission.');
         setStarting(false);
@@ -417,13 +440,13 @@ export default function NewMissionModal() {
                       ))}
                     </div>
                   </div>
-                  {isLiveAvailable && (
+                  {backendStatus?.configured && (
                     <div className="mt-4 p-3 rounded-2xl bg-black/40 border border-white/10">
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Execution Mode</span>
-                        <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          Backend Live Mode Available
+                        <span className={`text-[10px] font-mono flex items-center gap-1 ${isLiveAvailable ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isLiveAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                          {isLiveAvailable ? 'Backend Live Mode Available' : 'Live Mode Unavailable'}
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
@@ -443,21 +466,32 @@ export default function NewMissionModal() {
                           <div className="text-[10px] text-gray-500 mt-0.5">Scripted browser simulation</div>
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={() => setExecutionMode('live')}
-                          className={`px-3 py-2 rounded-xl text-xs font-semibold text-left border transition-all ${
-                            executionMode === 'live'
-                              ? 'border-emerald-500/50 bg-emerald-500/15 text-white shadow-sm'
-                              : 'border-white/5 bg-white/[0.02] text-gray-400 hover:text-white hover:bg-white/[0.04]'
-                          }`}
-                        >
-                          <div className="font-bold flex items-center gap-1.5 text-emerald-300">
-                            <span>Live Mode</span>
-                            {executionMode === 'live' && <Check className="w-3 h-3 text-emerald-400" />}
+                        {isLiveAvailable && googleConnected ? (
+                          <button
+                            type="button"
+                            onClick={() => setExecutionMode('live')}
+                            className={`px-3 py-2 rounded-xl text-xs font-semibold text-left border transition-all ${
+                              executionMode === 'live'
+                                ? 'border-emerald-500/50 bg-emerald-500/15 text-white shadow-sm'
+                                : 'border-white/5 bg-white/[0.02] text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                            }`}
+                          >
+                            <div className="font-bold flex items-center gap-1.5 text-emerald-300">
+                              <span>Live Mode</span>
+                              {executionMode === 'live' && <Check className="w-3 h-3 text-emerald-400" />}
+                            </div>
+                            <div className="text-[10px] text-gray-500 mt-0.5">Real Google tools & SSE</div>
+                          </button>
+                        ) : (
+                          <div className="px-3 py-2 rounded-xl text-xs font-semibold text-left border border-white/5 bg-white/[0.02] text-gray-500 opacity-70">
+                            <div className="font-bold flex items-center gap-1.5">Live Mode</div>
+                            <div className="text-[10px] mt-0.5">
+                              {!isLiveAvailable 
+                                ? (backendStatus.status === 'unreachable' ? 'AgentOS backend cannot be reached.' : 'Live Mode is disabled on backend.')
+                                : 'Connect Google to use Live missions.'}
+                            </div>
                           </div>
-                          <div className="text-[10px] text-gray-500 mt-0.5">Real Google tools & SSE</div>
-                        </button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -503,13 +537,13 @@ export default function NewMissionModal() {
                   <p className="text-sm text-gray-400 mt-1 truncate">“{goal.trim()}”</p>
                   <Understanding goal={goal.trim()} answers={answers} setAnswers={setAnswers} preferences={preferences} />
 
-                  {isLiveAvailable && (
+                  {backendStatus?.configured && (
                     <div className="mt-4 p-3 rounded-2xl bg-black/40 border border-white/10">
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Execution Mode</span>
-                        <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          Backend Live Mode Available
+                        <span className={`text-[10px] font-mono flex items-center gap-1 ${isLiveAvailable ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isLiveAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                          {isLiveAvailable ? 'Backend Live Mode Available' : 'Live Mode Unavailable'}
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
@@ -529,23 +563,36 @@ export default function NewMissionModal() {
                           <div className="text-[10px] text-gray-500 mt-0.5">Scripted browser simulation</div>
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={() => setExecutionMode('live')}
-                          className={`px-3 py-2 rounded-xl text-xs font-semibold text-left border transition-all ${
-                            executionMode === 'live'
-                              ? 'border-emerald-500/50 bg-emerald-500/15 text-white shadow-sm'
-                              : 'border-white/5 bg-white/[0.02] text-gray-400 hover:text-white hover:bg-white/[0.04]'
-                          }`}
-                        >
-                          <div className="font-bold flex items-center gap-1.5 text-emerald-300">
-                            <span>Live Mode</span>
-                            {executionMode === 'live' && <Check className="w-3 h-3 text-emerald-400" />}
+                        {isLiveAvailable && (!hasMissingCapabilities || googleConnected) ? (
+                          <button
+                            type="button"
+                            onClick={() => setExecutionMode('live')}
+                            className={`px-3 py-2 rounded-xl text-xs font-semibold text-left border transition-all ${
+                              executionMode === 'live'
+                                ? 'border-emerald-500/50 bg-emerald-500/15 text-white shadow-sm'
+                                : 'border-white/5 bg-white/[0.02] text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                            }`}
+                          >
+                            <div className="font-bold flex items-center gap-1.5 text-emerald-300">
+                              <span>Live Mode</span>
+                              {executionMode === 'live' && <Check className="w-3 h-3 text-emerald-400" />}
+                            </div>
+                            <div className="text-[10px] text-gray-500 mt-0.5">
+                              Real Google tools & SSE{!isAuthenticated ? ' · Sign-in required' : ''}
+                            </div>
+                          </button>
+                        ) : (
+                          <div className="px-3 py-2 rounded-xl text-xs font-semibold text-left border border-white/5 bg-white/[0.02] text-gray-500 opacity-70">
+                            <div className="font-bold flex items-center gap-1.5">Live Mode</div>
+                            <div className="text-[10px] mt-0.5">
+                              {!isLiveAvailable 
+                                ? (backendStatus.status === 'unreachable' ? 'AgentOS backend cannot be reached.' : 'Live Mode is disabled on backend.')
+                                : hasMissingCapabilities 
+                                ? `Requires capabilities: ${missingCaps.join(', ')}`
+                                : 'Connect Google to use Live missions.'}
+                            </div>
                           </div>
-                          <div className="text-[10px] text-gray-500 mt-0.5">
-                            Real Google tools & SSE{!isAuthenticated ? ' · Sign-in required' : ''}
-                          </div>
-                        </button>
+                        )}
                       </div>
                     </div>
                   )}

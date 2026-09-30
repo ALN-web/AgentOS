@@ -85,6 +85,11 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
         method: 'POST',
         body: { goal, plan, ...(source ? { source } : {}), ...(templateId ? { template_id: templateId } : {}) },
       }),
+    analyzeMission: (goal, answers = {}) =>
+      request('/missions/analyze', {
+        method: 'POST',
+        body: { goal, answers },
+      }),
     listCapabilities: () => request('/capabilities'),
     listMissions: () => request('/missions'),
     getMission: (missionId) => request(`/missions/${id(missionId)}`),

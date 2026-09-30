@@ -257,7 +257,7 @@ export default function MissionDetail() {
             className="h-[560px]"
           >
             <div className="h-full p-3 sm:p-4">
-              <ActivityFeed events={view.events} tasks={view.tasks} onSelect={selectEvent} selectedId={selected?.kind === 'event' ? selected.id : null} />
+              <ActivityFeed events={view.events} tasks={view.tasks} isLive={view.isLive} onSelect={selectEvent} selectedId={selected?.kind === 'event' ? selected.id : null} />
             </div>
           </Panel>
         </div>
