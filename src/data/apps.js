@@ -63,12 +63,9 @@ export const APPS_CATALOGUE = [
     provider: 'Google',
     category: 'Google Workspace',
     icon: 'Calendar',
-    status: 'connected', // 'connected' | 'available' | 'demo' | 'coming_soon'
-    accountEmail: 'alex.chen@agentos.org',
-    grantedScopes: [
-      'https://www.googleapis.com/auth/calendar.readonly',
-      'https://www.googleapis.com/auth/calendar.events',
-    ],
+    status: 'demo', // 'demo' | 'coming_soon' in demo catalogue; 'connected' | 'available' only in Live mode
+    accountEmail: null,
+    grantedScopes: [],
     description: 'Schedule meetings, check free/busy availability, and coordinate event timelines across team calendars.',
     disconnectWarning:
       'Disconnecting Google Calendar will revoke calendar event creation and availability checking. Active missions requiring meeting scheduling will pause and require manual intervention.',
@@ -140,13 +137,9 @@ export const APPS_CATALOGUE = [
     provider: 'Google',
     category: 'Google Workspace',
     icon: 'Mail',
-    status: 'connected',
-    accountEmail: 'alex.chen@agentos.org',
-    grantedScopes: [
-      'https://www.googleapis.com/auth/gmail.readonly',
-      'https://www.googleapis.com/auth/gmail.compose',
-      'https://www.googleapis.com/auth/gmail.send',
-    ],
+    status: 'demo',
+    accountEmail: null,
+    grantedScopes: [],
     description: 'Draft and review email communications, monitor confirmation replies, and send updates to verified recipients.',
     disconnectWarning:
       'Disconnecting Gmail prevents AgentOS from drafting emails or dispatching outreach. Outreach missions will stop at the email dispatch step.',
@@ -207,7 +200,7 @@ export const APPS_CATALOGUE = [
     provider: 'Google',
     category: 'Google Workspace',
     icon: 'HardDrive',
-    status: 'available',
+    status: 'demo',
     accountEmail: null,
     grantedScopes: [],
     description: 'Store research briefs, export structured spreadsheets, and share deliverables directly in your team folders.',
@@ -248,8 +241,8 @@ export const APPS_CATALOGUE = [
     category: 'Google Workspace',
     icon: 'FileText',
     status: 'demo',
-    accountEmail: 'demo-student@agentos.org',
-    grantedScopes: ['forms.body', 'forms.responses.readonly'],
+    accountEmail: null,
+    grantedScopes: [],
     description: 'Generate registration surveys, RSVP questionnaires, and feedback collection forms with real-time response aggregation.',
     disconnectWarning:
       'Disconnecting Google Forms will pause automated registration pipelines and survey collation.',
@@ -295,8 +288,8 @@ export const APPS_CATALOGUE = [
     category: 'Communication',
     icon: 'MessageSquare',
     status: 'demo',
-    accountEmail: 'alex.chen@workplace.slack.com',
-    grantedScopes: ['channels:read', 'chat:write', 'users:read'],
+    accountEmail: null,
+    grantedScopes: [],
     description: 'Publish sprint summaries, broadcast milestone alerts, and ping team channels when manual approvals are waiting.',
     disconnectWarning:
       'Disconnecting Slack will prevent AgentOS from sending notifications and summaries to your team channels.',
@@ -347,8 +340,8 @@ export const APPS_CATALOGUE = [
     category: 'Communication',
     icon: 'PhoneCall',
     status: 'demo',
-    accountEmail: '+1 (555) 234-8901',
-    grantedScopes: ['messages:send', 'messages:read'],
+    accountEmail: null,
+    grantedScopes: [],
     description: 'Send urgent operational alerts, RSVP confirmation pings, and emergency reschedule notifications directly to mobile contacts.',
     disconnectWarning:
       'Disconnecting WhatsApp stops mobile messaging alerts and emergency vendor notifications.',
@@ -390,7 +383,7 @@ export const APPS_CATALOGUE = [
     provider: 'Notion Labs',
     category: 'Productivity',
     icon: 'BookOpen',
-    status: 'available',
+    status: 'demo',
     accountEmail: null,
     grantedScopes: [],
     description: 'Build structured project wikis, maintain internship candidate shortlists, and publish knowledge bases with rich formatting.',
