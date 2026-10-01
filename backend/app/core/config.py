@@ -7,7 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
@@ -23,8 +23,17 @@ class Settings(BaseSettings):
     # Browser origins allowed to call the API (the Vite dev server and preview by default).
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000", "http://localhost:4173"])
 
-    # SQLite for local development; PostgreSQL in production.
+    # SQLite for local development; PostgreSQL in production (e.g. Neon). Hosted
+    # providers hand out postgres:// or postgresql:// URLs; both are accepted.
     database_url: str = "sqlite:///./agentos.db"
+
+    @field_validator("database_url")
+    @classmethod
+    def _postgres_driver(cls, v: str) -> str:
+        for prefix in ("postgres://", "postgresql://"):
+            if v.startswith(prefix):
+                return "postgresql+psycopg://" + v[len(prefix):]
+        return v
     # Apply migrations on startup. Convenient locally; production runs `alembic upgrade head` in deploy.
     auto_migrate: bool = True
 
