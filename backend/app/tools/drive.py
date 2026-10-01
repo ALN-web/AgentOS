@@ -77,13 +77,19 @@ class DriveCreateDocumentTool(Tool):
     def verify(self, ctx: ToolContext, result: ToolResult) -> dict[str, Any]:
         try:
             f = ctx.google.get_file(result.output["file_id"])
-            ok = f.get("id") == result.output["file_id"] and not f.get("trashed")
+            ok = (
+                f.get("id") == result.output["file_id"]
+                and not f.get("trashed")
+                and f.get("name") == result.output.get("title")
+            )
         except GoogleError as err:
             if err.error_class == "not_found":
                 ok = False
             else:
                 raise
-        return {"verified": ok, "detail": "Re-read the file from Google Drive." if ok else "The file is missing or trashed.", "method": "re-fetched file by id"}
+        if not ok:
+            return {"verified": False, "detail": "The file is missing, trashed, or title did not match.", "method": "re-fetched file by id"}
+        return {"verified": True, "detail": "Re-read the file from Google Drive and confirmed title.", "method": "re-fetched file by id"}
 
 
 class SimulatedDriveCreateDocumentTool(Tool):
