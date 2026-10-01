@@ -249,6 +249,7 @@ def list_evidence(
     db: Session = Depends(get_db),
     user: User = Depends(current_user),
 ):
+    svc.get_mission(db, user, mission_id)  # 404 unless the mission is yours
     evs = db.scalars(
         select(Evidence)
         .join(Mission, Evidence.mission_id == Mission.id)

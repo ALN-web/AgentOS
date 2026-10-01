@@ -49,9 +49,19 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-3-7-sonnet-latest"
     anthropic_timeout_seconds: float = 20.0
     
+    # Act as one local user when nobody is signed in (#32). Unset means: only in tests.
+    # Never possible in production.
+    auth_local_fallback: bool | None = None
+
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
+
+    @property
+    def allows_local_user(self) -> bool:
+        if self.is_production:
+            return False
+        return self.environment == "test" if self.auth_local_fallback is None else self.auth_local_fallback
 
 
 @lru_cache
