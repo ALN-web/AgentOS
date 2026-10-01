@@ -555,7 +555,8 @@ def test_without_google_every_google_step_is_marked_simulated(client):
 
 def test_tools_endpoint_says_what_runs_for_real(client, live):
     assert {t["name"]: t["available"] for t in client.get("/api/tools").json()} == {
-        "calendar.create_event": False, "calendar.list_events": False, "gmail.create_draft": False, "gmail.send_draft": False,
+        "calendar.create_event": False, "calendar.list_events": False, "calendar.update_event": False, "calendar.get_event": False,
+        "gmail.create_draft": False, "gmail.send_draft": False,
         "drive.create_document": False, "drive.get_file": False, "forms.create_form": False, "forms.get_form": False,
     }
     tools = {t["name"]: t for t in live[1].get("/api/tools").json()}

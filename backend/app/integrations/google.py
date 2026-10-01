@@ -398,6 +398,9 @@ class GoogleClient:
     def get_event(self, event_id: str) -> dict:
         return self._call("GET", f"{CALENDAR_API}/calendars/primary/events/{quote(event_id)}")
 
+    def update_event(self, event_id: str, patch: dict[str, Any]) -> dict:
+        return self._call("PATCH", f"{CALENDAR_API}/calendars/primary/events/{quote(event_id)}", params={"sendUpdates": "all"}, json=patch)
+
     # Gmail
     def create_draft(self, to: str, subject: str, body: str) -> dict:
         msg = EmailMessage()
