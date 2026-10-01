@@ -33,7 +33,7 @@ export default function MissionBrief({ plan }) {
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="px-2 py-0.5 rounded-full border border-white/10 text-[10px] font-semibold text-gray-300">{intent.domainLabel}</span>
             <span className="px-2 py-0.5 rounded-full border border-white/10 text-[10px] text-gray-400">
-              {plan.tasks.length} tasks · {plan.approvalPoints} approval{plan.approvalPoints === 1 ? '' : 's'} · {plan.riskLevel} risk
+              {(plan.tasks || []).length} tasks · {plan.approvalPoints ?? 0} approval{plan.approvalPoints === 1 ? '' : 's'}{plan.riskLevel ? ` · ${plan.riskLevel} risk` : ''}
             </span>
           </div>
           <div className="flex items-start gap-1.5 text-gray-300">
@@ -46,14 +46,14 @@ export default function MissionBrief({ plan }) {
           <div>
             <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Capabilities used</div>
             <div className="flex flex-wrap gap-1">
-              {plan.capabilities.map((c) => (
+              {(plan.capabilities || []).map((c) => (
                 <span key={c} className="px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/5 text-[10px] text-gray-300">
-                  {CAPABILITY_BY_ID[c]?.name}
+                  {CAPABILITY_BY_ID[c]?.name || c}
                 </span>
               ))}
             </div>
           </div>
-          {plan.assumptions.length > 0 && (
+          {plan.assumptions?.length > 0 && (
             <div className="flex items-start gap-1.5 text-gray-400">
               <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-gray-500" />
               <span>
