@@ -4,7 +4,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://agentos-backend.onrender.com/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://agentos-backend-qa0p.onrender.com/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
