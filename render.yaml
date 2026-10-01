@@ -1,0 +1,41 @@
+# Render Blueprint for the AgentOS backend (Live Mode). Free plan.
+# Secrets are marked `sync: false`: Render asks for them when the Blueprint is
+# created, and they never live in this repository. See docs/DEPLOY.md.
+services:
+  - type: web
+    name: agentos-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # --proxy-headers: requests arrive through Vercel's /api rewrite, so the real
+    # client address (used by the sign-in rate limit) is in X-Forwarded-For.
+    startCommand: uvicorn app.main:create_app --factory --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "*"
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: AGENTOS_ENVIRONMENT
+        value: production
+      - key: AGENTOS_LOG_LEVEL
+        value: INFO
+      # Neon connection string (postgres://... is accepted as is).
+      - key: AGENTOS_DATABASE_URL
+        sync: false
+      # A NEW Fernet key for production (never reuse the local one).
+      - key: AGENTOS_ENCRYPTION_KEY
+        sync: false
+      - key: AGENTOS_GOOGLE_CLIENT_ID
+        sync: false
+      - key: AGENTOS_GOOGLE_CLIENT_SECRET
+        sync: false
+      # https://<your-app>.vercel.app/api/integrations/google/callback
+      - key: AGENTOS_GOOGLE_REDIRECT_URI
+        sync: false
+      # https://<your-app>.vercel.app (OAuth return address and trusted origin)
+      - key: AGENTOS_FRONTEND_URL
+        sync: false
+      # Gemini (or another OpenAI-compatible) key for the AI planner.
+      - key: AGENTOS_LLM_API_KEY
+        sync: false
