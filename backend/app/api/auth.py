@@ -5,6 +5,8 @@ SameSite=Lax cookie with no Domain attribute, so it also reaches the Google OAut
 callback on the backend port. Nothing about the session is readable by scripts.
 """
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
@@ -35,6 +37,7 @@ class UserOut(BaseModel):
     id: str
     email: str
     name: str
+    created_at: datetime | None = None
 
 
 class UserEnvelope(BaseModel):
@@ -42,7 +45,7 @@ class UserEnvelope(BaseModel):
 
 
 def _out(user) -> UserEnvelope:
-    return UserEnvelope(user=UserOut(id=user.id, email=user.email, name=user.name or ""))
+    return UserEnvelope(user=UserOut(id=user.id, email=user.email, name=user.name or "", created_at=user.created_at))
 
 
 def _set_cookie(response: Response, token: str, settings: Settings) -> None:
