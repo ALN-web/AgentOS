@@ -50,8 +50,11 @@ class Settings(BaseSettings):
     # Without a key, the deterministic planner is used.
     llm_api_key: SecretStr | None = None
     llm_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
-    llm_model: str = "gemini-2.5-flash"
-    llm_timeout_seconds: float = 25.0  # x2 with one repair: stays under the 60 s the website waits
+    llm_model: str = "gemini-3.1-flash-lite"
+    # Tried in order when a model is rate-limited, overloaded or too slow (free tiers).
+    llm_fallback_models: str = "gemini-2.5-flash,gemini-3-flash-preview,gemini-flash-latest"
+    llm_timeout_seconds: float = 20.0  # per model attempt
+    llm_total_seconds: float = 28.0  # per planning call; x2 with one repair stays under the 60 s the website waits
 
     # Alternatively Anthropic, used when AGENTOS_LLM_API_KEY is not set.
     anthropic_api_key: SecretStr | None = None

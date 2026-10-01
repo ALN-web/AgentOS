@@ -10,6 +10,7 @@ via AGENTOS_LLM_*, or Anthropic via AGENTOS_ANTHROPIC_*.
 
 import json
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Protocol
 
@@ -210,33 +211,50 @@ class OpenAICompatiblePlanner(AnthropicPlanner):
 
     transport: httpx.BaseTransport | None = None  # tests inject httpx.MockTransport
 
+    # Free tiers rate-limit (429) or get overloaded (5xx) per model: try the next model.
+    RETRY_NEXT_MODEL = {408, 429, 500, 502, 503, 504}
+
+    def _models(self) -> list[str]:
+        extra = [m.strip() for m in (self.settings.llm_fallback_models or "").split(",") if m.strip()]
+        return list(dict.fromkeys([self.settings.llm_model, *extra]))
+
     def _call_llm(self, prompt: str, system: str) -> str | None:
         key = self.settings.llm_api_key
         if not key:
             return None
         url = self.settings.llm_base_url.rstrip("/") + "/chat/completions"
-        body = {
-            "model": self.settings.llm_model,
-            "temperature": 0,
-            "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
-            "response_format": {"type": "json_object"},
-        }
         headers = {"Authorization": f"Bearer {key.get_secret_value()}"}
-        try:
-            with httpx.Client(transport=self.transport, timeout=self.settings.llm_timeout_seconds) as http:
-                res = http.post(url, json=body, headers=headers)
-                if res.status_code == 400:
-                    # Some models do not support JSON mode; ask again without it.
-                    body.pop("response_format")
-                    res = http.post(url, json=body, headers=headers)
-            if res.status_code != 200:
-                log.error("LLM planning failed: HTTP %s from %s", res.status_code, httpx.URL(url).host)
-                return None
-            return res.json()["choices"][0]["message"]["content"]
-        except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError) as e:
-            log.error("LLM planning failed: %s", type(e).__name__)
-            return None
-
+        deadline = time.monotonic() + self.settings.llm_total_seconds
+        with httpx.Client(transport=self.transport) as http:
+            for model in self._models():
+                remaining = deadline - time.monotonic()
+                if remaining < 3:
+                    break
+                body = {
+                    "model": model,
+                    "temperature": 0,
+                    "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
+                    "response_format": {"type": "json_object"},
+                }
+                timeout = min(self.settings.llm_timeout_seconds, remaining)
+                try:
+                    res = http.post(url, json=body, headers=headers, timeout=timeout)
+                    if res.status_code == 400:
+                        # Some models do not support JSON mode; ask again without it.
+                        body.pop("response_format")
+                        res = http.post(url, json=body, headers=headers, timeout=max(3.0, deadline - time.monotonic()))
+                    if res.status_code == 200:
+                        return res.json()["choices"][0]["message"]["content"]
+                    log.warning("LLM model %s unavailable: HTTP %s", model, res.status_code)
+                    if res.status_code not in self.RETRY_NEXT_MODEL:
+                        return None  # e.g. a bad key: another model will not help
+                except httpx.TimeoutException:
+                    log.warning("LLM model %s timed out", model)
+                except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError) as e:
+                    log.error("LLM planning failed: %s", type(e).__name__)
+                    return None
+        log.error("LLM planning failed: no model answered in time")
+        return None
 
 def get_planner() -> Planner:
     settings = get_settings()

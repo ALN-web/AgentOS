@@ -54,7 +54,7 @@ def test_a_valid_plan_comes_back_from_the_provider(user):
     assert str(req.url) == "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
     assert req.headers["authorization"] == f"Bearer {KEY}"
     body = json.loads(req.content)
-    assert body["model"] == "gemini-2.5-flash" and body["response_format"] == {"type": "json_object"}
+    assert body["model"] == "gemini-3.1-flash-lite" and body["response_format"] == {"type": "json_object"}
     assert "untrusted data" in body["messages"][0]["content"]  # the safety rules are in the system prompt
     assert json.loads(body["messages"][1]["content"]) == {"goal": "dinner on Saturday", "answers": {}}
 
@@ -67,7 +67,7 @@ def test_other_providers_work_by_changing_base_url_and_model(user):
         urls.append((str(req.url), json.loads(req.content)["model"]))
         return reply(json.dumps(EXAMPLE))
 
-    make_planner(handler, llm_base_url="https://api.groq.com/openai/v1/", llm_model="some-groq-model").plan("x", {}, db, u)
+    make_planner(handler, llm_base_url="https://api.groq.com/openai/v1/", llm_model="some-groq-model", llm_fallback_models="").plan("x", {}, db, u)
     assert urls == [("https://api.groq.com/openai/v1/chat/completions", "some-groq-model")]
 
 
@@ -145,3 +145,28 @@ def test_wiring_leaves_complete_or_unrelated_plans_alone():
     assert wire_send_to_draft(json.loads(json.dumps(plan))) == plan
     lone = {"tasks": [{"id": "s", "capability": "communication", "deps": [], "inputs": {}}]}
     assert wire_send_to_draft(lone)["tasks"][0]["inputs"] == {}
+
+
+@pytest.mark.parametrize("first", [httpx.Response(429, json={}), httpx.Response(503, json={})])
+def test_a_rate_limited_or_overloaded_model_falls_through_to_the_next(user, first):
+    db, u = user
+    models = []
+
+    def handler(req):
+        models.append(json.loads(req.content)["model"])
+        return first if len(models) == 1 else reply(json.dumps(EXAMPLE))
+
+    plan = make_planner(handler, llm_model="model-a", llm_fallback_models="model-b, model-c").plan("x", {}, db, u)
+    assert plan is not None and models == ["model-a", "model-b"]
+
+
+def test_a_bad_key_does_not_cycle_through_every_model(user):
+    db, u = user
+    models = []
+
+    def handler(req):
+        models.append(json.loads(req.content)["model"])
+        return httpx.Response(401, json={})
+
+    assert make_planner(handler, llm_model="model-a", llm_fallback_models="model-b").plan("x", {}, db, u) is None
+    assert models == ["model-a"]
