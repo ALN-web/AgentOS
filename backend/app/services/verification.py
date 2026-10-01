@@ -3,7 +3,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Evidence, Mission, Task, User, utcnow
+from app.db.models import Evidence, Mission, Task, ToolExecution, User, utcnow
 from app.domain import EventType, TaskStatus
 from app.integrations.google import GoogleConnector, GoogleError
 from app.services.missions import append_event, get_mission
@@ -146,11 +146,61 @@ def reverify_mission(
         except Exception:
             g_client = None
 
+    # Which drafts were sent, and which draft each sent-email proof came from.
+    sends = db.scalars(select(ToolExecution).where(
+        ToolExecution.mission_id == mission.id, ToolExecution.tool_name == "gmail.send_draft", ToolExecution.status == "success",
+    )).all()
+    sent_drafts = {(te.input_json or {}).get("draft_id") for te in sends} - {None}
+    message_drafts = {
+        ev.id: next(((te.input_json or {}).get("draft_id") for te in sends if te.id == ev.tool_execution_id), None)
+        for ev in evs if ev.type == "gmail_message"
+    }
+
     for ev in evs:
         if ev.source == "simulated":
             ev.status = "verified"
             ev.verified_at = ev.verified_at or utcnow()
             ev.method = ev.method or "simulated proof"
+            continue
+
+        if ev.type == "calendar_availability":
+            # A read (free/busy check): nothing was created, so there is nothing to re-read.
+            ev.status = "verified"
+            ev.verified_at = ev.verified_at or utcnow()
+            ev.method = "read-only check; nothing was created"
+            continue
+
+        if ev.type == "gmail_draft" and ev.reference_id in sent_drafts:
+            # Sending consumed the draft, so its absence from Drafts is the expected state.
+            ev.status = "verified"
+            ev.verified_at = utcnow()
+            ev.method = "the draft was sent (see the sent email)"
+            ev.url = None
+            continue
+
+        if ev.type == "gmail_message":
+            # gmail.compose cannot read messages, but it can read drafts: a sent
+            # draft leaves Drafts (and Gmail labelled the message SENT when sending).
+            draft_id = message_drafts.get(ev.id)
+            if not draft_id or g_client is None:
+                ev.status = "failed"
+                ev.verified_at = None
+                ev.method = "Gmail unavailable or missing reference"
+                continue
+            try:
+                g_client.get_draft(draft_id)
+                ev.status = "failed"
+                ev.verified_at = None
+                ev.method = "the draft is still in Drafts, so it was not sent"
+            except GoogleError as err:
+                if err.error_class == "not_found":
+                    ev.status = "verified"
+                    ev.verified_at = utcnow()
+                    ev.method = "the draft left Drafts after sending (Gmail labelled it SENT)"
+                else:
+                    ev.status = "failed"
+                    ev.verified_at = None
+                    ev.method = f"check failed: {err.error_class}"
             continue
 
         if ev.type == "calendar_event" or ev.source in ("google_calendar", "calendar"):
@@ -178,7 +228,7 @@ def reverify_mission(
                     ev.verified_at = None
                     ev.method = "event not found in Google Calendar"
 
-        elif ev.type in ("gmail_message", "email") or ev.source in ("gmail", "email"):
+        elif ev.type == "email" or (ev.source in ("gmail", "email") and ev.type != "gmail_draft"):
             if not ev.reference_id or g_client is None:
                 ev.status = "failed"
                 ev.verified_at = None

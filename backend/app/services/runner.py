@@ -351,6 +351,14 @@ def run_mission(db: Session, user: User, mission_id: str, google: GoogleConnecto
                     method=ev.get("method") or ev_method,
                 ))
 
+            # A sent draft no longer exists in Drafts: its proof points to the sent email instead.
+            if tool.name == "gmail.send_draft" and not result.simulated and args.get("draft_id"):
+                for draft_ev in db.scalars(select(Evidence).where(
+                    Evidence.mission_id == mission.id, Evidence.type == "gmail_draft", Evidence.reference_id == args["draft_id"],
+                )):
+                    draft_ev.url = None
+                    draft_ev.method = "the draft was sent (see the sent email)"
+
             append_event(
                 db, mission, EventType.TOOL_COMPLETED, agent.id,
                 {"task_key": task.key, "tool": tool.name, "status": "success", "simulated": result.simulated,

@@ -369,11 +369,20 @@ class GoogleClient:
         return res.json() if res.content else {}
 
     # Calendar
-    def list_events(self, time_min: str, time_max: str) -> list[dict]:
-        data = self._call("GET", f"{CALENDAR_API}/calendars/primary/events", params={
-            "timeMin": time_min, "timeMax": time_max, "singleEvents": "true", "orderBy": "startTime", "maxResults": 50,
-        })
-        return data.get("items", [])
+    def list_events(self, time_min: str, time_max: str, max_pages: int = 5) -> list[dict]:
+        """Every event in the window (up to 5 x 250), so a busy calendar cannot hide a clash."""
+        items: list[dict] = []
+        page_token = None
+        for _ in range(max_pages):
+            params = {"timeMin": time_min, "timeMax": time_max, "singleEvents": "true", "orderBy": "startTime", "maxResults": 250}
+            if page_token:
+                params["pageToken"] = page_token
+            data = self._call("GET", f"{CALENDAR_API}/calendars/primary/events", params=params)
+            items.extend(data.get("items", []))
+            page_token = data.get("nextPageToken")
+            if not page_token:
+                break
+        return items
 
     def create_event(self, event: dict[str, Any]) -> dict:
         """Insert with a client-chosen id, so a retry can never create a duplicate."""
