@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app import __version__
 from app.api import approvals, apps, auth, capabilities, health, integrations, missions, preferences, tools
@@ -55,6 +56,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         expose_headers=[REQUEST_ID_HEADER],
     )
 
+    # CSRF defence in depth (#32): besides SameSite=Lax cookies, a browser write
+    # (POST/PUT/PATCH/DELETE) must come from our own site. Browsers always send
+    # Origin on cross-site writes; requests without one (curl, tests) pass.
+    trusted_origins = {o.rstrip("/") for o in settings.cors_origins} | {settings.frontend_url.rstrip("/")}
+
+    @app.middleware("http")
+    async def same_origin_writes(request: Request, call_next):
+        origin = request.headers.get("origin")
+        if request.method in ("POST", "PUT", "PATCH", "DELETE") and origin and origin.rstrip("/") not in trusted_origins:
+            return JSONResponse(status_code=403, content={"error": {
+                "code": "bad_origin", "message": "This request did not come from AgentOS.", "request_id": request_id_var.get()}})
+        return await call_next(request)
+
     @app.middleware("http")
     async def request_context(request: Request, call_next):
         # Accept a well-formed incoming id (for tracing), otherwise make one.
@@ -92,6 +106,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_error_handlers(app)
     app.include_router(health.router, prefix="/api")
     app.include_router(auth.router, prefix="/api")
+    app.include_router(auth.router, prefix="/api/v1")
     app.include_router(missions.router, prefix="/api")
     app.include_router(missions.router, prefix="/api/v1")
     app.include_router(approvals.router, prefix="/api")

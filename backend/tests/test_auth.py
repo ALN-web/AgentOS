@@ -34,7 +34,8 @@ def test_signup_signs_in_and_never_returns_or_stores_the_password(app):
     c = client(app)
     res = signup(c, email="  Ana@Example.com ")
     assert res.status_code == 201
-    assert res.json() == {"user": {"id": res.json()["user"]["id"], "email": "ana@example.com", "name": "Ana"}}
+    u = res.json()["user"]
+    assert (u["email"], u["name"], set(u)) == ("ana@example.com", "Ana", {"id", "email", "name", "created_at"})
     assert PASSWORD not in res.text
     assert c.get("/api/auth/me").json()["user"]["email"] == "ana@example.com"
     with app.state.session_factory() as db:
@@ -139,3 +140,20 @@ def test_production_never_falls_back_to_a_local_user(tmp_path):
     with TestClient(prod) as c:
         assert c.get("/api/missions").status_code == 401
     prod.state.engine.dispose()
+
+
+def test_auth_is_also_served_under_v1_with_created_at(app):
+    c = client(app)
+    res = c.post("/api/v1/auth/signup", json={"email": "v1@example.com", "password": PASSWORD})
+    assert res.status_code == 201 and res.json()["user"]["created_at"]
+    assert c.get("/api/v1/auth/me").json()["user"]["email"] == "v1@example.com"
+
+
+def test_writes_from_another_website_are_refused(app):
+    c = client(app)
+    signup(c)
+    evil = c.post("/api/missions", json={}, headers={"Origin": "https://evil.example"})
+    assert evil.status_code == 403 and evil.json()["error"]["code"] == "bad_origin"
+    ours = c.post("/api/auth/logout", headers={"Origin": "http://localhost:3000"})
+    assert ours.status_code == 200
+    assert c.get("/api/health", headers={"Origin": "https://evil.example"}).status_code == 200  # reads are fine
