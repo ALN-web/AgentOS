@@ -5,6 +5,15 @@ from app.core.config import Settings
 from app.main import create_app
 
 
+@pytest.fixture(autouse=True)
+def _never_read_backend_env(monkeypatch):
+    """Tests must never pick up real keys from backend/.env (or call real providers)."""
+    from app.services import planner
+
+    clean = Settings(environment="test", _env_file=None)
+    monkeypatch.setattr(planner, "get_settings", lambda: clean)
+
+
 def make_settings(tmp_path, **overrides) -> Settings:
     """Settings with a throwaway SQLite database per test."""
     return Settings(

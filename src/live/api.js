@@ -90,7 +90,7 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
       request('/missions/analyze', {
         method: 'POST',
         body: { goal, answers },
-        timeoutMs: 30000,
+        timeoutMs: 60000,
       }),
     listCapabilities: () => request('/capabilities'),
     listMissions: () => request('/missions'),
