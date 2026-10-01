@@ -118,6 +118,8 @@ describe('backend API client', () => {
         return json(200, { id: 'appr-1', status: body.decision });
       }
       if (url === '/api/missions/m-123/evidence' && (!init || init.method === 'GET')) return json(200, [{ id: 'ev-1', label: 'Event' }]);
+      if (url === '/api/missions/m-123/proof' && (!init || init.method === 'GET')) return json(200, { criteria: [{ label: 'Event', status: 'verified', evidence: [] }] });
+      if (url === '/api/missions/m-123/verify' && init?.method === 'POST') return json(200, { criteria: [{ label: 'Event', status: 'verified', evidence: [] }] });
       if (url === '/api/integrations' && (!init || init.method === 'GET')) return json(200, [{ provider: 'google', status: 'connected' }]);
       if (url === '/api/integrations/google/connect' && init?.method === 'POST') return json(200, { authorization_url: 'https://auth' });
       if (url === '/api/integrations/google' && init?.method === 'DELETE') return json(204, null);
@@ -136,6 +138,12 @@ describe('backend API client', () => {
 
     const evidence = await api.getMissionEvidence('m-123');
     expect(evidence).toEqual([{ id: 'ev-1', label: 'Event' }]);
+
+    const proof = await api.getMissionProof('m-123');
+    expect(proof).toEqual({ criteria: [{ label: 'Event', status: 'verified', evidence: [] }] });
+
+    const reverified = await api.verifyMission('m-123');
+    expect(reverified).toEqual({ criteria: [{ label: 'Event', status: 'verified', evidence: [] }] });
 
     const integs = await api.listIntegrations();
     expect(integs).toEqual([{ provider: 'google', status: 'connected' }]);

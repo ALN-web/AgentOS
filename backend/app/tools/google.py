@@ -203,7 +203,7 @@ class CalendarCreateEventTool(Tool):
     def verify(self, ctx: ToolContext, result: ToolResult) -> dict[str, Any]:
         ev = ctx.google.get_event(result.output["event_id"])
         ok = ev.get("status") != "cancelled" and ev.get("id") == result.output["event_id"]
-        return {"verified": ok, "detail": "Re-read the event from Google Calendar." if ok else "The event is missing or cancelled."}
+        return {"verified": ok, "detail": "Re-read the event from Google Calendar." if ok else "The event is missing or cancelled.", "method": "re-fetched event by id"}
 
 class SimulatedCalendarCreateEventTool(Tool):
     name = "calendar.create_event"
@@ -296,7 +296,7 @@ class GmailCreateDraftTool(Tool):
     def verify(self, ctx: ToolContext, result: ToolResult) -> dict[str, Any]:
         d = ctx.google.get_draft(result.output["draft_id"])
         ok = d.get("id") == result.output["draft_id"]
-        return {"verified": ok, "detail": "Re-read the draft from Gmail." if ok else "The draft is missing."}
+        return {"verified": ok, "detail": "Re-read the draft from Gmail." if ok else "The draft is missing.", "method": "re-fetched draft by id"}
 
 class SimulatedGmailCreateDraftTool(Tool):
     name = "gmail.create_draft"
@@ -398,7 +398,7 @@ class GmailSendDraftTool(Tool):
                 raise
             still_draft = False
         ok = not still_draft and result.output.get("status") == "sent"
-        return {"verified": ok, "detail": "Gmail labelled the message SENT and the draft left Drafts." if ok else "The email still looks unsent."}
+        return {"verified": ok, "detail": "Gmail labelled the message SENT and the draft left Drafts." if ok else "The email still looks unsent.", "method": "message found in Sent by id"}
 
 class SimulatedGmailSendDraftTool(Tool):
     name = "gmail.send_draft"

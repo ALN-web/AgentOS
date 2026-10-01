@@ -110,6 +110,10 @@ class FakeGoogle:
         if path.startswith("/gmail/v1/users/me/drafts/"):
             d = self.drafts.get(path.rsplit("/", 1)[1])
             return httpx.Response(200, json={"id": d["id"], "message": d["message"]}) if d else httpx.Response(404, json={"error": {"code": 404}})
+        if path.startswith("/gmail/v1/users/me/messages/"):
+            mid = path.rsplit("/", 1)[1]
+            msg = next((d["message"] for d in self.sent if d.get("message", {}).get("id") == mid or d.get("id") == mid), None)
+            return httpx.Response(200, json=msg) if msg else httpx.Response(404, json={"error": {"code": 404}})
         return httpx.Response(404, json={"error": {"code": 404, "message": f"fake has no {m} {path}"}})
 
 
@@ -223,6 +227,79 @@ def test_disconnect_revokes_and_wipes_tokens(live, fake):
     assert all("token=" not in str(r.url) for r in fake.requests)  # the token went in the body
     with app.state.session_factory() as db:
         assert db.query(Integration).one().encrypted_token is None
+    assert client.get("/api/integrations").json()[0]["status"] == "not_connected"
+
+
+def test_state_replay_is_rejected(live, fake):
+    app, client = live
+    url = client.post("/api/integrations/google/connect").json()["authorization_url"]
+    q = parse_qs(urlparse(url).query)
+    fake.challenge = q["code_challenge"][0]
+    res1 = client.get("/api/integrations/google/callback", params={"code": "good-code", "state": q["state"][0]}, follow_redirects=False)
+    assert res1.status_code == 303 and "connected=google" in res1.headers["location"]
+    # Replaying the exact same state must be rejected
+    res2 = client.get("/api/integrations/google/callback", params={"code": "good-code", "state": q["state"][0]}, follow_redirects=False)
+    assert res2.headers["location"].endswith("?error=invalid_state")
+
+
+def test_incremental_scopes_and_accumulation(live, fake):
+    app, client = live
+    # 1. Connect requesting only calendar
+    url = client.post("/api/v1/integrations/google/connect", json={"apps": ["google-calendar"]}).json()["authorization_url"]
+    q = parse_qs(urlparse(url).query)
+    assert q["scope"] == ["https://www.googleapis.com/auth/calendar.events"]
+    fake.challenge = q["code_challenge"][0]
+    fake.scope = "https://www.googleapis.com/auth/calendar.events"
+    res1 = client.get("/api/integrations/google/callback", params={"code": "good-code", "state": q["state"][0]}, follow_redirects=False)
+    assert res1.status_code == 303 and "connected=google" in res1.headers["location"]
+
+    integ1 = client.get("/api/v1/integrations").json()[0]
+    assert integ1["scopes"] == ["https://www.googleapis.com/auth/calendar.events"]
+
+    # 2. Incrementally request gmail
+    url2 = client.post("/api/v1/integrations/google/connect", json={"apps": ["gmail"]}).json()["authorization_url"]
+    q2 = parse_qs(urlparse(url2).query)
+    assert q2["scope"] == ["https://www.googleapis.com/auth/gmail.compose"]
+    fake.challenge = q2["code_challenge"][0]
+    fake.scope = "https://www.googleapis.com/auth/gmail.compose"
+    res2 = client.get("/api/integrations/google/callback", params={"code": "good-code", "state": q2["state"][0]}, follow_redirects=False)
+    assert res2.status_code == 303 and "connected=google" in res2.headers["location"]
+
+    integ2 = client.get("/api/v1/integrations").json()[0]
+    assert set(integ2["scopes"]) == {
+        "https://www.googleapis.com/auth/calendar.events",
+        "https://www.googleapis.com/auth/gmail.compose",
+    }
+
+
+def test_invalid_grant_marks_integration_needs_reconnect(live, fake):
+    app, client = live
+    connect(client, fake)
+    fake.refresh_ok = False
+    with app.state.session_factory() as db:
+        integ = db.query(Integration).one()
+        integ.token_expires_at = datetime.now(timezone.utc) - timedelta(hours=1)
+        db.commit()
+
+    # Triggering access_token will fail refresh and mark needs_reconnect
+    with pytest.raises(Exception):
+        with app.state.session_factory() as db:
+            integ = db.query(Integration).one()
+            app.state.google.access_token(db, integ)
+
+    integ_data = client.get("/api/integrations").json()[0]
+    assert integ_data["status"] == "needs_reconnect"
+
+
+def test_app_disconnect_revokes_token_at_google_and_affects_google_apps(live, fake):
+    app, client = live
+    connect(client, fake)
+    res = client.delete("/api/apps/google-calendar")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["disconnected"] is True
+    assert data["affected_apps"] == ["google-calendar", "gmail", "google-drive", "google-forms"]
+    assert fake.revoked and fake.revoked[0] in fake.issued
     assert client.get("/api/integrations").json()[0]["status"] == "not_connected"
 
 
@@ -342,7 +419,7 @@ def test_revoked_access_surfaces_as_authentication_failed(live, fake):
     failed = [e for e in events(client, mid) if e["type"] == "TASK_FAILED"][0]["payload"]
     assert failed["error_class"] == "authentication_failed"
     assert "Reconnect Google" in failed["message"]
-    assert client.get("/api/integrations").json()[0]["status"] == "not_connected"
+    assert client.get("/api/integrations").json()[0]["status"] == "needs_reconnect"
 
 
 def test_an_expired_access_token_is_refreshed_transparently(live, fake):
@@ -469,7 +546,64 @@ def test_tokens_never_appear_in_responses_events_or_logs(live, fake, caplog):
     client.post(f"/api/approvals/{pending_approval(client, mid)['approval_id']}/decision", json={"decision": "approve"})
     seen = json.dumps([
         client.get("/api/integrations").json(), client.get(f"/api/missions/{mid}").json(), events(client, mid),
-        client.get(f"/api/missions/{mid}/evidence").json(), client.get("/api/health").json(),
+        client.get(f"/api/missions/{mid}/evidence").json(), client.get(f"/api/missions/{mid}/proof").json(), client.get("/api/health").json(),
     ]) + client.get(f"/api/missions/{mid}/stream").text + caplog.text
     assert fake.issued and not any(t in seen for t in fake.issued)
     assert "shh-client-secret" not in seen
+
+
+def test_proof_bundle_and_reverification_on_demand(live, fake):
+    _, client = live
+    connect(client, fake)
+    mid = start_dinner(client)
+
+    # Approve Calendar and Gmail send
+    client.post(f"/api/approvals/{pending_approval(client, mid)['approval_id']}/decision", json={"decision": "approve"})
+    client.post(f"/api/approvals/{pending_approval(client, mid)['approval_id']}/decision", json={"decision": "approve"})
+
+    # Check proof bundle via both /api and /api/v1
+    for prefix in ("/api", "/api/v1"):
+        proof = client.get(f"{prefix}/missions/{mid}/proof").json()
+        assert "criteria" in proof
+        assert len(proof["criteria"]) >= 1
+        criterion = proof["criteria"][0]
+        assert criterion["status"] == "verified"
+        assert len(criterion["evidence"]) >= 2
+        for ev in criterion["evidence"]:
+            assert ev["status"] == "verified"
+            assert ev["verified_at"] is not None
+            assert ev["method"] is not None
+            assert "reference_id" in ev
+
+    # Re-verify on demand against real app: everything still intact
+    reverify_res = client.post(f"/api/missions/{mid}/verify").json()
+    assert reverify_res["criteria"][0]["status"] == "verified"
+
+    # Now simulate deleting the event in Google Calendar
+    fake.events.clear()
+
+    # Re-verify on demand: must mark the deleted event failed and criterion turns open
+    reverify_after_delete = client.post(f"/api/missions/{mid}/verify").json()
+    crit_after = reverify_after_delete["criteria"][0]
+    assert crit_after["status"] == "open"
+    cal_ev = next(e for e in crit_after["evidence"] if e["type"] == "calendar_event")
+    assert cal_ev["status"] == "failed"
+    assert "not found" in cal_ev["method"].lower() or "missing" in cal_ev["method"].lower()
+
+    # Proof bundle GET reflects the updated state
+    proof_after = client.get(f"/api/missions/{mid}/proof").json()
+    assert proof_after["criteria"][0]["status"] == "open"
+
+
+def test_proof_bundle_with_rejected_step(live, fake):
+    _, client = live
+    connect(client, fake)
+    mid = start_dinner(client)
+
+    # Approve event, reject send
+    client.post(f"/api/approvals/{pending_approval(client, mid)['approval_id']}/decision", json={"decision": "approve"})
+    client.post(f"/api/approvals/{pending_approval(client, mid)['approval_id']}/decision", json={"decision": "reject"})
+
+    proof = client.get(f"/api/missions/{mid}/proof").json()
+    assert any(c["status"] == "open" for c in proof["criteria"])
+

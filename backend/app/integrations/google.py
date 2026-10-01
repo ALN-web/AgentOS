@@ -37,6 +37,22 @@ SCOPES = (
     "https://www.googleapis.com/auth/calendar.events",
     "https://www.googleapis.com/auth/gmail.compose",
 )
+
+APP_SCOPES: dict[str, tuple[str, ...]] = {
+    "google-calendar": ("https://www.googleapis.com/auth/calendar.events",),
+    "calendar": ("https://www.googleapis.com/auth/calendar.events",),
+    "gmail": ("https://www.googleapis.com/auth/gmail.compose",),
+    "google-drive": ("https://www.googleapis.com/auth/drive.file",),
+    "drive": ("https://www.googleapis.com/auth/drive.file",),
+    "google-forms": (
+        "https://www.googleapis.com/auth/forms.body",
+        "https://www.googleapis.com/auth/forms.responses.readonly",
+    ),
+    "forms": (
+        "https://www.googleapis.com/auth/forms.body",
+        "https://www.googleapis.com/auth/forms.responses.readonly",
+    ),
+}
 STATE_TTL_SECONDS = 600
 REFRESH_MARGIN = timedelta(seconds=60)
 TIMEOUT = httpx.Timeout(15.0, connect=5.0)
@@ -115,6 +131,7 @@ class GoogleConnector:
         self.transport = transport  # tests inject httpx.MockTransport here
         self.problem: str | None = None
         self.vault: TokenVault | None = None
+        self._used_nonces: set[str] = set()
         if not settings.google_client_id or not settings.google_client_secret:
             self.problem = "Google is not configured on this server (AGENTOS_GOOGLE_CLIENT_ID / _SECRET)."
         elif not settings.encryption_key:
@@ -134,16 +151,25 @@ class GoogleConnector:
 
     # ------------------------------------------------------------ OAuth
 
-    def authorization_url(self, user: User) -> str:
+    def authorization_url(self, user: User, apps: list[str] | None = None) -> str:
         self._require()
         verifier = secrets.token_urlsafe(64)
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
-        state = self.vault.seal({"u": user.id, "v": verifier, "n": secrets.token_hex(8)}).decode()
+        nonce = secrets.token_hex(16)
+        if apps:
+            req_scopes_set = set()
+            for app_name in apps:
+                for sc in APP_SCOPES.get(app_name, ()):
+                    req_scopes_set.add(sc)
+            req_scopes = sorted(req_scopes_set) if req_scopes_set else list(SCOPES)
+        else:
+            req_scopes = list(SCOPES)
+        state = self.vault.seal({"u": user.id, "v": verifier, "n": nonce, "s": req_scopes}).decode()
         params = {
             "client_id": self.settings.google_client_id,
             "redirect_uri": self.settings.google_redirect_uri,
             "response_type": "code",
-            "scope": " ".join(SCOPES),
+            "scope": " ".join(req_scopes),
             "access_type": "offline",
             "prompt": "consent",
             "include_granted_scopes": "true",
@@ -162,6 +188,12 @@ class GoogleConnector:
             raise GoogleError("invalid_state", "The sign-in link expired or was tampered with. Try connecting again.") from None
         if st.get("u") != user.id:
             raise GoogleError("invalid_state", "This sign-in was started by a different user.")
+        nonce = st.get("n")
+        if nonce and nonce in self._used_nonces:
+            raise GoogleError("invalid_state", "This sign-in link has already been used. Try connecting again.")
+        if nonce:
+            self._used_nonces.add(nonce)
+
         with self.http() as http:
             res = _send(http, "POST", TOKEN_URL, data={
                 "code": code,
@@ -175,25 +207,48 @@ class GoogleConnector:
                 raise _classify_response(res)
             tok = res.json()
             granted = set(str(tok.get("scope", "")).split())
-            missing = [s for s in SCOPES if s not in granted]
-            if missing:
+
+            req_scopes = set(st.get("s") or SCOPES)
+            missing = [s for s in req_scopes if s not in granted]
+            if missing and req_scopes == set(SCOPES):
                 raise GoogleError("missing_scopes", "Calendar and Gmail access are both needed. Tick both boxes when connecting.")
-            profile = _send(http, "GET", f"{GMAIL_API}/users/me/profile", headers={"Authorization": f"Bearer {tok['access_token']}"})
-            email = profile.json().get("emailAddress") if profile.status_code == 200 else None
+            elif missing and not (granted & req_scopes):
+                raise GoogleError("missing_scopes", "Required permissions were not granted.")
+
+            email = None
+            try:
+                userinfo = _send(http, "GET", "https://www.googleapis.com/oauth2/v2/userinfo", headers={"Authorization": f"Bearer {tok['access_token']}"})
+                if userinfo.status_code == 200:
+                    email = userinfo.json().get("email")
+            except Exception:
+                pass
+
+            if not email:
+                try:
+                    profile = _send(http, "GET", f"{GMAIL_API}/users/me/profile", headers={"Authorization": f"Bearer {tok['access_token']}"})
+                    if profile.status_code == 200:
+                        email = profile.json().get("emailAddress")
+                except Exception:
+                    pass
 
         integ = db.scalar(select(Integration).where(Integration.user_id == user.id, Integration.provider == "google"))
         if integ is None:
             integ = Integration(user_id=user.id, provider="google")
             db.add(integ)
+        old_scopes = set(integ.scopes or []) if integ.scopes else set()
+        all_supported = set(s for scopes in APP_SCOPES.values() for s in scopes)
+        integ.scopes = sorted((old_scopes | granted) & all_supported) if (old_scopes | granted) & all_supported else sorted(granted)
+        integ.status = "connected"
+        if email:
+            integ.account_email = email
+        elif not integ.account_email:
+            integ.account_email = user.email
         old = self._tokens(integ) if integ.encrypted_token else {}
         self._store(integ, {
             "access_token": tok["access_token"],
             # Google only returns a refresh token on consent; keep the previous one otherwise.
             "refresh_token": tok.get("refresh_token") or old.get("refresh_token"),
         }, int(tok.get("expires_in", 3600)))
-        integ.scopes = sorted(granted & set(SCOPES))
-        integ.status = "connected"
-        integ.account_email = email
         db.commit()
         return integ
 
@@ -204,13 +259,16 @@ class GoogleConnector:
         if self.configured and integ.encrypted_token:
             try:
                 token = self._tokens(integ).get("refresh_token") or self._tokens(integ).get("access_token")
-                with self.http() as http:  # best effort; token in the body, never in a URL
-                    _send(http, "POST", REVOKE_URL, data={"token": token})
-            except (GoogleError, InvalidToken, ValueError):
+                if token:
+                    with self.http() as http:  # best effort; token in the body, never in a URL
+                        _send(http, "POST", REVOKE_URL, data={"token": token})
+            except Exception:
                 pass
         integ.status = "disconnected"
         integ.encrypted_token = None
         integ.token_expires_at = None
+        integ.scopes = []
+        integ.account_email = None
         db.commit()
 
     # ------------------------------------------------------------ credentials
@@ -247,8 +305,16 @@ class GoogleConnector:
             })
         if res.status_code != 200:
             err = _classify_response(res)
-            if res.status_code in (400, 401):
-                self._expire(db, integ)
+            err_data = {}
+            try:
+                err_data = res.json()
+            except Exception:
+                pass
+            if err_data.get("error") == "invalid_grant" or "invalid_grant" in str(err_data) or res.status_code in (400, 401):
+                integ.status = "needs_reconnect"
+                integ.encrypted_token = None
+                integ.token_expires_at = None
+                db.commit()
                 raise GoogleError("authentication_failed", f"Google access expired or was revoked. {RECONNECT}", res.status_code)
             raise err
         tok = res.json()
@@ -274,10 +340,10 @@ class GoogleConnector:
         integ.token_expires_at = utcnow() + timedelta(seconds=expires_in)
 
     def _expire(self, db: Session, integ: Integration) -> None:
-        integ.status = "expired"
+        integ.status = "needs_reconnect"
         integ.encrypted_token = None
         integ.token_expires_at = None
-        db.flush()
+        db.commit()
 
 
 class GoogleClient:
@@ -297,7 +363,8 @@ class GoogleClient:
         if res.status_code >= 400:
             err = _classify_response(res)
             if err.error_class == "authentication_failed":
-                self._connector._expire(self._db, self._integ)
+                self._integ.status = "needs_reconnect"
+                self._db.flush()
             raise err
         return res.json() if res.content else {}
 
@@ -334,6 +401,9 @@ class GoogleClient:
 
     def send_draft(self, draft_id: str) -> dict:
         return self._call("POST", f"{GMAIL_API}/users/me/drafts/send", json={"id": draft_id})
+
+    def get_message(self, message_id: str) -> dict:
+        return self._call("GET", f"{GMAIL_API}/users/me/messages/{quote(message_id)}")
 
 
 def event_id_for(idempotency_key: str) -> str:

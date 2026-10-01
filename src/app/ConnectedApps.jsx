@@ -61,6 +61,7 @@ export default function ConnectedApps() {
       const matchStatus =
         statusFilter === 'all' ||
         (statusFilter === 'connected' && app.status === 'connected') ||
+        (statusFilter === 'needs_reconnect' && app.status === 'needs_reconnect') ||
         (statusFilter === 'available' && app.status === 'available') ||
         (statusFilter === 'demo' && app.status === 'demo') ||
         (statusFilter === 'coming_soon' && app.status === 'coming_soon');
@@ -198,7 +199,13 @@ export default function ConnectedApps() {
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
           {[
             { id: 'all', label: 'All' },
-            ...(isLive ? [{ id: 'connected', label: 'Connected' }, { id: 'available', label: 'Available' }] : []),
+            ...(isLive
+              ? [
+                  { id: 'connected', label: 'Connected' },
+                  { id: 'needs_reconnect', label: 'Needs Reconnect' },
+                  { id: 'available', label: 'Available' },
+                ]
+              : []),
             { id: 'demo', label: 'Demo' },
             { id: 'coming_soon', label: 'Coming soon' },
           ].map((tab) => (
@@ -270,6 +277,7 @@ export default function ConnectedApps() {
               onDisconnect={disconnect}
               onConnect={connect}
               isLive={isLive}
+              allApps={apps}
             />
           ))}
         </div>

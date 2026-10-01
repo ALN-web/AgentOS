@@ -124,8 +124,14 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
           : Promise.reject(err)
       ),
     getMissionEvidence: (missionId) => request(`/missions/${id(missionId)}/evidence`),
+    getMissionProof: (missionId) => request(`/missions/${id(missionId)}/proof`),
+    verifyMission: (missionId) => request(`/missions/${id(missionId)}/verify`, { method: 'POST' }),
     listIntegrations: () => request('/integrations'),
-    connectGoogle: () => request('/integrations/google/connect', { method: 'POST' }),
+    connectGoogle: (apps) =>
+      request('/integrations/google/connect', {
+        method: 'POST',
+        body: apps && apps.length > 0 ? { apps } : undefined,
+      }),
     disconnectGoogle: () => request('/integrations/google', { method: 'DELETE' }),
   };
 }
