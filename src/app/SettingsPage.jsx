@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePreferences } from '../store/PreferencesStore';
 import { Check, Plus, Trash2, X } from 'lucide-react';
 import GoogleConnectControl from '../live/GoogleConnectControl';
+import { useAuth } from '../live/auth';
+import { api } from '../live/api';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const TONES = ['Friendly', 'Formal'];
@@ -15,6 +17,7 @@ const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 export default function SettingsPage() {
   const { preferences, updatePreferences } = usePreferences();
+  const { isAuthenticated } = useAuth();
   
   // Local state for draft updates
   const [draft, setDraft] = useState(preferences);
@@ -23,7 +26,30 @@ export default function SettingsPage() {
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupEmails, setNewGroupEmails] = useState({});
 
-  const save = () => {
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let active = true;
+    api.getPreferences()
+      .then((serverPrefs) => {
+        if (!active || !serverPrefs) return;
+        setDraft(prev => ({
+          ...prev,
+          ...serverPrefs,
+          workingHours: serverPrefs.workingHours || prev.workingHours,
+          workingDays: serverPrefs.workingDays || prev.workingDays,
+          groups: Array.isArray(serverPrefs.groups)
+            ? serverPrefs.groups.map(g => ({ id: g.id || g.name, name: g.name, emails: g.emails || [] }))
+            : prev.groups,
+        }));
+        updatePreferences(serverPrefs);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated]);
+
+  const save = async () => {
     // Validate
     if (draft.workingHours.start >= draft.workingHours.end) {
       alert("Working hours start must be before end.");
@@ -37,6 +63,29 @@ export default function SettingsPage() {
       alert("You must select at least one working day.");
       return;
     }
+
+    if (isAuthenticated) {
+      try {
+        const payload = {
+          timezone: draft.timezone || 'UTC',
+          workingDays: draft.workingDays,
+          workingHours: draft.workingHours,
+          displayName: draft.displayName || '',
+          signature: draft.signature || '',
+          tone: draft.tone || 'Friendly',
+          meetingLength: Number(draft.meetingLength) || 30,
+          groups: (draft.groups || []).map(g => ({
+            name: g.name,
+            emails: g.emails || []
+          }))
+        };
+        await api.updatePreferences(payload);
+      } catch (err) {
+        alert(err?.message || 'Failed to save preferences to server.');
+        return;
+      }
+    }
+
     updatePreferences(draft);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -178,7 +227,9 @@ export default function SettingsPage() {
                 onChange={e => handleUpdate({ timezone: e.target.value })}
                 className="w-full max-w-sm bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#eb6920]/60"
               >
-                {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
+                {(draft.timezone && !TIMEZONES.includes(draft.timezone) ? [draft.timezone, ...TIMEZONES] : TIMEZONES).map(tz => (
+                  <option key={tz} value={tz}>{tz}</option>
+                ))}
               </select>
             </label>
 
