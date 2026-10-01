@@ -219,3 +219,20 @@ def test_runner_pauses_to_ask_about_an_unknown_group(client):
     assert failed["payload"]["error_class"] == "needs_clarification"
     assert "marketing" in failed["payload"]["message"]
     assert not any(e["type"] == "TOOL_CALLED" and e["payload"]["task_key"] == "p3" for e in _events(client, mid))
+
+
+def test_onboarding_dismissal_persists(client):
+    # Initially not dismissed
+    prefs = client.get("/api/preferences").json()
+    assert prefs["onboardingDismissed"] is False
+
+    # Dismiss onboarding guide
+    res = client.put("/api/preferences", json={**prefs, "onboardingDismissed": True})
+    assert res.status_code == 200
+    assert res.json()["onboardingDismissed"] is True
+
+    # Check persistence
+    saved = client.get("/api/preferences").json()
+    assert saved["onboardingDismissed"] is True
+    # Contact groups remain untouched
+    assert saved["groups"] == []

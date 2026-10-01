@@ -65,6 +65,7 @@ class Preferences(_Camel):
     tone: Literal["Friendly", "Formal"] = "Friendly"
     meeting_length: int = Field(default=30, ge=5, le=480)
     groups: list[ContactGroup] = Field(default_factory=list, max_length=20)
+    onboarding_dismissed: bool = False
 
     @field_validator("timezone")
     @classmethod
