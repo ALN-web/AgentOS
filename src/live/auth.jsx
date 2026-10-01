@@ -20,7 +20,9 @@ export function getProtectedRedirect(isAuthenticated, currentPath = '/app') {
   return null;
 }
 
-const AuthContext = createContext(null);
+// One context for the whole page, even if the dev server's hot reload loads this
+// module twice (otherwise useAuth would throw "must be used within an AuthProvider").
+const AuthContext = globalThis.__agentosAuthContext || (globalThis.__agentosAuthContext = createContext(null));
 
 export function AuthProvider({ children, initialUser = null, apiClient = api }) {
   const [user, setUser] = useState(initialUser);
