@@ -61,6 +61,11 @@ Environment variables, prefixed `AGENTOS_`, can also go in `backend/.env`. That 
 | `AGENTOS_GOOGLE_CLIENT_SECRET` | none | its secret |
 | `AGENTOS_GOOGLE_REDIRECT_URI` | `http://localhost:8000/api/integrations/google/callback` | must match the OAuth client |
 | `AGENTOS_FRONTEND_URL` | `http://localhost:3000` | where the OAuth callback returns the browser |
+| `AGENTOS_LLM_API_KEY` | none | AI planner key for any OpenAI-compatible provider (Gemini by default). Without it, the deterministic planner is used |
+| `AGENTOS_LLM_BASE_URL` | Gemini's OpenAI endpoint | e.g. `https://api.groq.com/openai/v1`, `https://openrouter.ai/api/v1`, `https://integrate.api.nvidia.com/v1` |
+| `AGENTOS_LLM_MODEL` | `gemini-2.5-flash` | the provider's model name (check the provider's model list) |
+| `AGENTOS_ANTHROPIC_API_KEY` | none | alternative AI planner via Anthropic, used when no `AGENTOS_LLM_API_KEY` is set |
+| `AGENTOS_AUTH_LOCAL_FALLBACK` | unset | `true` lets a dev server act as one local user without signing in (never in production; tests use it by default) |
 
 ## Real Gmail and Google Calendar (#6)
 
