@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     llm_api_key: SecretStr | None = None
     llm_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
     llm_model: str = "gemini-2.5-flash"
-    llm_timeout_seconds: float = 45.0
+    llm_timeout_seconds: float = 25.0  # x2 with one repair: stays under the 60 s the website waits
 
     # Alternatively Anthropic, used when AGENTOS_LLM_API_KEY is not set.
     anthropic_api_key: SecretStr | None = None

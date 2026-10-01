@@ -128,3 +128,20 @@ def test_no_key_means_the_deterministic_planner(user):
     p = OpenAICompatiblePlanner()
     p.settings = p.settings.model_copy(update={"llm_api_key": None})
     assert p.plan("x", {}, db, u) is None
+
+
+def test_a_send_step_gets_the_draft_wired_in(user):
+    db, u = user
+    plan = json.loads(json.dumps(EXAMPLE))
+    del plan["tasks"][3]["inputs"]["draft_id"]  # what free models often produce
+    out = make_planner(lambda req: reply(json.dumps(plan))).plan("x", {}, db, u)
+    send = next(t for t in out.tasks if t.id == "p4")
+    assert send.inputs["draft_id"] == "p3.output.draft_id"
+
+
+def test_wiring_leaves_complete_or_unrelated_plans_alone():
+    from app.services.planner import wire_send_to_draft
+    plan = json.loads(json.dumps(EXAMPLE))
+    assert wire_send_to_draft(json.loads(json.dumps(plan))) == plan
+    lone = {"tasks": [{"id": "s", "capability": "communication", "deps": [], "inputs": {}}]}
+    assert wire_send_to_draft(lone)["tasks"][0]["inputs"] == {}
