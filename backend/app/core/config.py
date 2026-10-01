@@ -31,11 +31,11 @@ class Settings(BaseSettings):
     @classmethod
     def _postgres_driver(cls, v: str) -> str:
         # Tolerate copy-paste from a provider's "connect" box: spaces, line breaks,
-        # quotes, or the whole `psql '...'` command around the URL.
+        # quotes, <placeholder brackets>, or the whole `psql '...'` command around the URL.
         v = " ".join(v.split())
         if v.startswith("psql "):
             v = v[5:].strip()
-        v = v.strip("'\"")
+        v = v.strip("'\"<>").strip()
         for prefix in ("postgres://", "postgresql://"):
             if v.startswith(prefix):
                 return "postgresql+psycopg://" + v[len(prefix):]
