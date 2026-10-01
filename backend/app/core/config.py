@@ -45,10 +45,19 @@ class Settings(BaseSettings):
     def google_configured(self) -> bool:
         return bool(self.google_client_id and self.google_client_secret and self.encryption_key)
 
+    # AI planner (#45). Any OpenAI-compatible provider works (Gemini, Groq, OpenRouter,
+    # NVIDIA NIM): set AGENTOS_LLM_API_KEY, and the base URL / model for non-Gemini ones.
+    # Without a key, the deterministic planner is used.
+    llm_api_key: SecretStr | None = None
+    llm_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
+    llm_model: str = "gemini-2.5-flash"
+    llm_timeout_seconds: float = 45.0
+
+    # Alternatively Anthropic, used when AGENTOS_LLM_API_KEY is not set.
     anthropic_api_key: SecretStr | None = None
-    anthropic_model: str = "claude-3-7-sonnet-latest"
-    anthropic_timeout_seconds: float = 20.0
-    
+    anthropic_model: str = "claude-sonnet-5-5"
+    anthropic_timeout_seconds: float = 45.0
+
     # Act as one local user when nobody is signed in (#32). Unset means: only in tests.
     # Never possible in production.
     auth_local_fallback: bool | None = None
