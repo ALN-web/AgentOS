@@ -29,7 +29,7 @@ from tests.test_cross_app import _make_cross_app_plan
 
 KEY = Fernet.generate_key().decode()
 GOOGLE = {"google_client_id": "client-123.apps.googleusercontent.com", "google_client_secret": "shh-client-secret", "encryption_key": KEY}
-SCOPES = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/forms.body https://www.googleapis.com/auth/forms.responses.readonly"
+SCOPES = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/forms.body"
 
 
 class FakeGoogle:
@@ -556,7 +556,7 @@ def test_without_google_every_google_step_is_marked_simulated(client):
 def test_tools_endpoint_says_what_runs_for_real(client, live):
     assert {t["name"]: t["available"] for t in client.get("/api/tools").json()} == {
         "calendar.create_event": False, "calendar.list_events": False, "gmail.create_draft": False, "gmail.send_draft": False,
-        "drive.create_document": False, "drive.get_file": False,
+        "drive.create_document": False, "drive.get_file": False, "forms.create_form": False, "forms.get_form": False,
     }
     tools = {t["name"]: t for t in live[1].get("/api/tools").json()}
     assert tools["gmail.send_draft"]["name"] == "gmail.send_draft"

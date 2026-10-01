@@ -28,6 +28,8 @@ KNOWN_TOOL_OUTPUT_FIELDS: dict[str, set[str]] = {
     "gmail.send_draft": {"message_id", "thread_id", "status", "sent_at", "body", "subject", "to"},
     "drive.create_document": {"file_id", "html_link", "title", "mime_type"},
     "drive.get_file": {"file_id", "html_link", "title", "mime_type", "trashed"},
+    "forms.create_form": {"form_id", "responder_url", "edit_url", "title", "question_count"},
+    "forms.get_form": {"form_id", "title", "question_count", "responder_url"},
     "web.search": {"results", "query", "snippets", "urls"},
     "browser.navigate": {"url", "title", "content", "status"},
 }

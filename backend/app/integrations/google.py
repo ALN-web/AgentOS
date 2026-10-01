@@ -33,13 +33,13 @@ REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 CALENDAR_API = "https://www.googleapis.com/calendar/v3"
 GMAIL_API = "https://gmail.googleapis.com/gmail/v1"
 DRIVE_API = "https://www.googleapis.com/drive/v3"
+FORMS_API = "https://forms.googleapis.com/v1/forms"
 
 SCOPES = (
     "https://www.googleapis.com/auth/calendar.events",
     "https://www.googleapis.com/auth/gmail.compose",
     "https://www.googleapis.com/auth/drive.file",
     "https://www.googleapis.com/auth/forms.body",
-    "https://www.googleapis.com/auth/forms.responses.readonly",
 )
 
 APP_SCOPES: dict[str, tuple[str, ...]] = {
@@ -50,11 +50,9 @@ APP_SCOPES: dict[str, tuple[str, ...]] = {
     "drive": ("https://www.googleapis.com/auth/drive.file",),
     "google-forms": (
         "https://www.googleapis.com/auth/forms.body",
-        "https://www.googleapis.com/auth/forms.responses.readonly",
     ),
     "forms": (
         "https://www.googleapis.com/auth/forms.body",
-        "https://www.googleapis.com/auth/forms.responses.readonly",
     ),
 }
 STATE_TTL_SECONDS = 600
@@ -441,6 +439,19 @@ class GoogleClient:
     def get_file(self, file_id: str) -> dict:
         return self._call("GET", f"{DRIVE_API}/files/{quote(file_id)}", params={"fields": "id,name,webViewLink,mimeType,trashed"})
 
+    def update_file_metadata(self, file_id: str, metadata: dict[str, Any]) -> dict[str, Any]:
+        return self._call("PATCH", f"{DRIVE_API}/files/{quote(file_id)}", json=metadata)
+
+    # ------------------------------------------------------------ Forms
+
+    def create_form(self, form_data: dict[str, Any]) -> dict[str, Any]:
+        return self._call("POST", FORMS_API, json=form_data)
+
+    def update_form(self, form_id: str, update_data: dict[str, Any]) -> dict[str, Any]:
+        return self._call("POST", f"{FORMS_API}/{quote(form_id)}:batchUpdate", json=update_data)
+
+    def get_form(self, form_id: str) -> dict[str, Any]:
+        return self._call("GET", f"{FORMS_API}/{quote(form_id)}")
 
 def event_id_for(idempotency_key: str) -> str:
     """A valid Calendar event id (base32hex alphabet) derived from the idempotency key."""
