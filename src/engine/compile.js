@@ -35,7 +35,30 @@ const record = (t) => ({
   ...(t.countsFor ? { countsFor: t.countsFor } : {}),
 });
 
-export function compilePlan(plan) {
+// AI plans (Live Mode) carry only the shared MissionPlan fields; give the
+// rule-based extras the replay relies on safe defaults.
+function normalisePlan(plan) {
+  const intent = plan.intent || {};
+  return {
+    ...plan,
+    tasks: (plan.tasks || []).map((t) => ({
+      ...t,
+      why: t.why || { reason: t.gated ? 'This step acts on your behalf, so it waits for your approval.' : `Needed to: ${t.title}.` },
+      risk: t.risk || (t.gated ? 'HIGH' : 'LOW'),
+      category: t.category || (t.gated ? 'External action' : undefined),
+      payload: t.payload || t.inputs || {},
+    })),
+    criteria: plan.criteria || [],
+    capabilities: plan.capabilities || [],
+    assumptions: plan.assumptions || [],
+    approvalPoints: plan.approvalPoints ?? (plan.tasks || []).filter((t) => t.gated).length,
+    metric: plan.metric || { kind: 'criteria', label: 'Success criteria met', target: (plan.criteria || []).length || 1 },
+    intent: { ...intent, domainLabel: intent.domainLabel || intent.domain || 'general', objective: intent.objective || plan.goal, desiredOutcome: intent.desiredOutcome || intent.desired_outcome || 'Goal fulfilled' },
+  };
+}
+
+export function compilePlan(rawPlan) {
+  const plan = normalisePlan(rawPlan);
   const { intent, tasks, criteria, metric, failure } = plan;
   const byId = Object.fromEntries(tasks.map((t) => [t.id, t]));
   const backsCriterion = new Set(criteria.map((c) => c.taskId));

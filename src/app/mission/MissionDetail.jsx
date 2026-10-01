@@ -272,7 +272,8 @@ export default function MissionDetail() {
               </EmptyState>
             </div>
           )}
-          <BrowserPanel browser={view.browser} task={browserTask} paused={view.paused} recovering={view.status === 'recovering'} />
+          {/* Demo Mode's simulated browser; live missions have none. */}
+          {view.browser && <BrowserPanel browser={view.browser} task={browserTask} paused={view.paused} recovering={view.status === 'recovering'} />}
           <ProofPanel m={view} />
         </div>
       </div>

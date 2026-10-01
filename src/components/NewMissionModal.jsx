@@ -51,6 +51,8 @@ function Understanding({ goal, answers, setAnswers, preferences, livePlan }) {
   const tasks = plan.tasks || [];
   const criteria = plan.criteria || [];
   const capabilities = plan.capabilities || [];
+  // AI plans (Live Mode) carry no rule-based extras such as assumptions.
+  const assumptions = plan.assumptions || [];
 
   return (
     <div className="mt-5 space-y-4">
@@ -139,12 +141,12 @@ function Understanding({ goal, answers, setAnswers, preferences, livePlan }) {
         </div>
       )}
 
-      {plan.assumptions.length > 0 && (
+      {assumptions.length > 0 && (
         <div className="flex items-start gap-2 text-[11px] text-gray-400">
           <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-gray-500" />
           <span>
             <span className="text-gray-500">Assuming: </span>
-            {plan.assumptions.join(' · ')}
+            {assumptions.join(' · ')}
           </span>
         </div>
       )}
@@ -186,7 +188,7 @@ function Understanding({ goal, answers, setAnswers, preferences, livePlan }) {
               exit={{ height: 0, opacity: 0 }}
               className="mt-3 space-y-1.5 overflow-hidden"
             >
-              {plan.tasks.map((t, i) => {
+              {tasks.map((t, i) => {
                 const appMeta = getAppMeta(appForTask(t));
                 return (
                   <li key={t.id} className="flex items-center gap-2.5 rounded-xl bg-black/40 border border-white/5 px-3 py-2">

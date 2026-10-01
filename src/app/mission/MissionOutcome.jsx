@@ -48,15 +48,17 @@ export default function MissionOutcome({ m, onReplay, replaying }) {
             <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Goal</div>
             <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight mb-4">{m.goal}</h2>
 
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Outcome · simulated</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Outcome · {m.isLive ? 'real' : 'simulated'}</div>
             <div className="flex items-baseline gap-2 flex-wrap">
-              <span className={`text-4xl sm:text-5xl font-extrabold tabular-nums ${met ? 'text-emerald-300' : 'text-white'}`}>{m.metric.current}</span>
+              <span className={`text-4xl sm:text-5xl font-extrabold tabular-nums ${met ? 'text-emerald-300' : 'text-white'}`}>{m.isLive ? Math.min(m.metric.current, m.metric.target) : m.metric.current}</span>
               <span className="text-lg text-gray-500 font-semibold">/ {m.metric.target}</span>
               <span className="text-sm text-gray-400">{m.metric.label.toLowerCase()}</span>
             </div>
             <div className="text-[11px] text-gray-500 mt-1 font-mono">Mission time {formatClock(m.clock)}</div>
             <p className="text-[11px] text-gray-500 mt-2 max-w-md">
-              This is the verified result of the scripted demo run. No real registrations, emails or posts were created.
+              {m.isLive
+                ? 'Real actions in your connected apps, each re-checked in the app itself. Open the proof links below.'
+                : 'This is the verified result of the scripted demo run. No real registrations, emails or posts were created.'}
             </p>
           </div>
 
@@ -77,7 +79,7 @@ export default function MissionOutcome({ m, onReplay, replaying }) {
         </div>
 
         <div className="mt-6 pt-5 border-t border-white/5">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-3">What AgentOS accomplished · simulated</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-3">What AgentOS accomplished · {m.isLive ? 'real' : 'simulated'}</div>
           <ol className="md:columns-2 gap-x-6">
             {s.items.map((item, i) => (
               <motion.li
@@ -98,7 +100,7 @@ export default function MissionOutcome({ m, onReplay, replaying }) {
           <div className="mt-6 pt-5 border-t border-white/5">
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                Apps used · {m.live ? 'connected' : 'simulated'}
+                Apps used · {m.isLive ? 'connected' : 'simulated'}
               </div>
               <span className="text-[10px] text-gray-500">Cross-app workflow</span>
             </div>
