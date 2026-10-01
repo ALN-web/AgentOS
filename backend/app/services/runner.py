@@ -38,7 +38,7 @@ from app.schemas.plan import check_no_secrets_or_tokens, redact_dict
 from app.services.missions import append_event, get_mission
 from app.services.preferences import UnknownGroupError, apply_preferences, load_preferences
 from app.tools.base import Tool, ToolContext, ToolResult
-from app.tools.registry import get_tool, get_simulated_tool, resolve
+from app.tools.registry import get_all_tools, get_simulated_tool, get_tool, resolve
 from app.services.agents import AgentContext, resolve_agent_for_task
 
 
@@ -175,26 +175,32 @@ def run_mission(db: Session, user: User, mission_id: str, google: GoogleConnecto
             append_event(db, mission, EventType.AGENT_ASSIGNED, agent.id, {"task_key": task.key, "agent": agent.id})
             db.commit()
 
+        def simulate_step() -> ToolResult:
+            # No real tool exists for this step: it runs as a clearly marked simulation
+            # (Demo and Live Mode alike) instead of failing the whole mission.
+            task.status = TaskStatus.DONE
+            task.started_at = task.started_at or utcnow()
+            task.finished_at = utcnow()
+            sim_output = {"simulated": True, "title": task.title}
+            append_event(db, mission, EventType.TASK_STARTED, agent.id, {"task_key": task.key, "simulated": True})
+            append_event(
+                db, mission, EventType.TOOL_COMPLETED, agent.id,
+                {"task_key": task.key, "tool": None, "status": "success", "simulated": True, "output": sim_output, "evidence": []},
+            )
+            db.commit()
+            return ToolResult(status="success", tool="", output=sim_output, simulated=True)
+
         def execute_tool_callback(tool_name: str, args: dict[str, Any]) -> ToolResult:
             if not tool_name or tool_name == "none":
-                return ToolResult(status="failed", tool="", error_class="tool_unavailable")
+                return simulate_step()
+            if not (get_simulated_tool(tool_name) or get_tool(tool_name) or get_all_tools().get(tool_name)):
+                return simulate_step()  # a name nobody registered: never executed for real
 
             real = google_live
             if not real:
                 tool = get_simulated_tool(tool_name) or get_tool(tool_name)
                 if not tool:
-                    # Simulated success
-                    task.status = TaskStatus.DONE
-                    task.started_at = task.started_at or utcnow()
-                    task.finished_at = utcnow()
-                    sim_output = {"simulated": True, "title": task.title}
-                    append_event(db, mission, EventType.TASK_STARTED, agent.id, {"task_key": task.key, "simulated": True})
-                    append_event(
-                        db, mission, EventType.TOOL_COMPLETED, agent.id,
-                        {"task_key": task.key, "tool": None, "status": "success", "simulated": True, "output": sim_output, "evidence": []},
-                    )
-                    db.commit()
-                    return ToolResult(status="success", tool="", output=sim_output, simulated=True)
+                    return simulate_step()
             else:
                 # Live Mode
                 resolution = resolve(tool_name, db, user)

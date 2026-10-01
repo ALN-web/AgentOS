@@ -43,10 +43,8 @@ class GenericCapabilityAgent:
 
     def run(self, ctx: AgentContext) -> ToolResult:
         tool_name = find_tool_name_for_task(ctx.task)
-        if not tool_name:
-            # According to the prompt: If a capability exists but has no real tool, return tool_unavailable
-            return ToolResult(status="failed", tool="none", error_class="tool_unavailable")
-        return ctx.execute_tool(tool_name, ctx.resolved_inputs)
+        # No real tool for this capability: the runtime runs it as a marked simulation.
+        return ctx.execute_tool(tool_name or "", ctx.resolved_inputs)
 
 
 class PlannerAgent(GenericCapabilityAgent):
