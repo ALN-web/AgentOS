@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Check,
@@ -18,6 +18,15 @@ import {
 } from 'lucide-react';
 import { useGoogleIntegration } from './useGoogleIntegration';
 import { useAuth } from './auth';
+import { getConnectedServicesStatus } from '../data/apps';
+
+function GoogleIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" />
+    </svg>
+  );
+}
 
 export const SCOPE_LABELS = {
   'https://www.googleapis.com/auth/calendar.events': 'Calendar Events',
@@ -42,15 +51,41 @@ export function formatScope(scope) {
 }
 
 const GOOGLE_APPS_LIST = [
-  { name: 'Google Calendar', icon: Calendar },
+  { name: 'Google', icon: GoogleIcon },
   { name: 'Gmail', icon: Mail },
-  { name: 'Google Drive', icon: HardDrive },
-  { name: 'Google Forms', icon: FileText },
+  { name: 'Calendar', icon: Calendar },
+  { name: 'Drive', icon: HardDrive },
+  { name: 'Forms', icon: FileText },
 ];
 
-export default function GoogleConnectControl({ className = '', compact = false }) {
+function ServiceStatusBadge({ status }) {
+  if (status === 'Connected') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/30">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        Connected
+      </span>
+    );
+  }
+  if (status === 'Reconnect') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30">
+        <AlertTriangle className="w-2.5 h-2.5 text-amber-400" />
+        Reconnect
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold text-gray-400 bg-white/[0.04] border border-white/10">
+      Not connected
+    </span>
+  );
+}
+
+export default function GoogleConnectControl({ className = '', compact = false, apps: propApps, integrations: propIntegrations }) {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const googleIntegration = useGoogleIntegration();
   const {
     connected,
     status,
@@ -63,7 +98,21 @@ export default function GoogleConnectControl({ className = '', compact = false }
     connect,
     disconnect,
     dismissNotification,
-  } = useGoogleIntegration();
+  } = googleIntegration;
+
+  const effectiveApps = propApps || googleIntegration.apps || [];
+  const effectiveIntegrations = propIntegrations || googleIntegration.integrations || [];
+  const servicesStatus = useMemo(() => {
+    return getConnectedServicesStatus(effectiveIntegrations, effectiveApps);
+  }, [effectiveIntegrations, effectiveApps]);
+
+  const serviceItems = [
+    { id: 'google', name: 'Google', icon: GoogleIcon, status: servicesStatus.google },
+    { id: 'gmail', name: 'Gmail', icon: Mail, status: servicesStatus.gmail },
+    { id: 'calendar', name: 'Calendar', icon: Calendar, status: servicesStatus.calendar },
+    { id: 'drive', name: 'Drive', icon: HardDrive, status: servicesStatus.drive },
+    { id: 'forms', name: 'Forms', icon: FileText, status: servicesStatus.forms },
+  ];
 
   const [confirmDisconnectOpen, setConfirmDisconnectOpen] = useState(false);
 
@@ -148,7 +197,7 @@ export default function GoogleConnectControl({ className = '', compact = false }
                 {needsReconnect && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30">
                     <AlertTriangle className="w-3 h-3 text-amber-400" />
-                    Needs Reconnect
+                    Reconnect
                   </span>
                 )}
                 {!connected && !needsReconnect && (
@@ -210,6 +259,32 @@ export default function GoogleConnectControl({ className = '', compact = false }
           </div>
         </div>
 
+        {/* 5-Service Status Grid: Google, Gmail, Calendar, Drive, Forms */}
+        <div className="pt-3 border-t border-white/5">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2.5 flex items-center justify-between">
+            <span>Workspace Services Status</span>
+            <span className="text-[10px] font-normal text-gray-500">Google · Gmail · Calendar · Drive · Forms</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {serviceItems.map((s) => (
+              <div
+                key={s.id}
+                className="p-2.5 rounded-xl bg-black/30 border border-white/5 flex flex-col justify-between gap-2"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="p-1 rounded-lg bg-white/[0.04] text-[#eb6920]">
+                    <s.icon className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-xs font-semibold text-white truncate">{s.name}</span>
+                </div>
+                <div>
+                  <ServiceStatusBadge status={s.status} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Granted Scopes Chips (Plain-Language) */}
         {(connected || needsReconnect) && scopes && scopes.length > 0 && (
           <div className="pt-2 border-t border-white/5 flex flex-wrap items-center gap-2">
@@ -238,7 +313,7 @@ export default function GoogleConnectControl({ className = '', compact = false }
             <h4 className="text-lg font-bold text-white mb-2">Disconnect Google Workspace?</h4>
 
             <p className="text-xs text-gray-400 leading-relaxed mb-4">
-              Disconnecting Google Workspace revokes your OAuth token with Google and disconnects all linked Google apps:
+              Disconnecting Google Workspace revokes your authorization with Google and disconnects all linked Google services:
             </p>
 
             <div className="grid grid-cols-2 gap-2 mb-5">

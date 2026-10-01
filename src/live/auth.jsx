@@ -3,7 +3,14 @@ import { api, formatAuthError } from './api';
 
 export function normalizeUser(res) {
   if (!res) return null;
-  return res.user ?? res;
+  const u = res.user ?? res;
+  if (!u || typeof u !== 'object') return null;
+  return {
+    ...u,
+    id: u.id,
+    email: u.email,
+    name: u.name ?? u.full_name ?? u.displayName ?? undefined,
+  };
 }
 
 export function getProtectedRedirect(isAuthenticated, currentPath = '/app') {

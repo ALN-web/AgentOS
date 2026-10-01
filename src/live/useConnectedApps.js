@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { LIVE_API_URL } from './config';
 import { api } from './api';
-import { APPS_CATALOGUE } from '../data/apps';
+import { APPS_CATALOGUE, getConnectedServicesStatus } from '../data/apps';
 
 const LOCAL_STORAGE_KEY = 'agentos_apps_permissions';
 
@@ -44,9 +44,34 @@ function saveLocalApps(apps) {
 
 export function useConnectedApps() {
   const [apps, setApps] = useState(getStoredLocalApps);
+  const [integrations, setIntegrations] = useState([]);
   const [isLive, setIsLive] = useState(false);
   const [loading, setLoading] = useState(Boolean(LIVE_API_URL));
   const [error, setError] = useState(null);
+
+  const refresh = useCallback(async () => {
+    if (!LIVE_API_URL) return;
+    try {
+      const h = await api.health();
+      if (h?.live_mode?.available) {
+        setIsLive(true);
+        const [liveApps, liveIntegrations] = await Promise.all([
+          api.listApps().catch(() => []),
+          api.listIntegrations().catch(() => []),
+        ]);
+        if (Array.isArray(liveApps) && liveApps.length > 0) {
+          setApps(liveApps);
+        }
+        if (Array.isArray(liveIntegrations)) {
+          setIntegrations(liveIntegrations);
+        }
+      }
+    } catch (err) {
+      setError(err.message || 'Backend not responding');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Sync with live backend if LIVE_API_URL is configured
   useEffect(() => {
@@ -62,10 +87,16 @@ export function useConnectedApps() {
         if (!active) return;
         if (h?.live_mode?.available) {
           setIsLive(true);
-          return api.listApps().then((liveApps) => {
+          return Promise.all([
+            api.listApps().catch(() => []),
+            api.listIntegrations().catch(() => []),
+          ]).then(([liveApps, liveIntegrations]) => {
             if (!active) return;
             if (Array.isArray(liveApps) && liveApps.length > 0) {
               setApps(liveApps);
+            }
+            if (Array.isArray(liveIntegrations)) {
+              setIntegrations(liveIntegrations);
             }
           });
         }
@@ -181,13 +212,21 @@ export function useConnectedApps() {
     [isLive]
   );
 
+  const servicesStatus = useMemo(
+    () => getConnectedServicesStatus(integrations, apps),
+    [integrations, apps]
+  );
+
   return {
     apps,
+    integrations,
+    servicesStatus,
     isLive,
     loading,
     error,
     updatePermission,
     disconnect,
     connect,
+    refresh,
   };
 }

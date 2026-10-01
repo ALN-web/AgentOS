@@ -107,7 +107,12 @@ describe('Auth session logic and route protection', () => {
         errorMessage = formatAuthError(err);
       }
 
-      expect(errorMessage).toBe('Invalid email or password. Please try again.');
+      expect(errorMessage).toBe('Wrong email or password');
+    });
+
+    it('maps 404 and not_found to "Couldn\'t reach the server"', () => {
+      const err404 = new ApiError(404, 'not_found', 'Not Found');
+      expect(formatAuthError(err404)).toBe("Couldn't reach the server");
     });
 
     it('maps email_taken correctly during failed signup', async () => {

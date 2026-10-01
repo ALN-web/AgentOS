@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Rocket, Settings, X } from 'lucide-react';
 import { useMissions } from '../store/MissionStore';
 import { usePreferences } from '../store/PreferencesStore';

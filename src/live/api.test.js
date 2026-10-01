@@ -84,6 +84,31 @@ describe('backend API client', () => {
     expect(fetchImpl.mock.calls[0][0]).toBe('/api/missions/a%2Fb%3Fc/events?after=0');
   });
 
+  it('calls Deekshith\'s planner endpoint (/missions/analyze) with goal and answers', async () => {
+    const fetchImpl = vi.fn(async (url, init) => {
+      if (url === '/api/missions/analyze' && init?.method === 'POST') {
+        const body = JSON.parse(init.body);
+        return json(200, {
+          intent: { objective: body.goal, domain: 'event' },
+          plan: { intent: { objective: body.goal }, tasks: [], capabilities: [] },
+          planner: 'llm',
+        });
+      }
+      return json(404, {});
+    });
+    const api = createApiClient('/api', { fetchImpl });
+    const res = await api.analyzeMission('Organize a team lunch', { attendees: '5' });
+    expect(res.planner).toBe('llm');
+    expect(res.intent.objective).toBe('Organize a team lunch');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      '/api/missions/analyze',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ goal: 'Organize a team lunch', answers: { attendees: '5' } }),
+      })
+    );
+  });
+
   it('handles app endpoints: list, update permissions, activity, and disconnect', async () => {
     const fetchImpl = vi.fn(async (url, init) => {
       if (url === '/api/apps' && (!init || init.method === 'GET')) return json(200, [{ id: 'google-calendar' }]);
@@ -196,7 +221,10 @@ describe('backend API client', () => {
 
   it('formats auth error codes into user-facing messages', () => {
     expect(formatAuthError(new ApiError(401, 'invalid_credentials', 'Bad login'))).toBe(
-      'Invalid email or password. Please try again.'
+      'Wrong email or password'
+    );
+    expect(formatAuthError(new ApiError(404, 'not_found', 'Not Found'))).toBe(
+      "Couldn't reach the server"
     );
     expect(formatAuthError(new ApiError(400, 'email_taken', 'Email exists'))).toBe(
       'An account with this email address already exists.'
@@ -205,13 +233,13 @@ describe('backend API client', () => {
       'Too many attempts. Please wait a moment and try again.'
     );
     expect(formatAuthError(new ApiError(0, 'network_error', 'Network fail'))).toBe(
-      'Could not reach the server. Please check your connection.'
+      "Couldn't reach the server"
     );
     expect(formatAuthError(new ApiError(0, 'timeout', 'Timed out'))).toBe(
-      'The backend did not respond in time. Please try again.'
+      "Couldn't reach the server"
     );
     expect(formatAuthError(new ApiError(0, 'not_configured', 'No backend'))).toBe(
-      'The AgentOS backend is not configured.'
+      "Couldn't reach the server"
     );
     expect(formatAuthError(new Error('Custom error'))).toBe('Custom error');
     expect(formatAuthError(null)).toBeNull();

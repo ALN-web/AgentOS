@@ -25,10 +25,11 @@ const toUiApp = (a) =>
     : a;
 
 export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeoutMs = 8000 } = {}) {
-  async function request(path, { method = 'GET', body } = {}) {
+  async function request(path, { method = 'GET', body, timeoutMs: customTimeout } = {}) {
     if (!baseUrl) throw new ApiError(0, 'not_configured', 'The AgentOS backend is not configured.');
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const effectiveTimeout = customTimeout ?? timeoutMs;
+    const timer = setTimeout(() => controller.abort(), effectiveTimeout);
     try {
       const isWrite = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase());
       const res = await fetchImpl(`${baseUrl}${path}`, {
@@ -89,6 +90,7 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
       request('/missions/analyze', {
         method: 'POST',
         body: { goal, answers },
+        timeoutMs: 30000,
       }),
     listCapabilities: () => request('/capabilities'),
     listMissions: () => request('/missions'),
@@ -138,23 +140,54 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
 
 export function formatAuthError(error) {
   if (!error) return null;
+  const status = error?.status;
   const code = error?.code || (error instanceof ApiError ? error.code : null);
-  switch (code) {
-    case 'invalid_credentials':
-      return 'Invalid email or password. Please try again.';
-    case 'email_taken':
-      return 'An account with this email address already exists.';
-    case 'rate_limited':
-      return 'Too many attempts. Please wait a moment and try again.';
-    case 'not_configured':
-      return 'The AgentOS backend is not configured.';
-    case 'timeout':
-      return 'The backend did not respond in time. Please try again.';
-    case 'network_error':
-      return 'Could not reach the server. Please check your connection.';
-    default:
-      return error.message || 'An unexpected error occurred. Please try again.';
+  const msg = (error?.message || '').toLowerCase();
+
+  // 401: Wrong email or password
+  if (
+    status === 401 ||
+    code === 'invalid_credentials' ||
+    code === 'unauthorized' ||
+    msg.includes('unauthorized') ||
+    msg.includes('invalid credentials') ||
+    msg.includes('wrong password') ||
+    msg.includes('wrong email or password')
+  ) {
+    return 'Wrong email or password';
   }
+
+  // 404: Endpoint not found / backend not responding with auth route yet -> "Couldn't reach the server"
+  if (
+    status === 404 ||
+    code === 'not_found' ||
+    msg.includes('not found') ||
+    msg.includes('404')
+  ) {
+    return "Couldn't reach the server";
+  }
+
+  // Network failures / timeouts / server down
+  if (
+    status === 0 ||
+    code === 'network_error' ||
+    code === 'timeout' ||
+    code === 'backend_unavailable' ||
+    code === 'not_configured' ||
+    (typeof status === 'number' && status >= 500 && status < 600)
+  ) {
+    return "Couldn't reach the server";
+  }
+
+  if (code === 'email_taken' || (msg.includes('email') && msg.includes('exists'))) {
+    return 'An account with this email address already exists.';
+  }
+
+  if (code === 'rate_limited') {
+    return 'Too many attempts. Please wait a moment and try again.';
+  }
+
+  return error.message || "Couldn't reach the server";
 }
 
 export const api = createApiClient(LIVE_API_URL);

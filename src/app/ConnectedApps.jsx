@@ -16,9 +16,9 @@ import { useConnectedApps } from '../live/useConnectedApps';
 import GoogleConnectControl from '../live/GoogleConnectControl';
 
 export default function ConnectedApps() {
-  const { apps, isLive, loading, error, updatePermission, disconnect, connect } = useConnectedApps();
+  const { apps, integrations, isLive, loading, error, updatePermission, disconnect, connect } = useConnectedApps();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'connected' | 'available' | 'demo' | 'coming_soon'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'connected' | 'needs_reconnect' | 'not_connected' | 'demo' | 'coming_soon'
   const [categoryFilter, setCategoryFilter] = useState('all'); // 'all' | 'Google Workspace' | 'Communication' | 'Productivity'
 
   // Computed metrics
@@ -61,8 +61,9 @@ export default function ConnectedApps() {
       const matchStatus =
         statusFilter === 'all' ||
         (statusFilter === 'connected' && app.status === 'connected') ||
-        (statusFilter === 'needs_reconnect' && app.status === 'needs_reconnect') ||
-        (statusFilter === 'available' && app.status === 'available') ||
+        ((statusFilter === 'needs_reconnect' || statusFilter === 'reconnect') && app.status === 'needs_reconnect') ||
+        (statusFilter === 'not_connected' && (app.status === 'available' || app.status === 'not_connected' || app.status === 'demo')) ||
+        (statusFilter === 'available' && (app.status === 'available' || app.status === 'not_connected')) ||
         (statusFilter === 'demo' && app.status === 'demo') ||
         (statusFilter === 'coming_soon' && app.status === 'coming_soon');
 
@@ -162,7 +163,7 @@ export default function ConnectedApps() {
       </div>
 
       {/* Google Integration Control */}
-      {isLive && <GoogleConnectControl />}
+      {isLive && <GoogleConnectControl apps={apps} integrations={integrations} />}
 
       {/* Safety Policy Notice Card */}
       <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#171321] to-[#0f0d16] border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -202,10 +203,13 @@ export default function ConnectedApps() {
             ...(isLive
               ? [
                   { id: 'connected', label: 'Connected' },
-                  { id: 'needs_reconnect', label: 'Needs Reconnect' },
-                  { id: 'available', label: 'Available' },
+                  { id: 'needs_reconnect', label: 'Reconnect' },
+                  { id: 'not_connected', label: 'Not connected' },
                 ]
-              : []),
+              : [
+                  { id: 'connected', label: 'Connected' },
+                  { id: 'not_connected', label: 'Not connected' },
+                ]),
             { id: 'demo', label: 'Demo' },
             { id: 'coming_soon', label: 'Coming soon' },
           ].map((tab) => (
