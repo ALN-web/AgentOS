@@ -144,11 +144,11 @@ def test_missions_survive_a_restart(tmp_path):
     assert again["tasks"] == created["tasks"]
 
 
-def test_production_refuses_missions_until_authentication_exists(tmp_path):
+def test_production_requires_sign_in_for_missions(tmp_path):
     app = create_app(make_settings(tmp_path, environment="production"))
     with TestClient(app) as c:
         res = c.get("/api/missions")
-        assert res.status_code == 503
-        assert res.json()["error"]["code"] == "auth_not_configured"
-        assert c.post("/api/missions", json=body("hero")).status_code == 503
+        assert res.status_code == 401
+        assert res.json()["error"]["code"] == "not_authenticated"
+        assert c.post("/api/missions", json=body("hero")).status_code == 401
     app.state.engine.dispose()

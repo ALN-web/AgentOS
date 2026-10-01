@@ -10,11 +10,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
-from app.api import apps, approvals, capabilities, health, integrations, missions, preferences, tools
+from app.api import approvals, apps, auth, capabilities, health, integrations, missions, preferences, tools
 from app.core.config import Settings, get_settings
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger, request_id_var
 from app.db.migrate import upgrade_to_head
+from app.services.auth import AttemptLimiter
 from app.db.session import make_engine, make_session_factory
 from app.integrations.google import GoogleConnector
 from app.services.missions import ensure_reference_data
@@ -50,7 +51,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
-        allow_headers=["Content-Type", "Authorization", REQUEST_ID_HEADER],
+        allow_headers=["Content-Type", "Authorization", "X-Requested-With", REQUEST_ID_HEADER],
         expose_headers=[REQUEST_ID_HEADER],
     )
 
@@ -69,6 +70,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return response
 
     app.state.settings = settings
+    app.state.auth_limiter = AttemptLimiter()
     app.state.engine = make_engine(settings.database_url)
     if settings.auto_migrate:
         upgrade_to_head(settings.database_url)
@@ -89,6 +91,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     install_error_handlers(app)
     app.include_router(health.router, prefix="/api")
+    app.include_router(auth.router, prefix="/api")
     app.include_router(missions.router, prefix="/api")
     app.include_router(missions.router, prefix="/api/v1")
     app.include_router(approvals.router, prefix="/api")

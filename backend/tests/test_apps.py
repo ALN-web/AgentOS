@@ -207,8 +207,8 @@ def test_disconnect_is_idempotent_and_wipes_the_token(app, client, real_calendar
     assert client.delete("/api/apps/nope").status_code == 404
 
 
-def test_production_refuses_until_authentication_exists(tmp_path):
+def test_production_requires_sign_in(tmp_path):
     prod = create_app(make_settings(tmp_path, environment="production"))
     with TestClient(prod) as c:
-        assert c.get("/api/apps").status_code == 503
+        assert c.get("/api/apps").status_code == 401
     prod.state.engine.dispose()
