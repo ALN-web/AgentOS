@@ -15,6 +15,9 @@ SITE = "https://agentos-demo.vercel.app"
     ("postgresql://u:p@host/db", "postgresql+psycopg://u:p@host/db"),
     ("postgresql+psycopg://u:p@host/db", "postgresql+psycopg://u:p@host/db"),
     ("sqlite:///./agentos.db", "sqlite:///./agentos.db"),
+    ("psql 'postgresql://u:p@ep-x.neon.tech/db?sslmode=require&channel_binding=require'",
+     "postgresql+psycopg://u:p@ep-x.neon.tech/db?sslmode=require&channel_binding=require"),
+    ('  "postgresql://u:p@host/db"\n', "postgresql+psycopg://u:p@host/db"),
 ])
 def test_hosted_postgres_urls_get_the_psycopg_driver(given, expected):
     assert Settings(_env_file=None, database_url=given).database_url == expected
