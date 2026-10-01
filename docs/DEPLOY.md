@@ -5,7 +5,7 @@ their own Google account and run real missions.
 
 ```
 Browser ──► https://<app>.vercel.app          (website, Vercel)
-              └── /api/*  ──rewrite──►  https://agentos-backend.onrender.com/api/*   (backend, Render)
+              └── /api/*  ──rewrite──►  https://agentos-backend-qa0p.onrender.com/api/*   (backend, Render)
                                               └── Postgres (Neon)
 ```
 
@@ -42,7 +42,7 @@ Cost: $0. Never paste secrets into chat, issues, commits or screenshots.
 ## 3. Website: Vercel (5 minutes)
 1. Open the project in Vercel (or **Add New → Project** → import `ALN-web/AgentOS`).
 2. **Settings → Environment Variables:** `VITE_AGENTOS_API_URL` = `/api` (Production).
-3. If the Render address is not `agentos-backend.onrender.com`, change it in
+3. If the Render address is not `agentos-backend-qa0p.onrender.com`, change it in
    `vercel.json` (the `/api/:path*` rewrite) and merge.
 4. Redeploy. Done when `https://<app>.vercel.app/api/health` returns the backend's JSON.
 
