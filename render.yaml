@@ -30,12 +30,11 @@ services:
         sync: false
       - key: AGENTOS_GOOGLE_CLIENT_SECRET
         sync: false
-      # https://<your-app>.vercel.app/api/integrations/google/callback
+      # Public addresses (not secrets): the Vercel site, through which /api is served.
       - key: AGENTOS_GOOGLE_REDIRECT_URI
-        sync: false
-      # https://<your-app>.vercel.app (OAuth return address and trusted origin)
+        value: https://agent-os-two-iota.vercel.app/api/integrations/google/callback
       - key: AGENTOS_FRONTEND_URL
-        sync: false
+        value: https://agent-os-two-iota.vercel.app
       # Gemini (or another OpenAI-compatible) key for the AI planner.
       - key: AGENTOS_LLM_API_KEY
         sync: false
