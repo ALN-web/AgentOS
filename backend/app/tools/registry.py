@@ -26,6 +26,8 @@ KNOWN_TOOL_OUTPUT_FIELDS: dict[str, set[str]] = {
     "calendar.create_event": {"event_id", "html_link", "start", "end", "summary", "status", "idempotency_key", "hangout_link", "attendees"},
     "gmail.create_draft": {"draft_id", "message_id", "thread_id", "subject", "body", "to", "html_link"},
     "gmail.send_draft": {"message_id", "thread_id", "status", "sent_at", "body", "subject", "to"},
+    "drive.create_document": {"file_id", "html_link", "title", "mime_type"},
+    "drive.get_file": {"file_id", "html_link", "title", "mime_type", "trashed"},
     "web.search": {"results", "query", "snippets", "urls"},
     "browser.navigate": {"url", "title", "content", "status"},
 }
@@ -33,11 +35,11 @@ KNOWN_TOOL_OUTPUT_FIELDS: dict[str, set[str]] = {
 KNOWN_CAPABILITY_OUTPUT_FIELDS: dict[str, set[str]] = {
     "calendar": {"events", "free_slots", "count", "start", "end", "event_id", "html_link", "summary", "status", "idempotency_key", "hangout_link", "attendees"},
     "email": {"draft_id", "message_id", "thread_id", "subject", "body", "to", "status", "sent_at", "html_link"},
-    "document": {"draft_id", "message_id", "thread_id", "subject", "body", "to", "html_link", "content", "title"},
+    "document": {"draft_id", "message_id", "thread_id", "subject", "body", "to", "html_link", "content", "title", "file_id", "mime_type"},
     "communication": {"message_id", "thread_id", "status", "sent_at", "body", "subject", "to"},
     "reminders": {"event_id", "html_link", "start", "end", "summary", "status"},
     "search": {"results", "query", "snippets", "urls", "start", "end", "free_slots", "slots"},
-    "research": {"results", "query", "snippets", "urls", "data", "start", "end"},
+    "research": {"results", "query", "snippets", "urls", "data", "start", "end", "file_id", "html_link", "title", "mime_type", "trashed"},
     "browser": {"url", "title", "content", "status"},
     "verification": {"verified", "criteria", "summary", "passed", "evidence"},
     "planning": {"plan", "steps", "objective"},

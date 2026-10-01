@@ -20,6 +20,7 @@ from app.db.session import make_engine, make_session_factory
 from app.integrations.google import GoogleConnector
 from app.services.missions import ensure_reference_data
 from app.tools.google import GOOGLE_TOOLS
+from app.tools.drive import DRIVE_TOOLS
 from app.tools.registry import register_tool, unregister_tool
 
 log = get_logger("http")
@@ -80,7 +81,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # Real Google tools exist only when OAuth and token encryption are configured (#6).
     app.state.google = GoogleConnector(settings)
-    for tool in GOOGLE_TOOLS:
+    for tool in [*GOOGLE_TOOLS, *DRIVE_TOOLS]:
         is_sim = getattr(tool, "kind", "real") == "simulated"
         if is_sim:
             register_tool(tool)

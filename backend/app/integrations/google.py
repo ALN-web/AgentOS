@@ -32,10 +32,14 @@ TOKEN_URL = "https://oauth2.googleapis.com/token"
 REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 CALENDAR_API = "https://www.googleapis.com/calendar/v3"
 GMAIL_API = "https://gmail.googleapis.com/gmail/v1"
+DRIVE_API = "https://www.googleapis.com/drive/v3"
 
 SCOPES = (
     "https://www.googleapis.com/auth/calendar.events",
     "https://www.googleapis.com/auth/gmail.compose",
+    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/forms.body",
+    "https://www.googleapis.com/auth/forms.responses.readonly",
 )
 
 APP_SCOPES: dict[str, tuple[str, ...]] = {
@@ -413,6 +417,29 @@ class GoogleClient:
 
     def get_message(self, message_id: str) -> dict:
         return self._call("GET", f"{GMAIL_API}/users/me/messages/{quote(message_id)}")
+
+    # Drive
+    def search_drive(self, query: str) -> list[dict]:
+        return self._call("GET", f"{DRIVE_API}/files", params={"q": query, "fields": "files(id,name,webViewLink,trashed,mimeType)"}).get("files", [])
+
+    def create_document(self, metadata: dict[str, Any], content: str) -> dict:
+        token = self._connector.access_token(self._db, self._integ)
+        with self._connector.http() as http:
+            res = _send(
+                http, "POST", 
+                "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,mimeType,trashed",
+                headers={"Authorization": f"Bearer {token}"},
+                files={
+                    "metadata": (None, json.dumps(metadata), "application/json"),
+                    "file": (None, content, "text/plain")
+                }
+            )
+        if res.status_code >= 400:
+            raise _classify_response(res)
+        return res.json()
+
+    def get_file(self, file_id: str) -> dict:
+        return self._call("GET", f"{DRIVE_API}/files/{quote(file_id)}", params={"fields": "id,name,webViewLink,mimeType,trashed"})
 
 
 def event_id_for(idempotency_key: str) -> str:

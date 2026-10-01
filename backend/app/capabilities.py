@@ -34,7 +34,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     _cap("search", "Web Search", "browser", tools=("web.search",)),
     _cap("browser", "Browser Automation", "browser", risk=RiskLevel.MEDIUM, tools=("browser.navigate",)),
     _cap("analysis", "Analysis & Review", "critic"),
-    _cap("document", "Document Creation", "execution", risk=RiskLevel.MEDIUM, tools=("gmail.create_draft",)),
+    _cap("document", "Document Creation", "execution", risk=RiskLevel.MEDIUM, tools=("gmail.create_draft", "drive.create_document")),
     _cap("communication", "Communication", "execution", external=True, tools=("gmail.send_draft",)),
     _cap("submission", "Submission", "browser", external=True),
     _cap("purchasing", "Purchasing & Booking", "execution", external=True),

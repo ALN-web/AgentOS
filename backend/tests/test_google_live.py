@@ -29,7 +29,7 @@ from tests.test_cross_app import _make_cross_app_plan
 
 KEY = Fernet.generate_key().decode()
 GOOGLE = {"google_client_id": "client-123.apps.googleusercontent.com", "google_client_secret": "shh-client-secret", "encryption_key": KEY}
-SCOPES = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.compose"
+SCOPES = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/forms.body https://www.googleapis.com/auth/forms.responses.readonly"
 
 
 class FakeGoogle:
@@ -42,6 +42,7 @@ class FakeGoogle:
         self.events: dict[str, dict] = {}
         self.drafts: dict[str, dict] = {}
         self.sent: list[dict] = []
+        self.files: dict[str, dict] = {}
         self.revoked: list[str] = []
         self.fail_next: list[int] = []  # status codes to return for the next API calls
         self.requests: list[httpx.Request] = []
@@ -114,6 +115,30 @@ class FakeGoogle:
             mid = path.rsplit("/", 1)[1]
             msg = next((d["message"] for d in self.sent if d.get("message", {}).get("id") == mid or d.get("id") == mid), None)
             return httpx.Response(200, json=msg) if msg else httpx.Response(404, json={"error": {"code": 404}})
+        
+        if path == "/drive/v3/files" and m == "GET":
+            q = req.url.params.get("q", "")
+            return httpx.Response(200, json={"files": [f for f in self.files.values() if not f.get("trashed") and "agentos_key" in q and f.get("appProperties", {}).get("agentos_key") in q]})
+        if path == "/upload/drive/v3/files" and m == "POST":
+            import email
+            import email.policy
+            # Parse multipart
+            content_type = req.headers.get("content-type")
+            msg = email.message_from_bytes(
+                b"Content-Type: " + content_type.encode() + b"\r\n\r\n" + req.content,
+                policy=email.policy.default
+            )
+            parts = list(msg.iter_parts())
+            metadata = json.loads(parts[0].get_payload(decode=True))
+            fid = f"file_{len(self.files) + 1}"
+            f = {**metadata, "id": fid, "webViewLink": f"https://docs.google.com/document/d/{fid}", "trashed": False}
+            self.files[fid] = f
+            return httpx.Response(200, json=f)
+        if path.startswith("/drive/v3/files/") and m == "GET":
+            fid = path.rsplit("/", 1)[1]
+            f = self.files.get(fid)
+            return httpx.Response(200, json=f) if f else httpx.Response(404, json={"error": {"code": 404}})
+            
         return httpx.Response(404, json={"error": {"code": 404, "message": f"fake has no {m} {path}"}})
 
 
@@ -180,7 +205,7 @@ def test_authorization_url_uses_pkce_minimal_scopes_and_an_opaque_state(live):
     q = parse_qs(urlparse(url).query)
     assert url.startswith("https://accounts.google.com/o/oauth2/v2/auth?")
     assert q["code_challenge_method"] == ["S256"] and len(q["code_challenge"][0]) == 43
-    assert q["scope"] == [SCOPES]
+    assert set(q["scope"][0].split()) == set(SCOPES.split())
     assert q["redirect_uri"] == ["http://localhost:8000/api/integrations/google/callback"]
     assert "local" not in q["state"][0]  # encrypted, not readable by the browser
 
@@ -189,9 +214,10 @@ def test_callback_stores_encrypted_tokens_and_reports_the_real_account(live, fak
     app, client = live
     res = connect(client, fake)
     assert res.status_code == 303 and res.headers["location"] == "http://localhost:3000/app/apps?connected=google"
-    assert client.get("/api/integrations").json() == [
-        {"provider": "google", "status": "connected", "scopes": SCOPES.split(), "account_email": "me@example.com"}
-    ]
+    integs = client.get("/api/integrations").json()
+    assert len(integs) == 1
+    assert integs[0]["provider"] == "google" and integs[0]["status"] == "connected" and integs[0]["account_email"] == "me@example.com"
+    assert set(integs[0]["scopes"]) == set(SCOPES.split())
     with app.state.session_factory() as db:
         integ = db.query(Integration).one()
         assert all(t.encode() not in integ.encrypted_token for t in fake.issued)
@@ -530,6 +556,7 @@ def test_without_google_every_google_step_is_marked_simulated(client):
 def test_tools_endpoint_says_what_runs_for_real(client, live):
     assert {t["name"]: t["available"] for t in client.get("/api/tools").json()} == {
         "calendar.create_event": False, "calendar.list_events": False, "gmail.create_draft": False, "gmail.send_draft": False,
+        "drive.create_document": False, "drive.get_file": False,
     }
     tools = {t["name"]: t for t in live[1].get("/api/tools").json()}
     assert tools["gmail.send_draft"]["name"] == "gmail.send_draft"
