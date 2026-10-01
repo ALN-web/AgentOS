@@ -424,11 +424,178 @@ class SimulatedGmailSendDraftTool(Tool):
         return {"verified": False, "simulated": True, "detail": "Simulated; nothing to re-read."}
 
 
+class CalendarUpdateEventInput(BaseModel):
+    event_id: str
+    patch: dict[str, Any]
+
+class CalendarUpdateEventTool(Tool):
+    name = "calendar.update_event"
+    action_id = "calendar.update_event"
+    capability = "calendar"
+    integration = "google"
+    kind = "real"
+    required_scopes = ("https://www.googleapis.com/auth/calendar.events",)
+    description = "Update an existing calendar event."
+    risk = RiskLevel.HIGH
+    output_fields = ("event_id", "html_link", "start", "end", "summary", "status", "hangout_link", "attendees")
+    input_model = CalendarUpdateEventInput
+
+    def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+        event_id = args.get("event_id")
+        patch_args = args.get("patch", {})
+
+        if not patch_args:
+            raise GoogleError("validation_error", "Patch cannot be empty.")
+
+        supported_fields = {"summary", "start", "end", "timezone", "location", "description", "attendees"}
+        for k in patch_args:
+            if k not in supported_fields:
+                raise GoogleError("validation_error", f"Unsupported patch field: {k}")
+
+        patch_body = {}
+        if "summary" in patch_args:
+            patch_body["summary"] = patch_args["summary"]
+        if "description" in patch_args:
+            patch_body["description"] = str(patch_args["description"])
+        if "location" in patch_args:
+            patch_body["location"] = str(patch_args["location"])
+
+        start_dt = _parse(patch_args.get("start"))
+        end_dt = _parse(patch_args.get("end"))
+        tz = patch_args.get("timezone") or _prefs(ctx).timezone
+
+        if start_dt:
+            patch_body["start"] = {"dateTime": start_dt.isoformat(), "timeZone": tz}
+        if end_dt:
+            patch_body["end"] = {"dateTime": end_dt.isoformat(), "timeZone": tz}
+
+        attendees = _emails(patch_args.get("attendees"))
+        if attendees:
+            patch_body["attendees"] = [{"email": e} for e in attendees]
+
+        ev = ctx.google.update_event(event_id, patch_body)
+
+        return ToolResult(
+            status="success", tool=self.name,
+            output={
+                "event_id": ev["id"], "html_link": ev.get("htmlLink", ""),
+                "start": (ev.get("start") or {}).get("dateTime"),
+                "end": (ev.get("end") or {}).get("dateTime"),
+                "summary": ev.get("summary", ""), "status": ev.get("status", "confirmed"),
+                "hangout_link": ev.get("hangoutLink"),
+                "attendees": [a.get("email") for a in ev.get("attendees", [])],
+                "_patch_body": patch_body,
+            },
+            evidence=[{"type": "calendar_event", "source": "google_calendar", "label": f"Open '{ev.get('summary', '')}' in Google Calendar",
+                       "url": ev.get("htmlLink"), "reference_id": ev["id"]}],
+        )
+
+    def verify(self, ctx: ToolContext, result: ToolResult) -> dict[str, Any]:
+        ev = ctx.google.get_event(result.output["event_id"])
+
+        if ev.get("status") == "cancelled" or ev.get("id") != result.output["event_id"]:
+            return {"verified": False, "detail": "The event is missing or cancelled.", "method": "re-fetched event by id"}
+
+        patch_body = result.output.get("_patch_body", {})
+
+        for k, v in patch_body.items():
+            if k in ("start", "end"):
+                if ev.get(k, {}).get("dateTime") != v.get("dateTime") or ev.get(k, {}).get("timeZone") != v.get("timeZone"):
+                    return {"verified": False, "detail": "Persisted changes did not match.", "method": "re-fetched event by id"}
+            elif k == "attendees":
+                ev_attendees = {a.get("email") for a in ev.get("attendees", []) if a.get("email")}
+                v_attendees = {a.get("email") for a in v if a.get("email")}
+                if ev_attendees != v_attendees:
+                    return {"verified": False, "detail": "Persisted changes did not match.", "method": "re-fetched event by id"}
+            else:
+                if ev.get(k) != v:
+                    return {"verified": False, "detail": "Persisted changes did not match.", "method": "re-fetched event by id"}
+
+        return {"verified": True, "detail": "Re-read the event and confirmed changes.", "method": "re-fetched event by id"}
+
+class SimulatedCalendarUpdateEventTool(Tool):
+    name = "calendar.update_event"
+    action_id = "calendar.update_event"
+    capability = "calendar"
+    integration = "google"
+    kind = "simulated"
+    description = "Update an existing calendar event."
+    risk = RiskLevel.HIGH
+    output_fields = ("event_id", "html_link", "start", "end", "summary", "status", "hangout_link", "attendees")
+    input_model = CalendarUpdateEventInput
+
+    def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+        event_id = args.get("event_id")
+        patch = args.get("patch", {})
+        summary = patch.get("summary", "Simulated Event")
+
+        return ToolResult(
+            status="success", tool=self.name, simulated=True,
+            output={"event_id": event_id, "start": SIM_START, "end": SIM_END,
+                    "summary": summary, "status": "confirmed"},
+            evidence=_simulated_evidence({"type": "calendar_event", "label": f"Updated event '{summary}'", "reference_id": event_id}),
+        )
+
+class CalendarGetEventInput(BaseModel):
+    event_id: str
+
+class CalendarGetEventTool(Tool):
+    name = "calendar.get_event"
+    capability = "calendar"
+    integration = "google"
+    kind = "real"
+    required_scopes = ("https://www.googleapis.com/auth/calendar.events",)
+    description = "Get an existing calendar event."
+    risk = RiskLevel.LOW
+    output_fields = ("event_id", "html_link", "start", "end", "summary", "status", "hangout_link", "attendees")
+    input_model = CalendarGetEventInput
+
+    def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+        event_id = args.get("event_id")
+        ev = ctx.google.get_event(event_id)
+
+        return ToolResult(
+            status="success", tool=self.name,
+            output={
+                "event_id": ev["id"], "html_link": ev.get("htmlLink", ""),
+                "start": (ev.get("start") or {}).get("dateTime"),
+                "end": (ev.get("end") or {}).get("dateTime"),
+                "summary": ev.get("summary", ""), "status": ev.get("status", "confirmed"),
+                "hangout_link": ev.get("hangoutLink"),
+                "attendees": [a.get("email") for a in ev.get("attendees", [])],
+            },
+            evidence=[{"type": "calendar_event", "source": "google_calendar", "label": f"Open '{ev.get('summary', '')}' in Google Calendar",
+                       "url": ev.get("htmlLink"), "reference_id": ev["id"]}],
+        )
+
+class SimulatedCalendarGetEventTool(Tool):
+    name = "calendar.get_event"
+    capability = "calendar"
+    integration = "google"
+    kind = "simulated"
+    description = "Get an existing calendar event."
+    risk = RiskLevel.LOW
+    output_fields = ("event_id", "html_link", "start", "end", "summary", "status", "hangout_link", "attendees")
+    input_model = CalendarGetEventInput
+
+    def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+        event_id = args.get("event_id")
+        return ToolResult(
+            status="success", tool=self.name, simulated=True,
+            output={"event_id": event_id, "start": SIM_START, "end": SIM_END,
+                    "summary": "Simulated Event", "status": "confirmed"},
+            evidence=_simulated_evidence({"type": "calendar_event", "label": "Found simulated event", "reference_id": event_id}),
+        )
+
 GOOGLE_TOOLS: tuple[Tool, ...] = (
     CalendarListEventsTool(),
     SimulatedCalendarListEventsTool(),
     CalendarCreateEventTool(),
     SimulatedCalendarCreateEventTool(),
+    CalendarUpdateEventTool(),
+    SimulatedCalendarUpdateEventTool(),
+    CalendarGetEventTool(),
+    SimulatedCalendarGetEventTool(),
     GmailCreateDraftTool(),
     SimulatedGmailCreateDraftTool(),
     GmailSendDraftTool(),
