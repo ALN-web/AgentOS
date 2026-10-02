@@ -24,7 +24,11 @@ const toUiApp = (a) =>
       }
     : a;
 
-export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeoutMs = 8000 } = {}) {
+// Free hosting sleeps when idle; waking up takes 30-60 s, so reads wait 20 s and
+// requests that run real steps (create, start, approve, plan) wait up to 90 s.
+const LONG = 90000;
+
+export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeoutMs = 20000 } = {}) {
   async function request(path, { method = 'GET', body, timeoutMs: customTimeout } = {}) {
     if (!baseUrl) throw new ApiError(0, 'not_configured', 'The AgentOS backend is not configured.');
     const controller = new AbortController();
@@ -53,7 +57,7 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
       return data;
     } catch (err) {
       if (err instanceof ApiError) throw err;
-      if (err?.name === 'AbortError') throw new ApiError(0, 'timeout', 'The backend did not respond in time.');
+      if (err?.name === 'AbortError') throw new ApiError(0, 'timeout', 'The server is waking up (free hosting sleeps when idle). Please try again in a few seconds.');
       throw new ApiError(0, 'network_error', 'Could not reach the backend.');
     } finally {
       clearTimeout(timer);
@@ -85,12 +89,13 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
       request('/missions', {
         method: 'POST',
         body: { goal, plan, ...(source ? { source } : {}), ...(templateId ? { template_id: templateId } : {}) },
+        timeoutMs: LONG,
       }),
     analyzeMission: (goal, answers = {}) =>
       request('/missions/analyze', {
         method: 'POST',
         body: { goal, answers },
-        timeoutMs: 60000,
+        timeoutMs: LONG,
       }),
     listCapabilities: () => request('/capabilities'),
     listMissions: () => request('/missions'),
@@ -106,7 +111,7 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
       }).then(toUiApp),
     getAppActivity: (appId, limit = 20) => request(`/apps/${id(appId)}/activity?limit=${Number(limit) || 20}`),
     disconnectApp: (appId) => request(`/apps/${id(appId)}`, { method: 'DELETE' }),
-    startMission: (missionId) => request(`/missions/${id(missionId)}/start`, { method: 'POST' }),
+    startMission: (missionId) => request(`/missions/${id(missionId)}/start`, { method: 'POST', timeoutMs: LONG }),
     listApprovals: (status = 'pending') => request(`/v1/approvals?status=${status}`).catch((err) =>
       err.status === 404 ? request(`/approvals?status=${status}`) : Promise.reject(err)
     ),
@@ -117,11 +122,13 @@ export function createApiClient(baseUrl, { fetchImpl = globalThis.fetch, timeout
       request(`/v1/approvals/${id(approvalId)}/decision`, {
         method: 'POST',
         body: { decision, input: 'click', ...(edits ? { edits } : {}) },
+        timeoutMs: LONG,
       }).catch((err) =>
         err.status === 404
           ? request(`/approvals/${id(approvalId)}/decision`, {
               method: 'POST',
               body: { decision, input: 'click', ...(edits ? { edits } : {}) },
+              timeoutMs: LONG,
             })
           : Promise.reject(err)
       ),
