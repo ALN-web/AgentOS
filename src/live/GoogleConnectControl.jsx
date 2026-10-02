@@ -193,24 +193,24 @@ export default function GoogleConnectControl({ className = '', compact = false, 
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          <div className="flex items-center gap-2 self-stretch sm:self-auto shrink-0 w-full sm:w-auto">
             {connected ? (
               <button
                 type="button"
                 onClick={() => setConfirmDisconnectOpen(true)}
                 disabled={loading}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-red-400 bg-white/[0.04] hover:bg-red-500/10 border border-white/5 hover:border-red-500/20 transition-all flex items-center gap-1.5 disabled:opacity-50"
+                className="w-full sm:w-auto px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-red-400 bg-white/[0.04] hover:bg-red-500/10 border border-white/5 hover:border-red-500/20 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unplug className="w-3.5 h-3.5" />}
                 <span>Disconnect</span>
               </button>
             ) : needsReconnect ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setConfirmDisconnectOpen(true)}
                   disabled={loading}
-                  className="px-3 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-red-400 bg-white/[0.04] hover:bg-red-500/10 border border-white/5 transition-all"
+                  className="flex-1 sm:flex-none px-3 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-red-400 bg-white/[0.04] hover:bg-red-500/10 border border-white/5 transition-all text-center"
                 >
                   Disconnect
                 </button>
@@ -218,7 +218,7 @@ export default function GoogleConnectControl({ className = '', compact = false, 
                   type="button"
                   onClick={handleConnect}
                   disabled={connecting || loading}
-                  className="btn-orange px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm disabled:opacity-50"
+                  className="flex-1 sm:flex-none btn-orange px-4 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 text-center"
                 >
                   {connecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCw className="w-3.5 h-3.5" />}
                   <span>{connecting ? 'Connecting...' : 'Reconnect Google'}</span>
@@ -229,7 +229,7 @@ export default function GoogleConnectControl({ className = '', compact = false, 
                 type="button"
                 onClick={handleConnect}
                 disabled={connecting || loading}
-                className="btn-orange px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm disabled:opacity-50"
+                className="btn-orange w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
               >
                 {connecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
                 <span>{connecting ? 'Connecting...' : 'Connect Google'}</span>

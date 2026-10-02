@@ -125,9 +125,11 @@ export default function AppLayout() {
 
       {/* Mobile header */}
       <header className="lg:hidden sticky top-0 z-40 bg-black/85 backdrop-blur-xl border-b border-white/5">
-        <div className="px-4 h-14 flex items-center justify-between">
-          <Logo size="sm" />
-          <div className="flex items-center gap-2">
+        <div className="px-3 sm:px-4 h-14 flex items-center justify-between gap-1.5 overflow-hidden">
+          <div className="shrink-0">
+            <Logo size="sm" />
+          </div>
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <ThemeToggle size="sm" />
             {isAuthenticated ? (
               <button
@@ -143,7 +145,7 @@ export default function AppLayout() {
             ) : (
               <NavLink
                 to={`/login?next=${encodeURIComponent(pathname)}`}
-                className="btn-dark px-2.5 h-8 rounded-lg flex items-center gap-1 text-xs text-gray-300 hover:text-white"
+                className="btn-dark px-2 sm:px-2.5 h-8 rounded-lg flex items-center gap-1 text-xs text-gray-300 hover:text-white"
               >
                 <User className="w-3.5 h-3.5" />
                 <span className="text-xs">Sign in</span>
@@ -152,15 +154,16 @@ export default function AppLayout() {
             <button onClick={() => openLauncher()} aria-label="New mission" className="btn-dark w-8 h-8 rounded-lg flex items-center justify-center">
               <Plus className="w-3.5 h-3.5" />
             </button>
-            <button onClick={tryDemo} className="btn-orange px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+            <button onClick={tryDemo} className="btn-orange px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0">
               <Play className="w-3 h-3 fill-current" />
-              Try Demo
+              <span className="hidden xs:inline sm:inline">Try </span>
+              <span>Demo</span>
             </button>
           </div>
         </div>
-        <div className="px-4 pb-1.5 flex items-center gap-1.5 text-[10px] text-gray-500">
-          <FlaskConical className="w-3 h-3 text-[#eb6920]" />
-          Demo environment · all agent actions are simulated
+        <div className="px-3 sm:px-4 pb-1.5 flex items-center gap-1.5 text-[10px] text-gray-500 truncate">
+          <FlaskConical className="w-3 h-3 text-[#eb6920] shrink-0" />
+          <span className="truncate">Demo environment · all agent actions are simulated</span>
         </div>
         <nav className="px-3 pb-2 flex gap-1 overflow-x-auto no-scrollbar" aria-label="Console">
           <NavItems pending={pending} compact />

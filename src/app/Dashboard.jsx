@@ -76,11 +76,11 @@ export default function Dashboard() {
             <ResetDemoButton />
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 self-start sm:self-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 self-stretch sm:self-auto w-full sm:w-auto">
           <button
             type="button"
             onClick={handleGetStarted}
-            className="btn-orange px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-[0_0_20px_rgba(235,105,32,0.25)]"
+            className="w-full sm:w-auto btn-orange px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(235,105,32,0.25)]"
           >
             <span>Get started — connect your Google</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -88,7 +88,7 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={() => navigate(`/app/missions/${startDemo()}`)}
-            className="text-xs text-gray-400 hover:text-white underline underline-offset-4 font-medium flex items-center gap-1.5 px-2 py-1 transition-colors"
+            className="text-xs text-gray-400 hover:text-white underline underline-offset-4 font-medium flex items-center justify-center sm:justify-start gap-1.5 px-2 py-1 transition-colors self-center sm:self-auto"
           >
             <Play className="w-3 h-3 fill-current text-[#eb6920]" />
             <span>Try Demo</span>
