@@ -32,11 +32,11 @@ export function seedMissions() {
   ];
 }
 
-export function MissionProvider({ children }) {
+export function MissionProvider({ children, initialLauncher = { open: false, goal: '' } }) {
   const { preferences } = usePreferences();
   // Saved demo state from this browser if it is valid, otherwise a fresh start.
   const [missions, setMissions] = useState(() => loadMissions() ?? seedMissions());
-  const [launcher, setLauncher] = useState({ open: false, goal: '' });
+  const [launcher, setLauncher] = useState(initialLauncher);
   // Latest missions for event handlers, so a double click can't act on stale state.
   const latest = useRef(missions);
   latest.current = missions;
@@ -159,11 +159,12 @@ export function MissionProvider({ children }) {
       togglePause(missionId) {
         update(missionId, (m, now) => toggleMissionPause(m, now));
       },
-      openLauncher(goal = '') {
-        setLauncher({ open: true, goal });
+      openLauncher(goal = '', options = {}) {
+        const extra = typeof options === 'string' ? { mode: options } : options;
+        setLauncher({ open: true, goal, ...extra });
       },
       closeLauncher() {
-        setLauncher({ open: false, goal: '' });
+        setLauncher({ open: false, goal: '', mode: undefined });
       },
     };
   }, [missions, launcher, preferences]);
