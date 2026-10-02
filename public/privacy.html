@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentOS · Privacy Policy</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0b0b0d; color: #d6d6dc; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 20px 80px; }
+  h1 { color: #fff; font-size: 30px; margin: 0 0 4px; }
+  h2 { color: #fff; font-size: 20px; margin: 32px 0 8px; }
+  a { color: #ff9a5c; }
+  .muted { color: #8b8b95; font-size: 14px; }
+  li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <p><a href="/">← AgentOS</a></p>
+  <h1>Privacy Policy</h1>
+  <p class="muted">Last updated: 2 October 2026</p>
+
+  <p>AgentOS is an assistant that carries out everyday tasks in your own apps (Google Calendar,
+  Gmail, Google Drive and Google Forms) after you approve them. This page explains what data AgentOS
+  uses and how. It is a student hackathon project run by Anjankumar LN and team.</p>
+
+  <h2>Demo Mode</h2>
+  <p>Demo Mode needs no account. It runs entirely in your browser as a simulation; nothing you type is
+  sent to our servers.</p>
+
+  <h2>What we store when you use Live Mode</h2>
+  <ul>
+    <li><strong>Your account:</strong> name (optional), email address, and a salted hash of your password.
+      We never store your password itself.</li>
+    <li><strong>Your missions:</strong> the goals you type, the plan, approvals you give, and the results
+      (for example the link to an event AgentOS created), so you can see progress and proof.</li>
+    <li><strong>Your preferences:</strong> timezone, working hours, signature and contact groups you choose to save.</li>
+    <li><strong>Google connection:</strong> if you connect Google, the access tokens Google issues, encrypted at rest.
+      They are never shown in the app, never sent to your browser and never written to logs.</li>
+  </ul>
+
+  <h2>What AgentOS does with your Google account</h2>
+  <p>Only what you ask for in a mission, and every action that affects other people waits for your approval:</p>
+  <ul>
+    <li><strong>Google Calendar</strong> (<code>calendar.events</code>): read free/busy times and create or update the events you approve.</li>
+    <li><strong>Gmail</strong> (<code>gmail.send</code>): send the emails you approve, exactly as shown to you. AgentOS cannot read your mailbox.</li>
+    <li><strong>Google Drive</strong> (<code>drive.file</code>): create documents for your missions. AgentOS can only see files it created.</li>
+    <li><strong>Google Forms</strong> (<code>forms.body</code>): create forms (for example a registration form) for your missions.</li>
+    <li><strong>Your email address</strong> (<code>userinfo.email</code>): to show which Google account is connected.</li>
+  </ul>
+  <p>AgentOS's use and transfer of information received from Google APIs adheres to the
+  <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>,
+  including the Limited Use requirements. We do not sell your data, use it for advertising, or use Google user data
+  to train AI models.</p>
+
+  <h2>AI planning</h2>
+  <p>To turn your goal into a plan, the text of your goal (and your saved preferences such as timezone and contact
+  group names) is sent to an AI model provider (Google Gemini). Your Google tokens and your Google data are never
+  sent to the AI provider.</p>
+
+  <h2>Where data is kept</h2>
+  <p>The service runs on Vercel (website), Render (application server) and Neon (database). Data is used only to run
+  AgentOS for you.</p>
+
+  <h2>Your choices</h2>
+  <ul>
+    <li><strong>Disconnect Google</strong> at any time in Apps; AgentOS then revokes its access at Google and deletes the stored tokens.
+      You can also remove access at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</li>
+    <li><strong>Delete your data:</strong> email <a href="mailto:anjankumarln120@gmail.com">anjankumarln120@gmail.com</a>
+      and we will delete your account and missions.</li>
+  </ul>
+
+  <h2>Contact</h2>
+  <p><a href="mailto:anjankumarln120@gmail.com">anjankumarln120@gmail.com</a></p>
+</main>
+</body>
+</html>
