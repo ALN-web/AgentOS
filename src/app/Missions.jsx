@@ -10,6 +10,22 @@ import { useBackendStatus } from '../live/useBackendStatus';
 
 const FILTERS = ['all', ...Object.keys(STATUS_META)];
 
+// A live mission summary from the API has no events, tasks or recoveries: give the
+// row the shape it expects so the list never crashes.
+export function liveRow(m) {
+  const ts = (v) => (v ? new Date(v).getTime() : Date.now());
+  return {
+    ...m,
+    isLive: true,
+    events: [],
+    tasks: Array.isArray(m.tasks) ? m.tasks : [],
+    recoveries: [],
+    metric: m.metric || { label: 'Success criteria met', current: 0, target: 1 },
+    createdAt: ts(m.created_at),
+    updatedAt: ts(m.updated_at || m.created_at),
+  };
+}
+
 export default function Missions() {
   const { missions, openLauncher } = useMissions();
   const { preferences, updatePreferences } = usePreferences();
@@ -131,7 +147,7 @@ export default function Missions() {
                 <MissionHeader />
                 {liveShown.map((m) => (
                   <div key={m.id}>
-                    <MissionRow m={{...m, isLive: true, createdAt: m.created_at ? new Date(m.created_at).getTime() : Date.now()}} now={now} />
+                    <MissionRow m={liveRow(m)} now={now} />
                   </div>
                 ))}
               </>
