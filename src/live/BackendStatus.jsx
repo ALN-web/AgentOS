@@ -1,15 +1,15 @@
 import React from 'react';
-import { Server } from 'lucide-react';
-import { useBackendStatus } from './useBackendStatus';
-
-const DOT = { connected: 'bg-emerald-400', checking: 'bg-amber-400 animate-pulse', unreachable: 'bg-red-400' };
-const LABEL = { connected: 'Connected', checking: 'Checking…', unreachable: 'Unreachable' };
+import { Server, Loader2 } from 'lucide-react';
+import { useBackendStatus, COLD_START_MESSAGE } from './useBackendStatus';
 
 // Shown only when a backend is configured. It reports the connection, not a
 // Live Mode switch: Live Mode stays hidden until the backend says it is available.
-export default function BackendStatus() {
-  const s = useBackendStatus();
+export default function BackendStatus({ statusOverride = null }) {
+  const backendStatus = useBackendStatus();
+  const s = statusOverride || backendStatus;
   if (!s.configured) return null;
+
+  const isConnected = s.status === 'connected';
 
   return (
     <div className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2.5 text-[11px] text-gray-500 leading-relaxed" role="status">
@@ -17,18 +17,22 @@ export default function BackendStatus() {
         <Server className="w-3 h-3 text-[#eb6920]" />
         AgentOS backend
         <span className="ml-auto inline-flex items-center gap-1 font-normal text-gray-400">
-          <span className={`w-1.5 h-1.5 rounded-full ${DOT[s.status]}`} />
-          {LABEL[s.status]}
+          <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
+          {isConnected ? 'Connected' : 'Connecting…'}
         </span>
       </div>
-      {s.status === 'connected' && (
+      {isConnected ? (
         <div>
           v{s.version} · database {s.database}
           <br />
           {s.liveMode?.available ? 'Live Mode available' : 'Live Mode not available yet'}
         </div>
+      ) : (
+        <div className="text-amber-400/90 flex items-center gap-1.5 mt-1">
+          <Loader2 className="w-3 h-3 animate-spin shrink-0 text-[#eb6920]" />
+          <span>{s.message || COLD_START_MESSAGE}</span>
+        </div>
       )}
-      {s.status === 'unreachable' && <div>{s.error}</div>}
     </div>
   );
 }
