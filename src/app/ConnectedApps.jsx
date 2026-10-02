@@ -10,10 +10,12 @@ import {
   Plug,
   Activity,
   Filter,
+  Loader2,
 } from 'lucide-react';
 import AppCard from '../components/AppCard';
 import { useConnectedApps } from '../live/useConnectedApps';
 import GoogleConnectControl from '../live/GoogleConnectControl';
+import { COLD_START_MESSAGE } from '../live/useBackendStatus';
 
 export default function ConnectedApps() {
   const { apps, integrations, isLive, loading, error, updatePermission, disconnect, connect } = useConnectedApps();
@@ -105,12 +107,15 @@ export default function ConnectedApps() {
         </div>
       </div>
 
-      {/* Error alert banner if any */}
+      {/* Friendly cold start alert banner if server waking up */}
       {error && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-center justify-between">
-          <span>{error}</span>
-          <button onClick={() => window.location.reload()} className="underline hover:text-white">
-            Reload
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-[#eb6920] shrink-0" />
+            <span>{COLD_START_MESSAGE}</span>
+          </div>
+          <button onClick={() => window.location.reload()} className="underline hover:text-white font-medium ml-2">
+            Retry
           </button>
         </div>
       )}

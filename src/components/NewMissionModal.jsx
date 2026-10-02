@@ -525,7 +525,7 @@ export default function NewMissionModal() {
                         <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Execution Mode</span>
                         <span className={`text-[10px] font-mono flex items-center gap-1 ${isLiveAvailable ? 'text-emerald-400' : 'text-amber-400'}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${isLiveAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                          {isLiveAvailable ? 'Backend Live Mode Available' : 'Live Mode Unavailable'}
+                          {isLiveAvailable ? 'Backend Live Mode Available' : backendStatus?.status === 'connected' ? 'Live Mode Unavailable' : 'Connecting to live server…'}
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
@@ -568,7 +568,7 @@ export default function NewMissionModal() {
                             <div className="font-bold flex items-center gap-1.5">Live Mode</div>
                             <div className="text-[10px] mt-0.5">
                               {!isLiveAvailable 
-                                ? (backendStatus?.status === 'unreachable' ? 'AgentOS backend cannot be reached.' : 'Live Mode is disabled on backend.')
+                                ? (backendStatus?.status !== 'connected' ? 'Connecting to the live server… (first visit can take up to a minute)' : 'Live Mode is disabled on backend.')
                                 : 'Sign in & connect Google to use Live missions.'}
                             </div>
                           </div>
@@ -699,7 +699,7 @@ export default function NewMissionModal() {
                             <div className="font-bold flex items-center gap-1.5">Live Mode</div>
                             <div className="text-[10px] mt-0.5">
                               {!isLiveAvailable 
-                                ? (backendStatus?.status === 'unreachable' ? 'AgentOS backend cannot be reached.' : 'Live Mode is disabled on backend.')
+                                ? (backendStatus?.status !== 'connected' ? 'Connecting to the live server… (first visit can take up to a minute)' : 'Live Mode is disabled on backend.')
                                 : hasMissingCapabilities 
                                 ? `Requires capabilities: ${missingCaps.join(', ')}`
                                 : 'Connect Google to use Live missions.'}
