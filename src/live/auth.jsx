@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { api, formatAuthError } from './api';
+import { syncBrowserTimezone } from './timezone';
+
+export { syncBrowserTimezone };
 
 export function normalizeUser(res) {
   if (!res) return null;
@@ -60,6 +63,7 @@ export function AuthProvider({ children, initialUser = null, apiClient = api }) 
         const res = await apiClient.login({ email, password });
         const loggedInUser = normalizeUser(res);
         setUser(loggedInUser);
+        await syncBrowserTimezone(apiClient).catch(() => {});
         return loggedInUser;
       } catch (err) {
         const message = formatAuthError(err);
@@ -77,6 +81,7 @@ export function AuthProvider({ children, initialUser = null, apiClient = api }) 
         const res = await apiClient.signup({ email, password, name });
         const signedUpUser = normalizeUser(res);
         setUser(signedUpUser);
+        await syncBrowserTimezone(apiClient).catch(() => {});
         return signedUpUser;
       } catch (err) {
         const message = formatAuthError(err);
