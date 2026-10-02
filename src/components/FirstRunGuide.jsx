@@ -100,7 +100,7 @@ export default function FirstRunGuide({
   };
 
   const handleSelectGoal = (exampleGoal) => {
-    openLauncher(exampleGoal);
+    openLauncher(exampleGoal, { mode: 'live' });
   };
 
   return (
