@@ -159,4 +159,15 @@ describe('FirstRunGuide onboarding card (#68)', () => {
 
     delete global.window;
   });
+
+  it('contains example goal chips ready to launch into Live Mode', () => {
+    const html = renderGuide({
+      googleConnectedOverride: true,
+      missionCreatedOverride: false,
+    });
+
+    for (const goal of EXAMPLE_GOALS) {
+      expect(html).toContain(goal);
+    }
+  });
 });
