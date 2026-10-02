@@ -76,6 +76,14 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-sonnet-5-5"
     anthropic_timeout_seconds: float = 45.0
 
+    # Run missions on a background worker (#44). Unset means: everywhere except tests,
+    # which run missions inside the request so they can assert on the result directly.
+    background_runs: bool | None = None
+
+    @property
+    def runs_in_background(self) -> bool:
+        return self.environment != "test" if self.background_runs is None else self.background_runs
+
     # Act as one local user when nobody is signed in (#32). Unset means: only in tests.
     # Never possible in production.
     auth_local_fallback: bool | None = None

@@ -108,6 +108,9 @@ def decide_approval(
         decision=body.decision,
         edits=body.edits,
         google=request.app.state.google,
-        input_type=body.input
+        input_type=body.input,
+        resume_inline=not request.app.state.settings.runs_in_background,
     )
+    if request.app.state.settings.runs_in_background:
+        request.app.state.worker.submit(approval.mission_id, user.id)
     return _approval_out(approval)

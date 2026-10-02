@@ -17,6 +17,7 @@ from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger, request_id_var
 from app.db.migrate import upgrade_to_head
 from app.services.auth import AttemptLimiter
+from app.services.worker import MissionWorker
 from app.db.session import make_engine, make_session_factory
 from app.integrations.google import GoogleConnector
 from app.services.missions import ensure_reference_data
@@ -37,6 +38,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         yield
+        app.state.worker.shutdown()
         app.state.engine.dispose()
 
     app = FastAPI(
@@ -96,6 +98,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # Real Google tools exist only when OAuth and token encryption are configured (#6).
     app.state.google = GoogleConnector(settings)
+    # Missions run on a background worker outside tests (#44).
+    app.state.worker = MissionWorker(app.state.session_factory, app.state.google)
     for tool in [*GOOGLE_TOOLS, *DRIVE_TOOLS, *FORMS_TOOLS]:
         is_sim = getattr(tool, "kind", "real") == "simulated"
         if is_sim:

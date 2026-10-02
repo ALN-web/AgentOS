@@ -437,6 +437,7 @@ def handle_approval_decision(
     edits: dict[str, Any] | None = None,
     google: GoogleConnector | None = None,
     input_type: str = "click",
+    resume_inline: bool = True,
 ) -> Approval:
     """Approve, edit or reject; then resume the mission. A decision is accepted only
     while the approval is still pending, so it cannot be replayed or changed."""
@@ -490,7 +491,9 @@ def handle_approval_decision(
     mission.status = MissionStatus.RUNNING
     db.commit()
     # Resume: an approved step runs; a rejected one is skipped and the plan continues.
-    run_mission(db, user, mission.id, google)
+    # With a background worker (#44) the caller hands the run to it instead.
+    if resume_inline:
+        run_mission(db, user, mission.id, google)
     return approval
 
 
