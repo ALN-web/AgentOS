@@ -135,6 +135,36 @@ class PlanCriterion(BaseModel):
     taskId: str | None = None
 
 
+def wire_send_to_draft(data: dict) -> dict:
+    """A send step that depends on a draft step gets the prepared email wired in
+    (draft_id, to, subject, body), so its approval shows exactly what will be sent (#37).
+    Applies to every plan: AI, rule-based or template."""
+    tasks = data.get("tasks") if isinstance(data, dict) else None
+    if not isinstance(tasks, list):
+        return data
+    by_id = {t.get("id"): t for t in tasks if isinstance(t, dict)}
+
+    def is_draft(t: dict) -> bool:
+        return (t.get("inputs") or {}).get("tool") == "gmail.create_draft" or t.get("type") == "draft" or t.get("capability") == "document"
+
+    for t in tasks:
+        if not isinstance(t, dict):
+            continue
+        inputs = t.get("inputs") or {}
+        sends = inputs.get("tool") == "gmail.send_draft" or t.get("capability") == "communication" or t.get("type") in ("communicate", "send")
+        if not sends or (inputs.get("draft_id") and inputs.get("body")):
+            continue
+        draft = next((d for d in t.get("deps") or [] if isinstance(by_id.get(d), dict) and is_draft(by_id[d])), None)
+        if draft:
+            # Pass the prepared email itself, so the approval card shows exactly what is sent (#37).
+            wired = {"draft_id": f"{draft}.output.draft_id"}
+            for field in ("to", "subject", "body"):
+                if not inputs.get(field):
+                    wired[field] = f"{draft}.output.{field}"
+            t["inputs"] = {**inputs, **wired}
+    return data
+
+
 class MissionPlan(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -146,6 +176,11 @@ class MissionPlan(BaseModel):
     metric: PlanMetric
     approvalPoints: int = Field(ge=0, le=60)
     capabilities: list[str] = Field(default_factory=list, max_length=30)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _wire_send_steps(cls, data: Any) -> Any:
+        return wire_send_to_draft(data) if isinstance(data, dict) else data
 
     @model_validator(mode="after")
     def _valid_graph(self):

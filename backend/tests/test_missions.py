@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import inspect, select
 
+from app.schemas.plan import wire_send_to_draft
 from app.db.models import Agent, Mission, User
 from app.main import create_app
 from tests.conftest import make_settings
@@ -58,8 +59,9 @@ def test_frontend_plans_are_accepted_and_stored_faithfully(client, name):
         assert got["agent"] == sent["agent"]
         assert got["gated"] == sent["gated"]
         assert sorted(got["deps"]) == sorted(sent["deps"])
-    # The full plan round-trips, including presentation-only fields.
-    assert m["plan"] == plan
+    # The full plan round-trips, including presentation-only fields; the only change is
+    # that send steps get the prepared email wired in (#37).
+    assert m["plan"] == wire_send_to_draft(copy.deepcopy(plan))
 
     events = client.get(f"/api/missions/{m['id']}/events").json()
     assert [(e["seq"], e["type"]) for e in events] == [(1, "MISSION_CREATED")]
