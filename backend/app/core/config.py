@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     llm_model: str = "gemini-3.1-flash-lite"
     # Tried in order when a model is rate-limited, overloaded or too slow (free tiers).
     llm_fallback_models: str = "gemini-2.5-flash,gemini-3-flash-preview,gemini-flash-latest"
+    # Optional second provider (#101), tried after the primary's models; Groq by default.
+    llm_fallback_api_key: SecretStr | None = None
+    llm_fallback_base_url: str = "https://api.groq.com/openai/v1"
+    llm_fallback_provider_models: str = "llama-3.3-70b-versatile,openai/gpt-oss-120b,llama-3.1-8b-instant"
     llm_timeout_seconds: float = 20.0  # per model attempt
     llm_total_seconds: float = 28.0  # per planning call; x2 with one repair stays under the 60 s the website waits
 
