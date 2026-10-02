@@ -25,7 +25,7 @@ const SPEEDS = [1, 2, 4];
 
 function Panel({ icon: Icon, title, right, children, className = '' }) {
   return (
-    <div className={`glass-card rounded-2xl flex flex-col overflow-hidden ${className}`}>
+    <div className={`glass-card rounded-2xl flex flex-col overflow-clip ${className}`}>
       <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-white/5">
         <div className="flex items-center gap-2 text-sm font-semibold text-white">
           <Icon className="w-4 h-4 text-[#eb6920]" />

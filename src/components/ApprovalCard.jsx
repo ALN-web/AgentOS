@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertCircle, ArrowRight, Check, CheckCircle2, Info, Loader2, Pencil, ShieldAlert, X, XCircle } from 'lucide-react';
-import { useMissions } from '../store/MissionStore';
+import { useMission, useMissions } from '../store/MissionStore';
 import { agentName, timeAgo } from './ui';
 
 const RISK = {
@@ -68,10 +68,44 @@ function Row({ label, children, align = 'center' }) {
   );
 }
 
+export function presentationModel(rawPayload, mission) {
+  let p = { ...rawPayload };
+  if (p.draft_id && !p.to && !p.subject && !p.body) {
+    if (mission && mission.tasks) {
+      const draftTask = mission.tasks.find((t) => t.output && t.output.draft_id === p.draft_id);
+      if (draftTask && draftTask.output) {
+        p.to = rawPayload.to || draftTask.output.to;
+        p.subject = rawPayload.subject || draftTask.output.subject;
+        p.body = rawPayload.body || draftTask.output.body;
+      }
+    }
+  }
+
+  const isSecret = (v) => typeof v === 'string' && (v.includes('ya29.') || v.includes('Bearer '));
+  const safeStr = (v) => (isSecret(v) ? '[REDACTED]' : v);
+
+  return {
+    ...p,
+    summary: safeStr(p.summary),
+    title: safeStr(p.title),
+    start: safeStr(p.start),
+    from: safeStr(p.from),
+    to: safeStr(p.to),
+    audience: safeStr(p.audience),
+    subject: safeStr(p.subject),
+    body: safeStr(p.body),
+    draft_id: p.draft_id,
+  };
+}
+
 // readOnly: shown during a replay, where decisions are the recorded ones.
 export default function ApprovalCard({ approval, showMission = false, readOnly = false, compact = false, onDecide }) {
   const { decide } = useMissions();
-  const p = approval.payload || {};
+  const mission = useMission(approval.missionId);
+
+  const raw = approval.payload || {};
+  const p = presentationModel(raw, mission);
+
   const [editing, setEditing] = useState(false);
   const [subject, setSubject] = useState(p.subject || '');
   const [body, setBody] = useState(p.body || '');

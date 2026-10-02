@@ -60,7 +60,7 @@ export default function ActivityFeed({ events, tasks = [], isLive = false, onSel
   }
 
   return (
-    <ol ref={scroller} className="h-full overflow-y-auto pr-1 relative" aria-label="Agent activity timeline">
+    <ol ref={scroller} className="h-full overflow-y-auto pr-1 relative" style={{ transform: 'translateZ(0)' }} aria-label="Agent activity timeline">
       {events.map((e, i) => {
         const agent = AGENT_BY_ID[e.agent];
         const color = agent?.color || '#9ca3af';
