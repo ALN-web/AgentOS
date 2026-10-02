@@ -19,7 +19,7 @@ AgentOS turns an everyday goal into a **mission**:
 
 ## Contents
 
-1. [Try it in 2 minutes (judges)](#try-it-in-2-minutes-judges)
+1. [Try it in 2 minutes](#try-it-in-2-minutes)
 2. [What is real](#what-is-real)
 3. [Safety](#safety)
 4. [Architecture](#architecture)
@@ -34,7 +34,7 @@ AgentOS turns an everyday goal into a **mission**:
 
 ---
 
-## Try it in 2 minutes (judges)
+## Try it in 2 minutes
 
 1. Open **https://agent-os-two-iota.vercel.app** and click **Get started — connect your Google**.
    - The backend runs on a free server. If nobody has used it for a while, the first load can take up to a minute; the page says so and retries by itself.
@@ -302,7 +302,7 @@ Follow the step-by-step guide in **[docs/DEPLOY.md](docs/DEPLOY.md)**. In short:
 4. **Google Cloud:**
    - add `https://<your-app>.vercel.app/api/integrations/google/callback` as a redirect URI and your Vercel domain as an authorised domain;
    - **Publish app**, so anyone can connect (up to 100 users before Google verification).
-5. Keep the free backend awake while it's being judged: ping `https://<your-service>.onrender.com/api/health` every 5 minutes (e.g. with cron-job.org).
+5. Keep the free backend awake: ping `https://<your-service>.onrender.com/api/health` every 5 minutes (e.g. with cron-job.org).
 
 ---
 
