@@ -119,6 +119,11 @@ def start_mission(
     user: User = Depends(current_user),
 ):
     from app.services.runner import run_mission
+    if request.app.state.settings.runs_in_background:
+        # Return at once; the worker runs the mission and the event stream shows progress (#44).
+        mission = svc.get_mission(db, user, mission_id)
+        request.app.state.worker.submit(mission.id, user.id)
+        return _detail(mission)
     return _detail(run_mission(db, user, mission_id, request.app.state.google))
 
 
