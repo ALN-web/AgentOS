@@ -131,8 +131,9 @@ def end_session(db: Session, token: str | None) -> None:
 class AttemptLimiter:
     """At most `limit` failed attempts per key in `window` seconds (in memory, per process)."""
 
-    def __init__(self, limit: int = 10, window: float = 300.0):
-        self.limit, self.window = limit, window
+    def __init__(self, limit: int = 10, window: float = 300.0, code: str = "too_many_attempts",
+                 message: str = "Too many attempts. Wait a few minutes and try again."):
+        self.limit, self.window, self.code, self.message = limit, window, code, message
         self._hits: dict[str, list[float]] = {}
         self._lock = threading.Lock()
 
@@ -144,12 +145,21 @@ class AttemptLimiter:
     def check(self, key: str) -> None:
         with self._lock:
             if len(self._recent(key, time.monotonic())) >= self.limit:
-                raise AppError("too_many_attempts", "Too many attempts. Wait a few minutes and try again.", status_code=429)
+                raise AppError(self.code, self.message, status_code=429)
 
     def fail(self, key: str) -> None:
         with self._lock:
             now = time.monotonic()
             self._recent(key, now).append(now)
+
+    def hit(self, key: str) -> None:
+        """Count one use, refusing it (429) once the limit is reached."""
+        with self._lock:
+            now = time.monotonic()
+            hits = self._recent(key, now)
+            if len(hits) >= self.limit:
+                raise AppError(self.code, self.message, status_code=429)
+            hits.append(now)
 
     def reset(self, key: str) -> None:
         with self._lock:

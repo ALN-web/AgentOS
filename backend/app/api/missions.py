@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -61,14 +61,23 @@ def _detail(m: Mission) -> MissionDetail:
 
 
 class AnalyzeRequest(BaseModel):
-    goal: str
+    goal: str = Field(min_length=1, max_length=500)
     answers: dict | None = None
+
+    @field_validator("answers")
+    @classmethod
+    def _small_answers(cls, v):
+        if v is not None and (len(v) > 20 or len(json.dumps(v, default=str)) > 4000):
+            raise ValueError("too many or too long answers")
+        return v
 
 
 @router.post("/analyze")
-def analyze_mission(body: AnalyzeRequest, db: Session = Depends(get_db), user: User = Depends(current_user)):
+def analyze_mission(body: AnalyzeRequest, request: Request, db: Session = Depends(get_db),
+                    user: User = Depends(current_user)):
     from app.services.planner import get_planner
-    
+
+    request.app.state.plan_limiter.hit(user.id)
     planner = get_planner()
     plan = planner.plan(goal=body.goal, answers=body.answers or {}, db=db, user=user)
     
@@ -83,7 +92,9 @@ def analyze_mission(body: AnalyzeRequest, db: Session = Depends(get_db), user: U
 
 
 @router.post("", response_model=MissionDetail, status_code=status.HTTP_201_CREATED)
-def create_mission(body: MissionCreate, db: Session = Depends(get_db), user: User = Depends(current_user)):
+def create_mission(body: MissionCreate, request: Request, db: Session = Depends(get_db),
+                   user: User = Depends(current_user)):
+    request.app.state.mission_limiter.hit(user.id)
     return _detail(svc.create_mission(db, user, body))
 
 

@@ -85,10 +85,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             request_id_var.reset(token)
         response.headers[REQUEST_ID_HEADER] = rid
         response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if settings.environment == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
     app.state.settings = settings
     app.state.auth_limiter = AttemptLimiter()
+    app.state.plan_limiter = AttemptLimiter(settings.plans_per_hour, 3600.0, "rate_limited",
+                                            "You have planned a lot of missions this hour. Try again later.")
+    app.state.mission_limiter = AttemptLimiter(settings.missions_per_hour, 3600.0, "rate_limited",
+                                               "You have created a lot of missions this hour. Try again later.")
     app.state.engine = make_engine(settings.database_url)
     if settings.auto_migrate:
         upgrade_to_head(settings.database_url)

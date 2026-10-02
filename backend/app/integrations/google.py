@@ -20,7 +20,7 @@ from typing import Any
 from urllib.parse import quote, urlencode
 
 import httpx
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet, InvalidToken, MultiFernet
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -122,8 +122,10 @@ def _send(http: httpx.Client, method: str, url: str, **kwargs) -> httpx.Response
 class TokenVault:
     """Encrypts token bundles and OAuth state with the server's Fernet key."""
 
-    def __init__(self, key: str):
-        self._fernet = Fernet(key.encode() if isinstance(key, str) else key)
+    def __init__(self, key: str | bytes):
+        # "new,old": encrypt with the first key, decrypt with any (key rotation, #50).
+        keys = key.decode() if isinstance(key, bytes) else key
+        self._fernet = MultiFernet([Fernet(k.strip().encode()) for k in keys.split(",") if k.strip()])
 
     def seal(self, data: dict) -> bytes:
         return self._fernet.encrypt(json.dumps(data).encode())

@@ -56,7 +56,8 @@ Environment variables, prefixed `AGENTOS_`, can also go in `backend/.env`. That 
 | `AGENTOS_CORS_ORIGINS` | `["http://localhost:3000","http://localhost:4173"]` | JSON list |
 | `AGENTOS_DATABASE_URL` | `sqlite:///./agentos.db` | e.g. `postgresql+psycopg://…` in production |
 | `AGENTOS_AUTO_MIGRATE` | `true` | apply migrations at startup |
-| `AGENTOS_ENCRYPTION_KEY` | none | Fernet key that encrypts stored Google tokens |
+| `AGENTOS_ENCRYPTION_KEY` | none | Fernet key that encrypts stored Google tokens ; to rotate, set `new,old` (encrypts with the first, still opens the old) |
+| `AGENTOS_PLANS_PER_HOUR` / `AGENTOS_MISSIONS_PER_HOUR` | `30` / `20` | per-user limits; over them the API answers 429 `rate_limited` |
 | `AGENTOS_GOOGLE_CLIENT_ID` | none | Google OAuth client id (type **Web**) |
 | `AGENTOS_GOOGLE_CLIENT_SECRET` | none | its secret |
 | `AGENTOS_GOOGLE_REDIRECT_URI` | `http://localhost:8000/api/integrations/google/callback` | must match the OAuth client |

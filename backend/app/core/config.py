@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     llm_fallback_base_url: str = "https://api.groq.com/openai/v1"
     llm_fallback_provider_models: str = "llama-3.3-70b-versatile,openai/gpt-oss-120b,llama-3.1-8b-instant"
     llm_timeout_seconds: float = 20.0  # per model attempt
+    # Per-user limits (#50): AI planning uses a shared free quota, and every mission can act in Google.
+    plans_per_hour: int = 30
+    missions_per_hour: int = 20
     llm_total_seconds: float = 28.0  # per planning call; x2 with one repair stays under the 60 s the website waits
 
     # Alternatively Anthropic, used when AGENTOS_LLM_API_KEY is not set.
