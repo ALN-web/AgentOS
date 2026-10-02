@@ -256,6 +256,17 @@ export default function NewMissionModal() {
     onResult: handleSpeechResult
   });
 
+  const backendStatus = useBackendStatus();
+  const { connected: googleConnected } = useGoogleIntegration();
+  const isLiveAvailable = Boolean(backendStatus?.liveMode?.available);
+
+  // Preselect Live Mode when user is signed in and live mode is available
+  const [executionMode, setExecutionMode] = useState(() => {
+    if (launcher?.mode) return launcher.mode;
+    return isAuthenticated && isLiveAvailable ? 'live' : 'demo';
+  });
+  const [userSelectedMode, setUserSelectedMode] = useState(false);
+
   useEffect(() => {
     if (launcher.open) {
       setGoal(launcher.goal);
@@ -263,9 +274,34 @@ export default function NewMissionModal() {
       setAnswers({});
       setLivePlan(null);
       setIsPlanning(false);
+      setUserSelectedMode(false);
+      if (launcher.mode) {
+        setExecutionMode(launcher.mode);
+        setUserSelectedMode(true);
+      } else if (isAuthenticated && isLiveAvailable) {
+        setExecutionMode('live');
+      } else {
+        setExecutionMode('demo');
+      }
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [launcher.open, launcher.goal]);
+  }, [launcher.open, launcher.goal, launcher.mode, isAuthenticated, isLiveAvailable]);
+
+  // If launcher is open, user hasn't manually picked a mode, and backend health finishes loading
+  useEffect(() => {
+    if (launcher.open && !userSelectedMode && !launcher.mode) {
+      if (isAuthenticated && isLiveAvailable) {
+        setExecutionMode('live');
+      } else {
+        setExecutionMode('demo');
+      }
+    }
+  }, [launcher.open, userSelectedMode, launcher.mode, isAuthenticated, isLiveAvailable]);
+
+  const handleSelectMode = (mode) => {
+    setUserSelectedMode(true);
+    setExecutionMode(mode);
+  };
 
   useEffect(() => {
     if (!launcher.open) return;
@@ -273,10 +309,6 @@ export default function NewMissionModal() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [launcher.open, closeLauncher]);
-
-  const backendStatus = useBackendStatus();
-  const { connected: googleConnected } = useGoogleIntegration();
-  const isLiveAvailable = Boolean(backendStatus?.liveMode?.available);
   
   let missingCaps = [];
   if (stage === 'review' && !googleConnected) {
@@ -286,7 +318,6 @@ export default function NewMissionModal() {
   }
   const hasMissingCapabilities = missingCaps.length > 0;
 
-  const [executionMode, setExecutionMode] = useState('demo');
   const [starting, setStarting] = useState(false);
   const [isPlanning, setIsPlanning] = useState(false);
   const [livePlan, setLivePlan] = useState(null);
@@ -500,7 +531,7 @@ export default function NewMissionModal() {
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
-                          onClick={() => setExecutionMode('demo')}
+                          onClick={() => handleSelectMode('demo')}
                           className={`px-3 py-2 rounded-xl text-xs font-semibold text-left border transition-all ${
                             executionMode === 'demo'
                               ? 'border-[#eb6920]/50 bg-[#eb6920]/15 text-white shadow-sm'
@@ -514,10 +545,10 @@ export default function NewMissionModal() {
                           <div className="text-[10px] text-gray-500 mt-0.5">Scripted browser simulation</div>
                         </button>
 
-                        {isLiveAvailable && googleConnected ? (
+                        {isLiveAvailable && (googleConnected || isAuthenticated) ? (
                           <button
                             type="button"
-                            onClick={() => setExecutionMode('live')}
+                            onClick={() => handleSelectMode('live')}
                             className={`px-3 py-2 rounded-xl text-xs font-semibold text-left border transition-all ${
                               executionMode === 'live'
                                 ? 'border-emerald-500/50 bg-emerald-500/15 text-white shadow-sm'
@@ -528,15 +559,17 @@ export default function NewMissionModal() {
                               <span>Live Mode</span>
                               {executionMode === 'live' && <Check className="w-3 h-3 text-emerald-400" />}
                             </div>
-                            <div className="text-[10px] text-gray-500 mt-0.5">Real Google tools & SSE</div>
+                            <div className="text-[10px] text-gray-500 mt-0.5">
+                              Real Google tools & SSE{!googleConnected ? ' · Connect Google to execute' : ''}
+                            </div>
                           </button>
                         ) : (
                           <div className="px-3 py-2 rounded-xl text-xs font-semibold text-left border border-white/5 bg-white/[0.02] text-gray-500 opacity-70">
                             <div className="font-bold flex items-center gap-1.5">Live Mode</div>
                             <div className="text-[10px] mt-0.5">
                               {!isLiveAvailable 
-                                ? (backendStatus.status === 'unreachable' ? 'AgentOS backend cannot be reached.' : 'Live Mode is disabled on backend.')
-                                : 'Connect Google to use Live missions.'}
+                                ? (backendStatus?.status === 'unreachable' ? 'AgentOS backend cannot be reached.' : 'Live Mode is disabled on backend.')
+                                : 'Sign in & connect Google to use Live missions.'}
                             </div>
                           </div>
                         )}
@@ -629,7 +662,7 @@ export default function NewMissionModal() {
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
-                          onClick={() => setExecutionMode('demo')}
+                          onClick={() => handleSelectMode('demo')}
                           className={`px-3 py-2 rounded-xl text-xs font-semibold text-left border transition-all ${
                             executionMode === 'demo'
                               ? 'border-[#eb6920]/50 bg-[#eb6920]/15 text-white shadow-sm'
@@ -643,10 +676,10 @@ export default function NewMissionModal() {
                           <div className="text-[10px] text-gray-500 mt-0.5">Scripted browser simulation</div>
                         </button>
 
-                        {isLiveAvailable && (!hasMissingCapabilities || googleConnected) ? (
+                        {isLiveAvailable && (googleConnected || isAuthenticated || !hasMissingCapabilities) ? (
                           <button
                             type="button"
-                            onClick={() => setExecutionMode('live')}
+                            onClick={() => handleSelectMode('live')}
                             className={`px-3 py-2 rounded-xl text-xs font-semibold text-left border transition-all ${
                               executionMode === 'live'
                                 ? 'border-emerald-500/50 bg-emerald-500/15 text-white shadow-sm'
@@ -658,7 +691,7 @@ export default function NewMissionModal() {
                               {executionMode === 'live' && <Check className="w-3 h-3 text-emerald-400" />}
                             </div>
                             <div className="text-[10px] text-gray-500 mt-0.5">
-                              Real Google tools & SSE{!isAuthenticated ? ' · Sign-in required' : ''}
+                              Real Google tools & SSE{!isAuthenticated ? ' · Sign-in required' : !googleConnected ? ' · Connect Google' : ''}
                             </div>
                           </button>
                         ) : (
@@ -666,7 +699,7 @@ export default function NewMissionModal() {
                             <div className="font-bold flex items-center gap-1.5">Live Mode</div>
                             <div className="text-[10px] mt-0.5">
                               {!isLiveAvailable 
-                                ? (backendStatus.status === 'unreachable' ? 'AgentOS backend cannot be reached.' : 'Live Mode is disabled on backend.')
+                                ? (backendStatus?.status === 'unreachable' ? 'AgentOS backend cannot be reached.' : 'Live Mode is disabled on backend.')
                                 : hasMissingCapabilities 
                                 ? `Requires capabilities: ${missingCaps.join(', ')}`
                                 : 'Connect Google to use Live missions.'}
