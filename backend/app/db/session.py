@@ -13,7 +13,8 @@ def make_engine(url: str) -> Engine:
         engine = create_engine(url, connect_args={"check_same_thread": False}, future=True)
     else:
         # Hosted Postgres (Neon) closes idle connections: check each one before use.
-        engine = create_engine(url, future=True, pool_pre_ping=True, pool_recycle=300, pool_size=5, max_overflow=5)
+        engine = create_engine(url, future=True, pool_pre_ping=True, pool_recycle=300, pool_size=5, max_overflow=5,
+                               pool_timeout=10, connect_args={"connect_timeout": 5})
     if sqlite:
         # SQLite ignores foreign keys unless asked, per connection.
         @event.listens_for(engine, "connect")

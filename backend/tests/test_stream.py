@@ -166,3 +166,29 @@ def test_live_stream_receives_events_and_closes_on_completion(app, client):
         assert len(lines) == 3
         assert lines == ["id: 1", "id: 2", "id: 3"]
 
+
+
+
+def test_the_stream_reads_the_database_off_the_event_loop(app, client, monkeypatch):
+    """Render restarts the server when /api/health takes over 5 s: a stream must never block the loop."""
+    import asyncio
+    import threading
+
+    from app.api import missions as api
+
+    mid = _create_sample_mission(client)["id"]
+    loop_threads, poll_threads = [], []
+    real_to_thread = asyncio.to_thread
+
+    async def tracking_to_thread(fn, *args, **kwargs):
+        loop_threads.append(threading.get_ident())
+
+        def run():
+            poll_threads.append(threading.get_ident())
+            return fn(*args, **kwargs)
+        return await real_to_thread(run)
+
+    monkeypatch.setattr(api.asyncio, "to_thread", tracking_to_thread)
+    res = client.get(f"/api/missions/{mid}/stream")
+    assert res.status_code == 200 and "id: 1" in res.text
+    assert poll_threads and all(p != l for p, l in zip(poll_threads, loop_threads))
