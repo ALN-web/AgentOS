@@ -65,7 +65,9 @@ export default function MissionBrief({ plan }) {
           <p className="text-[10px] text-gray-600">
             {plan.kind === 'hero'
               ? 'Curated demo plan for the hero mission. Actions are simulated.'
-              : 'Planned by the demo planner (deterministic, in your browser). Actions are simulated.'}
+              : plan.plannerSource === 'llm' || plan.planner === 'llm'
+                ? 'Planned by the AI planner.'
+                : 'Planned by the rule-based planner (no AI).'}
           </p>
         </div>
       )}

@@ -228,7 +228,9 @@ function Understanding({ goal, answers, setAnswers, preferences, livePlan }) {
         <ShieldAlert className="w-3 h-3 mt-0.5 shrink-0" />
         {plan.kind === 'hero'
           ? 'Curated demo plan. Every action runs as a simulation.'
-          : 'Planned by the demo planner: deterministic goal analysis in your browser, no API key. Every action runs as a simulation.'}
+          : isLlmPlan
+            ? 'Planned by the AI planner. In Live Mode, approved Google steps run for real; anything without a real tool is marked as simulated.'
+            : 'Planned by the rule-based planner (no AI). In Demo Mode every action is simulated; in Live Mode approved Google steps run for real.'}
       </p>
     </div>
   );
