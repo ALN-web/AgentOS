@@ -9,10 +9,12 @@ via AGENTOS_LLM_*, or Anthropic via AGENTOS_ANTHROPIC_*.
 """
 
 import json
+import re
 import logging
 import time
 from datetime import datetime, timezone
 from typing import Protocol
+from zoneinfo import ZoneInfo
 
 import httpx
 from sqlalchemy.orm import Session
@@ -147,6 +149,12 @@ Answer with the JSON object only: no prose, no markdown."""
             return None
 
     def plan(self, goal: str, answers: dict, db: Session, user: User) -> MissionPlan | None:
+        plan = self._plan(goal, answers, db, user)
+        if plan is not None:
+            localize_times(plan, load_preferences(db, user).timezone)
+        return plan
+
+    def _plan(self, goal: str, answers: dict, db: Session, user: User) -> MissionPlan | None:
         system = self._build_system_prompt(db, user)
         prompt = json.dumps({"goal": goal, "answers": answers})
 
@@ -181,6 +189,27 @@ Answer with the JSON object only: no prose, no markdown."""
         if start != -1 and end > start:
             text = text[start:end + 1]
         return MissionPlan(**json.loads(text))
+
+
+TIME_INPUTS = ("start", "end", "start_time", "end_time", "time_min", "time_max", "due")
+_UTC_OR_NAIVE = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)(Z|[+-]00:00)?$")
+
+
+def localize_times(plan: MissionPlan, tz_name: str | None) -> None:
+    """Free models often write "19:00Z" for "7 pm" even when told the user's offset. For a user
+    whose timezone is not UTC, a UTC or offset-less time from the AI is the user's local time."""
+    if not tz_name or tz_name == "UTC":
+        return
+    try:
+        tz = ZoneInfo(tz_name)
+    except Exception:
+        return
+    for task in plan.tasks:
+        for key in TIME_INPUTS:
+            value = task.inputs.get(key)
+            m = _UTC_OR_NAIVE.match(value) if isinstance(value, str) else None
+            if m:
+                task.inputs[key] = datetime.fromisoformat(m.group(1)).replace(tzinfo=tz).isoformat()
 
 
 class OpenAICompatiblePlanner(AnthropicPlanner):

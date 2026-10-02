@@ -257,3 +257,21 @@ def test_only_a_fallback_key_still_uses_the_ai_planner(monkeypatch, user):
     hosts = []
     p.transport = httpx.MockTransport(lambda req: hosts.append(req.url.host) or reply(json.dumps(EXAMPLE)))
     assert p.plan("x", {}, db, u) is not None and hosts == ["api.groq.com"]
+
+
+def test_ai_times_without_the_users_offset_are_read_as_local_time():
+    from app.services.planner import localize_times
+    plan = MissionPlan(**json.loads(json.dumps(EXAMPLE)))
+    plan.tasks[0].inputs.update({"start": "2026-10-03T19:00:00Z", "end": "2026-10-03T21:00"})
+    plan.tasks[1].inputs.update({"start": "2026-10-03T19:00:00+05:30"})
+    localize_times(plan, "Asia/Kolkata")
+    assert plan.tasks[0].inputs["start"] == "2026-10-03T19:00:00+05:30"  # 7 pm in India, not 00:30
+    assert plan.tasks[0].inputs["end"] == "2026-10-03T21:00:00+05:30"
+    assert plan.tasks[1].inputs["start"] == "2026-10-03T19:00:00+05:30"  # an explicit offset is kept
+    utc = MissionPlan(**json.loads(json.dumps(EXAMPLE)))
+    utc.tasks[0].inputs["start"] = "2026-10-03T19:00:00Z"
+    localize_times(utc, "UTC")
+    assert utc.tasks[0].inputs["start"] == "2026-10-03T19:00:00Z"  # UTC users unchanged
+    ref = MissionPlan(**json.loads(json.dumps(EXAMPLE)))
+    localize_times(ref, "Asia/Kolkata")
+    assert ref.tasks[1].inputs["start"] == EXAMPLE["tasks"][1]["inputs"]["start"]  # references untouched
