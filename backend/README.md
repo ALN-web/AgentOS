@@ -69,6 +69,7 @@ Environment variables, prefixed `AGENTOS_`, can also go in `backend/.env`. That 
 | `AGENTOS_LLM_FALLBACK_API_KEY` | none | optional second provider, tried after every primary model fails |
 | `AGENTOS_LLM_FALLBACK_BASE_URL` | Groq's OpenAI endpoint | the second provider's endpoint |
 | `AGENTOS_LLM_FALLBACK_PROVIDER_MODELS` | `llama-3.3-70b-versatile,…` | the second provider's models, in order |
+| `AGENTOS_WEB_SEARCH` | on (off in tests) | real web research tool `web.search`: Gemini + Google Search (with `AGENTOS_LLM_API_KEY`), then Groq web search (with `AGENTOS_LLM_FALLBACK_API_KEY`), then Wikipedia (no key) |
 | `AGENTOS_ANTHROPIC_API_KEY` | none | alternative AI planner via Anthropic, used when no `AGENTOS_LLM_API_KEY` is set |
 | `AGENTOS_AUTH_LOCAL_FALLBACK` | unset | `true` lets a dev server act as one local user without signing in (never in production; tests use it by default) |
 

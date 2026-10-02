@@ -12,6 +12,10 @@ def _never_read_backend_env(monkeypatch):
 
     clean = Settings(environment="test", _env_file=None)
     monkeypatch.setattr(planner, "get_settings", lambda: clean)
+    yield
+    from app.tools.registry import unregister_tool
+
+    unregister_tool("web.search")  # registered by production-like test apps; never left behind
 
 
 def make_settings(tmp_path, **overrides) -> Settings:

@@ -79,6 +79,7 @@ MAX_RETRIES = 2
 RETRY_BACKOFF_SECONDS = 1.0
 # Budgets: at most this many tool calls per mission, and this long per run.
 MAX_TOOL_CALLS_PER_MISSION = 30
+APP_NAMES = {"calendar": "Google Calendar", "gmail": "Gmail", "drive": "Google Drive", "forms": "Google Forms"}
 MAX_RUN_SECONDS = 120.0
 
 
@@ -206,8 +207,14 @@ def run_mission(db: Session, user: User, mission_id: str, google: GoogleConnecto
                 resolution = resolve(tool_name, db, user)
                 if not resolution.available:
                     reason = resolution.reason or "tool_unavailable"
-                    pause = reason == "not_connected"
-                    _fail(db, mission, task, reason, "Could not use the tool. Connect the required integration and try again." if pause else "The required tool is unavailable.", pause=pause)
+                    pause = reason in ("not_connected", "missing_scope")
+                    app_name = APP_NAMES.get(tool_name.split(".")[0], "this app")
+                    message = {
+                        "not_connected": "Could not use the tool. Connect the required integration and try again.",
+                        # Connected before this permission existed: reconnecting asks Google for it (#53).
+                        "missing_scope": f"Google has not given AgentOS access to {app_name} yet. Open Apps, connect Google again, then start the mission again.",
+                    }.get(reason, "The required tool is unavailable.")
+                    _fail(db, mission, task, reason, message, pause=pause)
                     raise PauseExecution(mission)
                 tool = resolution.tool
                 if not tool:

@@ -17,6 +17,7 @@ from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger, request_id_var
 from app.db.migrate import upgrade_to_head
 from app.services.auth import AttemptLimiter
+from app.tools.web import WebSearchTool
 from app.services.worker import MissionWorker
 from app.db.session import make_engine, make_session_factory
 from app.integrations.google import GoogleConnector
@@ -116,6 +117,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             register_tool(tool)
             if hasattr(tool, "action_id") and tool.action_id:
                 register_tool(tool.action_id)
+
+    # Real web research needs no account (#53).
+    if settings.web_search_enabled:
+        register_tool(WebSearchTool(settings))
 
     install_error_handlers(app)
     app.include_router(health.router, prefix="/api")

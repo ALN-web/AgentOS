@@ -192,6 +192,13 @@ def reverify_mission(
                 ev.method = "Gmail did not confirm this message as sent"
             continue
 
+        if ev.type == "web_source":
+            # A public page found by web search (#53); the link opens the source itself.
+            ev.status = "verified" if (ev.url or "").startswith("https://") else "failed"
+            ev.verified_at = utcnow() if ev.status == "verified" else None
+            ev.method = "public web source returned by the search, with its link"
+            continue
+
         if ev.type == "email_prepared":
             # Prepared inside AgentOS for approval; nothing to re-read in Gmail.
             ev.status = "verified"
