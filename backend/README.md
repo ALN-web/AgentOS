@@ -1,19 +1,19 @@
-# AgentOS backend (Live Mode, in development)
+# AgentOS backend (Live Mode)
 
-The public AgentOS demo is the frontend Demo Mode and does **not** use this backend. This service is the foundation for Live Mode, which executes real actions through a tool registry, a policy engine and human approval. See [`../docs/live-mode.md`](../docs/live-mode.md) for the design and roadmap.
+The FastAPI service behind Live Mode. It handles:
 
-Current state: **Phase 2 plus part of Phase 3.**
-- The app: FastAPI with typed settings, request ids, structured logging and a consistent error format.
-- The database: SQLAlchemy models for the full Live Mode schema, with Alembic migrations (SQLite locally, PostgreSQL-ready).
-- Capabilities: `GET /api/capabilities` returns the registry mirrored from the frontend, including calendar, email and reminders, with honest `simulated`/`live` modes. Plans must gate every external capability behind approval.
-- Missions: `POST/GET /api/missions`, `GET /api/missions/{id}` and `GET /api/missions/{id}/events`. They validate and store mission plans from the frontend planner.
-- Health: `GET /api/health` reports database status and `live_mode.available: false`.
-- Nothing executes yet: there are no tools, policy engine or LLM.
-- Authentication does not exist yet either. In development every request acts as one local user; in production the mission endpoints refuse to serve (503) until authentication is added.
+- accounts and sessions;
+- Google OAuth;
+- the AI planner (Gemini, then Groq, then a rule-based planner);
+- missions, which run on a background worker, through a policy engine and human approval, and are verified against Google;
+- real tools: Calendar, Gmail send, Drive/Docs, Forms and web search.
+
+**Step-by-step setup, including Google Cloud and keys, is in the main [README](../README.md#b-full-live-mode-on-your-computer-about-30-minutes).**
+This page is the reference.
 
 ## Run
 
-Requires Python 3.11+.
+Requires Python 3.11+ (3.12 recommended).
 
 ```bash
 cd backend
@@ -79,9 +79,9 @@ Without the three Google/encryption settings, missions still run, but every Goog
 step is **simulated** and marked so (`simulated: true` in events, no proof links), and
 `/api/health` reports `live_mode.available: false`. With them, Google steps are real.
 
-1. In Google Cloud Console: create a project, enable the **Google Calendar API** and
-   the **Gmail API**, configure the OAuth consent screen (External, Testing), and add
-   the Google accounts you will demo with as **test users**.
+1. In Google Cloud Console: create a project, enable the **Google Calendar**, **Gmail**,
+   **Google Drive** and **Google Forms** APIs, configure the OAuth consent screen
+   (External), and add the Google accounts you will use as **test users** (or publish the app).
 2. Create an OAuth client ID of type **Web application** with the authorised redirect
    URI `http://localhost:8000/api/integrations/google/callback`.
 3. Put the settings in `backend/.env` (git-ignored, never commit it):
@@ -99,17 +99,17 @@ step is **simulated** and marked so (`simulated: true` in events, no proof links
 4. Restart the backend, open the app in Live Mode, go to **Apps** and connect Google.
 
 How it behaves:
-- Scopes are only `calendar.events` and `gmail.compose`. OAuth uses PKCE and an
+- Scopes are only `calendar.events`, `gmail.send`, `drive.file`, `forms.body` and `userinfo.email`. OAuth uses PKCE and an
   encrypted, expiring `state`. Tokens are encrypted at rest, refreshed when needed,
   revoked on disconnect, and never appear in responses, events or logs.
 - Every tool call passes the policy engine (your per-app permissions). Creating an
-  event and sending an email always wait for your approval; a draft runs on its own
-  because nothing leaves your account. Rejecting a step skips it (and anything that
+  event, a document or a form, and sending an email, always wait for your approval. An email is
+  prepared inside AgentOS and shown in full in the approval card before it is sent. Rejecting a step skips it (and anything that
   needs it), and the mission still completes with that criterion left open.
 - Failures are classified (`authentication_failed`, `permission_denied`, `rate_limited`,
   `service_unavailable`, `validation_error`, `timeout`, `network_error`); transient ones
   are retried at most twice. Budgets: 30 tool calls per mission, 120 s per run.
-- Proof is re-read from Google: the event by its id, the draft by its id, and a sent
-  email by Gmail's `SENT` label plus the draft having left Drafts. Calendar events use
+- Proof is re-read from Google: the event, document and form by their ids. A sent email is
+  proven by Gmail's `SENT` confirmation, recorded when it is sent (`gmail.send` cannot read mail back). Calendar events use
   an id derived from the mission step, so a retry can never create a duplicate.
 
