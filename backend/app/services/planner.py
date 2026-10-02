@@ -188,53 +188,71 @@ class OpenAICompatiblePlanner(AnthropicPlanner):
 
     transport: httpx.BaseTransport | None = None  # tests inject httpx.MockTransport
 
-    # Free tiers rate-limit (429) or get overloaded (5xx) per model: try the next model.
-    RETRY_NEXT_MODEL = {408, 429, 500, 502, 503, 504}
+    # Free tiers rate-limit (429), get overloaded (5xx) or retire models (404): try the next model.
+    RETRY_NEXT_MODEL = {404, 408, 429, 500, 502, 503, 504}
+    FALLBACK_RESERVE_SECONDS = 8.0  # time kept for the second provider
+
+    @staticmethod
+    def _split(models: str | None) -> list[str]:
+        return [m.strip() for m in (models or "").split(",") if m.strip()]
 
     def _models(self) -> list[str]:
-        extra = [m.strip() for m in (self.settings.llm_fallback_models or "").split(",") if m.strip()]
-        return list(dict.fromkeys([self.settings.llm_model, *extra]))
+        return list(dict.fromkeys([self.settings.llm_model, *self._split(self.settings.llm_fallback_models)]))
+
+    def _providers(self) -> list[tuple[str, str, list[str]]]:
+        """(base_url, key, models) in order: the primary provider, then the optional
+        second provider (#101, e.g. Groq) so one provider's free quota is not a single point of failure."""
+        out = []
+        if self.settings.llm_api_key:
+            out.append((self.settings.llm_base_url, self.settings.llm_api_key.get_secret_value(), self._models()))
+        if self.settings.llm_fallback_api_key:
+            out.append((self.settings.llm_fallback_base_url, self.settings.llm_fallback_api_key.get_secret_value(),
+                        self._split(self.settings.llm_fallback_provider_models)))
+        return [p for p in out if p[2]]
 
     def _call_llm(self, prompt: str, system: str) -> str | None:
-        key = self.settings.llm_api_key
-        if not key:
+        providers = self._providers()
+        if not providers:
             return None
-        url = self.settings.llm_base_url.rstrip("/") + "/chat/completions"
-        headers = {"Authorization": f"Bearer {key.get_secret_value()}"}
         deadline = time.monotonic() + self.settings.llm_total_seconds
         with httpx.Client(transport=self.transport) as http:
-            for model in self._models():
-                remaining = deadline - time.monotonic()
-                if remaining < 3:
-                    break
-                body = {
-                    "model": model,
-                    "temperature": 0,
-                    "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
-                    "response_format": {"type": "json_object"},
-                }
-                timeout = min(self.settings.llm_timeout_seconds, remaining)
-                try:
-                    res = http.post(url, json=body, headers=headers, timeout=timeout)
-                    if res.status_code == 400:
-                        # Some models do not support JSON mode; ask again without it.
-                        body.pop("response_format")
-                        res = http.post(url, json=body, headers=headers, timeout=max(3.0, deadline - time.monotonic()))
-                    if res.status_code == 200:
-                        return res.json()["choices"][0]["message"]["content"]
-                    log.warning("LLM model %s unavailable: HTTP %s", model, res.status_code)
-                    if res.status_code not in self.RETRY_NEXT_MODEL:
-                        return None  # e.g. a bad key: another model will not help
-                except httpx.TimeoutException:
-                    log.warning("LLM model %s timed out", model)
-                except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError) as e:
-                    log.error("LLM planning failed: %s", type(e).__name__)
-                    return None
+            for index, (base_url, key, models) in enumerate(providers):
+                url = base_url.rstrip("/") + "/chat/completions"
+                headers = {"Authorization": f"Bearer {key}"}
+                host = httpx.URL(url).host
+                reserve = self.FALLBACK_RESERVE_SECONDS if index < len(providers) - 1 else 0.0
+                for model in models:
+                    remaining = deadline - time.monotonic() - reserve
+                    if remaining < 3:
+                        break
+                    body = {
+                        "model": model,
+                        "temperature": 0,
+                        "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
+                        "response_format": {"type": "json_object"},
+                    }
+                    try:
+                        res = http.post(url, json=body, headers=headers, timeout=min(self.settings.llm_timeout_seconds, remaining))
+                        if res.status_code == 400:
+                            # Some models do not support JSON mode; ask again without it.
+                            body.pop("response_format")
+                            res = http.post(url, json=body, headers=headers,
+                                            timeout=max(3.0, deadline - time.monotonic() - reserve))
+                        if res.status_code == 200:
+                            return res.json()["choices"][0]["message"]["content"]
+                        log.warning("LLM model %s on %s unavailable: HTTP %s", model, host, res.status_code)
+                        if res.status_code not in self.RETRY_NEXT_MODEL:
+                            break  # e.g. a bad key: skip this provider's other models
+                    except httpx.TimeoutException:
+                        log.warning("LLM model %s on %s timed out", model, host)
+                    except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError) as e:
+                        log.warning("LLM model %s on %s failed: %s", model, host, type(e).__name__)
         log.error("LLM planning failed: no model answered in time")
         return None
 
+
 def get_planner() -> Planner:
     settings = get_settings()
-    if settings.llm_api_key:
+    if settings.llm_api_key or settings.llm_fallback_api_key:
         return OpenAICompatiblePlanner()
     return AnthropicPlanner()

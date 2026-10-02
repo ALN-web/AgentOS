@@ -170,3 +170,90 @@ def test_a_bad_key_does_not_cycle_through_every_model(user):
 
     assert make_planner(handler, llm_model="model-a", llm_fallback_models="model-b").plan("x", {}, db, u) is None
     assert models == ["model-a"]
+
+
+GROQ_KEY = "gsk-test-key-never-logged"
+
+
+def two_providers(handler, **settings):
+    return make_planner(handler, llm_model="gemini-a", llm_fallback_models="gemini-b",
+                        llm_fallback_api_key=SecretStr(GROQ_KEY), llm_fallback_provider_models="groq-a,groq-b", **settings)
+
+
+@pytest.mark.parametrize("gemini_status", [429, 503, 401])
+def test_when_gemini_is_unavailable_the_second_provider_plans(user, gemini_status, caplog):
+    db, u = user
+    caplog.set_level(logging.DEBUG)
+    seen = []
+
+    def handler(req):
+        seen.append((req.url.host, json.loads(req.content)["model"], req.headers["authorization"]))
+        if req.url.host == "generativelanguage.googleapis.com":
+            return httpx.Response(gemini_status, json={})
+        return reply(json.dumps(EXAMPLE))
+
+    plan = two_providers(handler).plan("x", {}, db, u)
+    assert plan is not None
+    groq = [s for s in seen if s[0] == "api.groq.com"]
+    assert groq[0] == ("api.groq.com", "groq-a", f"Bearer {GROQ_KEY}")
+    assert all(s[2] == f"Bearer {KEY}" for s in seen if s[0] != "api.groq.com")  # each key only to its own provider
+    assert KEY not in caplog.text and GROQ_KEY not in caplog.text
+
+
+def test_the_second_provider_is_not_called_when_gemini_answers(user):
+    db, u = user
+    hosts = []
+
+    def handler(req):
+        hosts.append(req.url.host)
+        return reply(json.dumps(EXAMPLE))
+
+    assert two_providers(handler).plan("x", {}, db, u) is not None
+    assert hosts == ["generativelanguage.googleapis.com"]
+
+
+def test_a_retired_model_is_skipped(user):
+    db, u = user
+    models = []
+
+    def handler(req):
+        models.append(json.loads(req.content)["model"])
+        return httpx.Response(404, json={}) if len(models) < 4 else reply(json.dumps(EXAMPLE))
+
+    assert two_providers(handler).plan("x", {}, db, u) is not None
+    assert models == ["gemini-a", "gemini-b", "groq-a", "groq-b"]
+
+
+def test_everything_down_falls_back_to_the_rule_based_planner(user):
+    db, u = user
+    assert two_providers(lambda req: httpx.Response(503, json={})).plan("x", {}, db, u) is None
+
+
+def test_slow_gemini_still_leaves_time_for_the_second_provider(user, monkeypatch):
+    db, u = user
+    clock = [0.0]
+    monkeypatch.setattr(planner_mod.time, "monotonic", lambda: clock[0])
+    hosts = []
+
+    def handler(req):
+        hosts.append(req.url.host)
+        if req.url.host == "generativelanguage.googleapis.com":
+            clock[0] += req.extensions["timeout"]["read"]  # Gemini hangs until the attempt times out
+            raise httpx.ReadTimeout("slow")
+        return reply(json.dumps(EXAMPLE))
+
+    assert two_providers(handler).plan("x", {}, db, u) is not None
+    assert hosts[0] == "generativelanguage.googleapis.com" and hosts[-1] == "api.groq.com"
+    assert clock[0] <= 28  # within the overall planning budget
+
+
+def test_only_a_fallback_key_still_uses_the_ai_planner(monkeypatch, user):
+    db, u = user
+    base = planner_mod.get_settings()
+    monkeypatch.setattr(planner_mod, "get_settings", lambda: base.model_copy(
+        update={"llm_api_key": None, "llm_fallback_api_key": SecretStr(GROQ_KEY)}))
+    p = get_planner()
+    assert isinstance(p, OpenAICompatiblePlanner)
+    hosts = []
+    p.transport = httpx.MockTransport(lambda req: hosts.append(req.url.host) or reply(json.dumps(EXAMPLE)))
+    assert p.plan("x", {}, db, u) is not None and hosts == ["api.groq.com"]

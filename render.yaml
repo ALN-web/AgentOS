@@ -38,3 +38,6 @@ services:
       # Gemini (or another OpenAI-compatible) key for the AI planner.
       - key: AGENTOS_LLM_API_KEY
         sync: false
+      # Optional second AI provider (Groq by default), used when Gemini's free quota runs out.
+      - key: AGENTOS_LLM_FALLBACK_API_KEY
+        sync: false

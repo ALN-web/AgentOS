@@ -34,6 +34,7 @@ Cost: $0. Never paste secrets into chat, issues, commits or screenshots.
    | `AGENTOS_GOOGLE_REDIRECT_URI` | `https://<app>.vercel.app/api/integrations/google/callback` |
    | `AGENTOS_FRONTEND_URL` | `https://<app>.vercel.app` |
    | `AGENTOS_LLM_API_KEY` | your Gemini key |
+   | `AGENTOS_LLM_FALLBACK_API_KEY` | optional: a free Groq key (console.groq.com → API Keys) |
 
    The two public addresses (`AGENTOS_FRONTEND_URL`, `AGENTOS_GOOGLE_REDIRECT_URI`) are set in `render.yaml`; change them there if the Vercel address changes. Current site: https://agent-os-two-iota.vercel.app
 4. Deploy. Done when `https://<service>.onrender.com/api/health` shows `"database":"ok"`.
@@ -69,4 +70,5 @@ At https://cron-job.org add `GET https://<service>.onrender.com/api/health` ever
 - Every merge to `main` redeploys both the website and the backend.
 - Render's free disk is wiped on restart: all data lives in Neon.
 - Free Gemini models have daily quotas; the planner falls back through
-  `AGENTOS_LLM_FALLBACK_MODELS`, then to the rule-based planner.
+  `AGENTOS_LLM_FALLBACK_MODELS`, then to the second provider (Groq, if
+  `AGENTOS_LLM_FALLBACK_API_KEY` is set), then to the rule-based planner.

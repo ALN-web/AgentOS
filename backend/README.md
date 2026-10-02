@@ -63,7 +63,11 @@ Environment variables, prefixed `AGENTOS_`, can also go in `backend/.env`. That 
 | `AGENTOS_FRONTEND_URL` | `http://localhost:3000` | where the OAuth callback returns the browser |
 | `AGENTOS_LLM_API_KEY` | none | AI planner key for any OpenAI-compatible provider (Gemini by default). Without it, the deterministic planner is used |
 | `AGENTOS_LLM_BASE_URL` | Gemini's OpenAI endpoint | e.g. `https://api.groq.com/openai/v1`, `https://openrouter.ai/api/v1`, `https://integrate.api.nvidia.com/v1` |
-| `AGENTOS_LLM_MODEL` | `gemini-2.5-flash` | the provider's model name (check the provider's model list) |
+| `AGENTOS_LLM_MODEL` | `gemini-3.1-flash-lite` | the provider's model name (check the provider's model list) |
+| `AGENTOS_LLM_FALLBACK_MODELS` | `gemini-2.5-flash,…` | more models at the same provider, tried when one is rate-limited or overloaded |
+| `AGENTOS_LLM_FALLBACK_API_KEY` | none | optional second provider, tried after every primary model fails |
+| `AGENTOS_LLM_FALLBACK_BASE_URL` | Groq's OpenAI endpoint | the second provider's endpoint |
+| `AGENTOS_LLM_FALLBACK_PROVIDER_MODELS` | `llama-3.3-70b-versatile,…` | the second provider's models, in order |
 | `AGENTOS_ANTHROPIC_API_KEY` | none | alternative AI planner via Anthropic, used when no `AGENTOS_LLM_API_KEY` is set |
 | `AGENTOS_AUTH_LOCAL_FALLBACK` | unset | `true` lets a dev server act as one local user without signing in (never in production; tests use it by default) |
 
