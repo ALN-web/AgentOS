@@ -111,9 +111,11 @@ export default function AppLayout() {
         <div className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 text-[11px] text-gray-500 leading-relaxed">
           <div className="flex items-center gap-1.5 font-semibold text-gray-300 mb-0.5">
             <FlaskConical className="w-3 h-3 text-[#eb6920]" />
-            Demo environment
+            {isAuthenticated ? 'Live Mode + Demo' : 'Demo environment'}
           </div>
-          Agents run a scripted simulation in your browser.
+          {isAuthenticated
+            ? 'Live missions act in your connected Google apps after your approval. Demo missions stay simulated.'
+            : 'Agents run a scripted simulation in your browser.'}
           <div className="mt-1.5">
             <ResetDemoButton />
           </div>
@@ -163,7 +165,7 @@ export default function AppLayout() {
         </div>
         <div className="px-3 sm:px-4 pb-1.5 flex items-center gap-1.5 text-[10px] text-gray-500 truncate">
           <FlaskConical className="w-3 h-3 text-[#eb6920] shrink-0" />
-          <span className="truncate">Demo environment · all agent actions are simulated</span>
+          <span className="truncate">{isAuthenticated ? 'Live missions act in your Google apps after approval' : 'Demo environment · all agent actions are simulated'}</span>
         </div>
         <nav className="px-3 pb-2 flex gap-1 overflow-x-auto no-scrollbar" aria-label="Console">
           <NavItems pending={pending} compact />
