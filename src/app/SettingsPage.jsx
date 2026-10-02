@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { usePreferences } from '../store/PreferencesStore';
-import { Check, Plus, Trash2, X } from 'lucide-react';
+import { Check, Plus, Trash2, X, Loader2, AlertCircle } from 'lucide-react';
 import GoogleConnectControl from '../live/GoogleConnectControl';
 import { useAuth } from '../live/auth';
-import { api } from '../live/api';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const TONES = ['Friendly', 'Formal'];
@@ -16,38 +15,18 @@ const TIMEZONES = typeof Intl.supportedValuesOf === 'function'
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 export default function SettingsPage() {
-  const { preferences, updatePreferences } = usePreferences();
+  const { preferences, updatePreferences, saveStatus, saveError, saveNow } = usePreferences();
   const { isAuthenticated } = useAuth();
   
   // Local state for draft updates
   const [draft, setDraft] = useState(preferences);
-  const [saved, setSaved] = useState(false);
   
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupEmails, setNewGroupEmails] = useState({});
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-    let active = true;
-    api.getPreferences()
-      .then((serverPrefs) => {
-        if (!active || !serverPrefs) return;
-        setDraft(prev => ({
-          ...prev,
-          ...serverPrefs,
-          workingHours: serverPrefs.workingHours || prev.workingHours,
-          workingDays: serverPrefs.workingDays || prev.workingDays,
-          groups: Array.isArray(serverPrefs.groups)
-            ? serverPrefs.groups.map(g => ({ id: g.id || g.name, name: g.name, emails: g.emails || [] }))
-            : prev.groups,
-        }));
-        updatePreferences(serverPrefs);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [isAuthenticated]);
+    setDraft(preferences);
+  }, [preferences]);
 
   const save = async () => {
     // Validate
@@ -64,36 +43,12 @@ export default function SettingsPage() {
       return;
     }
 
-    if (isAuthenticated) {
-      try {
-        const payload = {
-          timezone: draft.timezone || 'UTC',
-          workingDays: draft.workingDays,
-          workingHours: draft.workingHours,
-          displayName: draft.displayName || '',
-          signature: draft.signature || '',
-          tone: draft.tone || 'Friendly',
-          meetingLength: Number(draft.meetingLength) || 30,
-          groups: (draft.groups || []).map(g => ({
-            name: g.name,
-            emails: g.emails || []
-          }))
-        };
-        await api.updatePreferences(payload);
-      } catch (err) {
-        alert(err?.message || 'Failed to save preferences to server.');
-        return;
-      }
-    }
-
-    updatePreferences(draft);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    await saveNow(draft);
   };
 
   const handleUpdate = (updates) => {
     setDraft(prev => ({ ...prev, ...updates }));
-    setSaved(false);
+    updatePreferences(updates);
   };
 
   const handleWorkingHours = (field, value) => {
@@ -355,11 +310,35 @@ export default function SettingsPage() {
 
         {/* Save */}
         <div className="flex items-center gap-4 pt-2">
-          <button onClick={save} className="btn-orange px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2">
-            Save Preferences
-            {saved && <Check className="w-4 h-4" />}
+          <button
+            onClick={save}
+            disabled={saveStatus === 'saving'}
+            className="btn-orange px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2"
+          >
+            {saveStatus === 'saving' ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                Save Preferences
+                {saveStatus === 'saved' && <Check className="w-4 h-4" />}
+              </>
+            )}
           </button>
-          {saved && <span className="text-sm text-emerald-400">Saved successfully!</span>}
+          {saveStatus === 'saved' && (
+            <span className="text-sm text-emerald-400 flex items-center gap-1.5">
+              <Check className="w-4 h-4" />
+              Saved
+            </span>
+          )}
+          {saveStatus === 'error' && (
+            <span className="text-sm text-red-400 flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4" />
+              {saveError || 'Failed to save preferences'}
+            </span>
+          )}
         </div>
       </div>
     </div>
