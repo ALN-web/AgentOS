@@ -415,7 +415,7 @@ export default function NewMissionModal() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-            className="relative w-full max-w-xl max-h-[92vh] overflow-y-auto bg-[#0e0c15] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.95)]"
+            className="relative w-full max-w-xl max-h-[92vh] overflow-y-auto bg-[#0e0c15] border border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.95)]"
           >
             <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#eb6920]/15 rounded-full blur-3xl pointer-events-none" />
 
@@ -528,7 +528,7 @@ export default function NewMissionModal() {
                           {isLiveAvailable ? 'Backend Live Mode Available' : backendStatus?.status === 'connected' ? 'Live Mode Unavailable' : 'Connecting to live server…'}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <button
                           type="button"
                           onClick={() => handleSelectMode('demo')}
@@ -659,7 +659,7 @@ export default function NewMissionModal() {
                           {isLiveAvailable ? 'Backend Live Mode Available' : 'Live Mode Unavailable'}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <button
                           type="button"
                           onClick={() => handleSelectMode('demo')}

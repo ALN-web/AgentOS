@@ -121,7 +121,7 @@ export default function Hero() {
         </div>
 
         <div className="text-center max-w-4xl mx-auto mb-10">
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.05] mb-6">
+          <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.08] mb-6">
             Your autonomous <br />
             <span className="bg-gradient-to-r from-[#ffb37a] via-[#ff8c42] to-[#eb6920] bg-clip-text text-transparent">agent for everyday apps</span>
           </h1>
@@ -133,13 +133,13 @@ export default function Hero() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-3">
           <button
             onClick={handleGetStarted}
-            className="w-full sm:w-auto px-8 py-4 rounded-full text-sm sm:text-base font-bold tracking-wide btn-orange flex items-center justify-center gap-2.5 shadow-[0_0_30px_rgba(235,105,32,0.35)] hover:shadow-[0_0_40px_rgba(235,105,32,0.5)] transition-all group"
+            className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 rounded-full text-sm sm:text-base font-bold tracking-wide btn-orange flex items-center justify-center gap-2.5 shadow-[0_0_30px_rgba(235,105,32,0.35)] hover:shadow-[0_0_40px_rgba(235,105,32,0.5)] transition-all group"
           >
             <span>Get started — connect your Google</span>
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </button>
         </div>
-        <div className="flex items-center justify-center gap-3 text-xs text-gray-400 mb-6">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs text-gray-400 mb-6 px-2">
           <span>Want to explore without connecting?</span>
           <button
             onClick={runDemo}
