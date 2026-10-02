@@ -9,6 +9,7 @@ import { AgentIcon, EmptyState } from '../components/ui';
 import MissionRow, { MissionHeader } from '../components/MissionRow';
 import { DEMO_GOAL } from '../data/templates';
 import ResetDemoButton from '../components/ResetDemoButton';
+import FirstRunGuide from '../components/FirstRunGuide';
 
 const RECENT = 5;
 
@@ -74,6 +75,8 @@ export default function Dashboard() {
           Try Demo Mission
         </button>
       </div>
+
+      <FirstRunGuide />
 
       <form onSubmit={start} className="glass-card rounded-2xl p-2 flex flex-col sm:flex-row gap-2 mb-8">
         <div className="flex items-center gap-3 flex-1 min-w-0 px-3">

@@ -37,6 +37,15 @@ def load_preferences(db: Session, user: User) -> Preferences:
     row = db.get(UserPreference, user.id)
     if row is None:
         return Preferences()
+    raw_groups = row.groups or []
+    clean_groups = []
+    onboarding_dismissed = False
+    for g in raw_groups:
+        if isinstance(g, dict) and g.get("__meta__"):
+            onboarding_dismissed = bool(g.get("onboarding_dismissed", False))
+        else:
+            clean_groups.append(g)
+
     return Preferences(
         timezone=row.timezone,
         working_days=row.working_days or list(DAYS[:5]),
@@ -45,7 +54,8 @@ def load_preferences(db: Session, user: User) -> Preferences:
         signature=row.signature,
         tone=row.tone,
         meeting_length=row.meeting_length,
-        groups=row.groups or [],
+        groups=clean_groups,
+        onboarding_dismissed=onboarding_dismissed,
     )
 
 
@@ -59,7 +69,10 @@ def save_preferences(db: Session, user: User, prefs: Preferences) -> Preferences
     row.signature = prefs.signature
     row.tone = prefs.tone
     row.meeting_length = prefs.meeting_length
-    row.groups = [g.model_dump() for g in prefs.groups]
+    serialized_groups = [g.model_dump() for g in prefs.groups]
+    if prefs.onboarding_dismissed:
+        serialized_groups.append({"__meta__": True, "onboarding_dismissed": True})
+    row.groups = serialized_groups
     db.add(row)
     db.commit()
     return load_preferences(db, user)
