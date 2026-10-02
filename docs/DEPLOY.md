@@ -53,8 +53,8 @@ Cost: $0. Never paste secrets into chat, issues, commits or screenshots.
 2. **Branding → Authorised domains:** add `<app>.vercel.app`.
 3. **Audience:** while testing, only listed test users can connect Google. To let
    anyone connect (up to 100 users before Google verification), **Publish app**.
-   Restricted scopes (`gmail.compose`) block non-test users of an unverified app;
-   see the Gmail note in the roadmap.
+   AgentOS uses only sensitive (not restricted) scopes, including `gmail.send`, so
+   published-but-unverified works: users see "unverified app" → Advanced → Continue.
 
 ## 5. Test like a judge
 Private window → the Vercel link → Sign up → Apps → Connect Google → New mission
@@ -64,7 +64,7 @@ signing in, refresh mid-mission, log out and in.
 ## 6. Keep it awake during judging (free)
 Render's free plan sleeps after 15 idle minutes (first request then takes ~30–60 s).
 At https://cron-job.org add `GET https://<service>.onrender.com/api/health` every
-10 minutes, only for the judging days.
+5 minutes, only for the judging days.
 
 ## Notes
 - Every merge to `main` redeploys both the website and the backend.
