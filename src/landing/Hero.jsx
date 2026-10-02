@@ -5,6 +5,7 @@ import { ArrowRight, Play } from 'lucide-react';
 import { AgentIcon, ProgressBar, StatusPill, agentName } from '../components/ui';
 import { useMissions } from '../store/MissionStore';
 import { DEMO_GOAL } from '../data/templates';
+import { useAuth } from '../live/auth';
 
 // A looping, condensed preview of the (simulated) demo mission.
 const PREVIEW = [
@@ -92,7 +93,16 @@ const STEPS = ['Give AgentOS a goal.', 'Agents execute the work.', 'AgentOS hand
 
 export default function Hero() {
   const { openLauncher, startDemo } = useMissions();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
+      navigate('/app/apps');
+    } else {
+      navigate('/signup?next=' + encodeURIComponent('/app/apps'));
+    }
+  };
 
   const runDemo = () => navigate(`/app/missions/${startDemo()}`);
 
@@ -120,39 +130,50 @@ export default function Hero() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-3">
           <button
-            onClick={() => openLauncher(DEMO_GOAL)}
-            className="w-full sm:w-auto px-8 py-3.5 rounded-full text-sm font-semibold tracking-wide uppercase btn-orange flex items-center justify-center gap-2 group"
+            onClick={handleGetStarted}
+            className="w-full sm:w-auto px-8 py-4 rounded-full text-sm sm:text-base font-bold tracking-wide btn-orange flex items-center justify-center gap-2.5 shadow-[0_0_30px_rgba(235,105,32,0.35)] hover:shadow-[0_0_40px_rgba(235,105,32,0.5)] transition-all group"
           >
-            Launch Mission
+            <span>Get started — connect your Google</span>
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </button>
+        </div>
+        <div className="flex items-center justify-center gap-3 text-xs text-gray-400 mb-6">
+          <span>Want to explore without connecting?</span>
           <button
             onClick={runDemo}
-            className="w-full sm:w-auto px-8 py-3.5 rounded-full text-sm font-semibold tracking-wide btn-dark flex items-center justify-center gap-2.5"
+            className="text-gray-400 hover:text-white underline underline-offset-4 transition-colors font-medium flex items-center gap-1"
           >
-            <Play className="w-3.5 h-3.5 fill-current text-[#eb6920]" />
-            Try Demo Mission
+            <Play className="w-3 h-3 fill-current text-[#eb6920]" />
+            <span>Try Demo</span>
           </button>
         </div>
         <p className="text-center text-xs text-gray-500 mb-10">
-          Runs entirely in your browser as a simulation. No sign-up, no API keys, nothing is sent anywhere.
+          Live Mode connects genuine apps with strict safety controls. Zero surprises — approvals required for sensitive actions.
         </p>
         <div className="flex flex-col items-center justify-center gap-3 mb-14">
           <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Works across</div>
           <div className="flex flex-wrap justify-center gap-3">
-            {['Calendar (Demo)', 'Gmail (Demo)', 'Drive (Coming soon)', 'Slack (Coming soon)', 'WhatsApp (Coming soon)'].map((app) => {
-              const [name, status] = app.split(' (');
-              return (
-                <div key={name} className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/5 bg-white/[0.02]">
-                  <span className="text-xs font-medium text-gray-300">{name}</span>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${status === 'Demo)' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/5 text-gray-500'}`}>
-                    {status.replace(')', '')}
-                  </span>
-                </div>
-              );
-            })}
+            {[
+              { name: 'Google Calendar', badge: 'Live', live: true },
+              { name: 'Gmail', badge: 'Live', live: true },
+              { name: 'Google Drive', badge: 'Live', live: true },
+              { name: 'Google Forms', badge: 'Live', live: true },
+              { name: 'Slack', badge: 'Coming soon', live: false },
+              { name: 'WhatsApp', badge: 'Coming soon', live: false },
+            ].map((app) => (
+              <div key={app.name} className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/5 bg-white/[0.02]">
+                <span className="text-xs font-medium text-gray-300">{app.name}</span>
+                <span
+                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                    app.live ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/5 text-gray-500'
+                  }`}
+                >
+                  {app.badge}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
         <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 max-w-4xl mx-auto mb-14" aria-label="How AgentOS works">
