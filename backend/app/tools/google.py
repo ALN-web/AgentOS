@@ -5,6 +5,7 @@ With a connected Google account (`ctx.google`), every tool calls the real API an
 return a clearly marked simulation: `simulated=True`, and the evidence carries no link.
 """
 
+import hashlib
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -12,7 +13,7 @@ from typing import Any
 from pydantic import BaseModel, Field, EmailStr, validator
 
 from app.domain import RiskLevel
-from app.integrations.google import GoogleError, event_id_for
+from app.integrations.google import GMAIL_SEND, GoogleError, event_id_for
 from app.schemas.preferences import Preferences
 from app.tools.base import Tool, ToolContext, ToolResult
 
@@ -252,51 +253,58 @@ class GmailCreateDraftInput(BaseModel):
                 raise ValueError(f"Invalid recipient email: {e}")
         return v
 
+def _compose_body(args: dict[str, Any]) -> tuple[str, str]:
+    subject = args.get("subject", "Birthday Dinner Invitation")
+    event_link = args.get("body_link") or args.get("html_link") or args.get("event_link") or ""
+    body = args.get("body")
+    if not body:
+        body = (
+            f"Hi,\n\nYou are invited to the birthday dinner for 8 on Saturday!\n"
+            f"Event details & link: {event_link}\n\nHope you can make it!"
+        )
+    elif event_link and event_link not in body:
+        body = f"{body}\n\nEvent link: {event_link}"
+    signature = args.get("signature")
+    if signature and signature not in body:
+        body = f"{body.rstrip()}\n\n{signature}"
+    return subject, body
+
+
 class GmailCreateDraftTool(Tool):
+    """Prepares the email inside AgentOS (#37). Nothing is written to Gmail: the text is
+    shown in the send step's approval card, and only the approved send reaches Gmail.
+    (Gmail drafts need the restricted gmail.compose scope, which unverified apps cannot use
+    for other people's accounts.)"""
+
     name = "gmail.create_draft"
     capability = "document"
     integration = "google"
     kind = "real"
-    required_scopes = ("https://www.googleapis.com/auth/gmail.compose",)
-    description = "Create a Gmail draft with invitation details."
+    required_scopes = (GMAIL_SEND,)
+    description = "Prepare an email (recipients, subject, body) for approval before it is sent."
     risk = RiskLevel.MEDIUM
     output_fields = ("draft_id", "message_id", "thread_id", "subject", "body", "to", "html_link")
     supports_idempotency = True
     input_model = GmailCreateDraftInput
 
     def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
-        subject = args.get("subject", "Birthday Dinner Invitation")
-        event_link = args.get("body_link") or args.get("html_link") or args.get("event_link") or ""
-
-        body = args.get("body")
-        if not body:
-            body = (
-                f"Hi,\n\nYou are invited to the birthday dinner for 8 on Saturday!\n"
-                f"Event details & link: {event_link}\n\nHope you can make it!"
-            )
-        elif event_link and event_link not in body:
-            body = f"{body}\n\nEvent link: {event_link}"
-        signature = args.get("signature")
-        if signature and signature not in body:
-            body = f"{body.rstrip()}\n\n{signature}"
-
+        subject, body = _compose_body(args)
         to = ", ".join(_emails(args.get("to")))
         if not to:
             raise GoogleError("validation_error", "The email has no recipients. Name them, or add a contact group in Settings.")
-        draft = ctx.google.create_draft(to, subject, body)
-        msg = draft.get("message") or {}
-        html_link = f"https://mail.google.com/mail/u/0/#drafts?compose={msg.get('id', '')}"
+        draft_id = "prep_" + hashlib.sha256((ctx.idempotency_key or uuid.uuid4().hex).encode()).hexdigest()[:16]
         return ToolResult(
             status="success", tool=self.name,
-            output={"draft_id": draft["id"], "message_id": msg.get("id"), "thread_id": msg.get("threadId"),
-                    "subject": subject, "body": body, "to": to, "html_link": html_link},
-            evidence=[{"type": "gmail_draft", "source": "gmail", "label": f"Draft: {subject}", "url": html_link, "reference_id": draft["id"]}],
+            output={"draft_id": draft_id, "message_id": None, "thread_id": None,
+                    "subject": subject, "body": body, "to": to, "html_link": None},
+            evidence=[{"type": "email_prepared", "source": "agentos", "label": f"Email prepared: {subject}",
+                       "url": None, "reference_id": draft_id}],
         )
 
     def verify(self, ctx: ToolContext, result: ToolResult) -> dict[str, Any]:
-        d = ctx.google.get_draft(result.output["draft_id"])
-        ok = d.get("id") == result.output["draft_id"]
-        return {"verified": ok, "detail": "Re-read the draft from Gmail." if ok else "The draft is missing.", "method": "re-fetched draft by id"}
+        ok = bool(result.output.get("to") and result.output.get("body"))
+        return {"verified": ok, "detail": "Prepared in AgentOS for your approval; nothing has been sent yet.",
+                "method": "prepared locally"}
 
 class SimulatedGmailCreateDraftTool(Tool):
     name = "gmail.create_draft"
@@ -356,49 +364,65 @@ class GmailSendDraftInput(BaseModel):
                 raise ValueError(f"Invalid recipient email: {e}")
         return v
 
+def _prepared_email(ctx: ToolContext, draft_id: str | None) -> dict[str, Any]:
+    """The email a draft step prepared in this mission (fallback when the plan passed only draft_id)."""
+    if not draft_id or ctx.db is None:
+        return {}
+    from sqlalchemy import select
+
+    from app.db.models import Task
+
+    for out in ctx.db.scalars(select(Task.output).where(Task.mission_id == ctx.mission_id)):
+        if isinstance(out, dict) and out.get("draft_id") == draft_id:
+            return out
+    return {}
+
+
 class GmailSendDraftTool(Tool):
+    """Sends the approved email directly with gmail.send (#37)."""
+
     name = "gmail.send_draft"
     capability = "communication"
     integration = "google"
     kind = "real"
-    required_scopes = ("https://www.googleapis.com/auth/gmail.compose",)
-    description = "Send a prepared Gmail draft."
+    required_scopes = (GMAIL_SEND,)
+    description = "Send the prepared email (after approval)."
     risk = RiskLevel.HIGH
     output_fields = ("message_id", "thread_id", "status", "sent_at", "body", "subject", "to")
     supports_idempotency = True
     input_model = GmailSendDraftInput
 
     def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
-        body, subject, to = args.get("body", ""), args.get("subject", ""), args.get("to", "")
-
-        draft_id = args.get("draft_id")
-        if not draft_id:
-            raise GoogleError("validation_error", "There is no draft to send.")
+        prepared = _prepared_email(ctx, args.get("draft_id"))
+        to = ", ".join(_emails(args.get("to") or prepared.get("to")))
+        subject = args.get("subject") or prepared.get("subject") or ""
+        body = args.get("body") or prepared.get("body") or ""
+        if not to:
+            raise GoogleError("validation_error", "There is no recipient for this email.")
+        if not body:
+            raise GoogleError("validation_error", "The email has no text to send.")
         try:
-            sent = ctx.google.send_draft(draft_id)
+            sent = ctx.google.send_message(to, subject, body)
         except GoogleError as err:
-            if err.error_class == "not_found":
-                raise GoogleError("validation_error", "The draft no longer exists; it may already have been sent.") from None
+            if err.error_class in ("timeout", "network_error", "service_unavailable"):
+                # Gmail may have sent it before the answer was lost: never resend automatically.
+                raise GoogleError("send_unconfirmed", "Gmail did not confirm the send. Check your Sent folder before trying again.") from None
             raise
         labels = sent.get("labelIds") or []
         return ToolResult(
             status="success", tool=self.name,
             output={"message_id": sent["id"], "thread_id": sent.get("threadId"), "status": "sent" if "SENT" in labels else "queued",
-                    "sent_at": datetime.now(timezone.utc).isoformat(), "body": body, "subject": subject, "to": to, "draft_id": draft_id},
-            evidence=[{"type": "gmail_message", "source": "gmail", "label": "Open the sent email in Gmail",
+                    "sent_at": datetime.now(timezone.utc).isoformat(), "body": body, "subject": subject, "to": to,
+                    "draft_id": args.get("draft_id")},
+            evidence=[{"type": "gmail_message", "source": "gmail", "label": f"Sent to {to}",
                        "url": f"https://mail.google.com/mail/u/0/#all/{sent['id']}", "reference_id": sent["id"]}],
         )
 
     def verify(self, ctx: ToolContext, result: ToolResult) -> dict[str, Any]:
-        try:
-            ctx.google.get_draft(result.output["draft_id"])
-            still_draft = True
-        except GoogleError as err:
-            if err.error_class != "not_found":
-                raise
-            still_draft = False
-        ok = not still_draft and result.output.get("status") == "sent"
-        return {"verified": ok, "detail": "Gmail labelled the message SENT and the draft left Drafts." if ok else "The email still looks unsent.", "method": "message found in Sent by id"}
+        ok = result.output.get("status") == "sent"
+        return {"verified": ok,
+                "detail": "Gmail confirmed the message as SENT." if ok else "Gmail did not label the message as sent.",
+                "method": "confirmed by Gmail when sending (gmail.send cannot re-read mail)"}
 
 class SimulatedGmailSendDraftTool(Tool):
     name = "gmail.send_draft"

@@ -35,17 +35,24 @@ GMAIL_API = "https://gmail.googleapis.com/gmail/v1"
 DRIVE_API = "https://www.googleapis.com/drive/v3"
 FORMS_API = "https://forms.googleapis.com/v1/forms"
 
+# gmail.send (sensitive) instead of gmail.compose (restricted): restricted scopes block
+# every non-test user of an unverified app, sensitive ones only show a warning (#37).
+GMAIL_SEND = "https://www.googleapis.com/auth/gmail.send"
+# Non-sensitive: lets us show which account is connected (gmail.send cannot read it).
+USERINFO_EMAIL = "https://www.googleapis.com/auth/userinfo.email"
+
 SCOPES = (
     "https://www.googleapis.com/auth/calendar.events",
-    "https://www.googleapis.com/auth/gmail.compose",
+    GMAIL_SEND,
     "https://www.googleapis.com/auth/drive.file",
     "https://www.googleapis.com/auth/forms.body",
+    USERINFO_EMAIL,
 )
 
 APP_SCOPES: dict[str, tuple[str, ...]] = {
     "google-calendar": ("https://www.googleapis.com/auth/calendar.events",),
     "calendar": ("https://www.googleapis.com/auth/calendar.events",),
-    "gmail": ("https://www.googleapis.com/auth/gmail.compose",),
+    "gmail": (GMAIL_SEND,),
     "google-drive": ("https://www.googleapis.com/auth/drive.file",),
     "drive": ("https://www.googleapis.com/auth/drive.file",),
     "google-forms": (
@@ -213,7 +220,7 @@ class GoogleConnector:
             req_scopes = set(st.get("s") or SCOPES)
             missing = [s for s in req_scopes if s not in granted]
             if missing and req_scopes == set(SCOPES):
-                raise GoogleError("missing_scopes", "Calendar and Gmail access are both needed. Tick both boxes when connecting.")
+                raise GoogleError("missing_scopes", "Calendar, Gmail sending, Drive and Forms access are all needed. Tick every box when connecting.")
             elif missing and not (granted & req_scopes):
                 raise GoogleError("missing_scopes", "Required permissions were not granted.")
 
@@ -418,6 +425,15 @@ class GoogleClient:
 
     def get_message(self, message_id: str) -> dict:
         return self._call("GET", f"{GMAIL_API}/users/me/messages/{quote(message_id)}")
+
+    def send_message(self, to: str, subject: str, body: str) -> dict:
+        """Send directly (gmail.send). Gmail answers with the message and its labels."""
+        msg = EmailMessage()
+        msg["To"] = to
+        msg["Subject"] = subject
+        msg.set_content(body)
+        raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+        return self._call("POST", f"{GMAIL_API}/users/me/messages/send", json={"raw": raw})
 
     # Drive
     def search_drive(self, query: str) -> list[dict]:

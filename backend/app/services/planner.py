@@ -21,7 +21,7 @@ from app.capabilities import CAPABILITY_BY_ID, TASK_TYPES
 from app.core.config import get_settings
 from app.db.models import User
 from app.domain import AGENTS
-from app.schemas.plan import MissionPlan
+from app.schemas.plan import MissionPlan, wire_send_to_draft  # noqa: F401  (re-exported)
 from app.services.preferences import load_preferences
 from app.tools.registry import get_all_tools, resolve
 
@@ -49,7 +49,8 @@ EXAMPLE = {
          "inputs": {"tool": "gmail.create_draft", "to": "sam@example.com", "subject": "Birthday dinner on Saturday", "body_link": "p2.output.html_link"}},
         {"id": "p4", "title": "Send the invitation", "agent": "execution", "type": "communicate",
          "capability": "communication", "deps": ["p3"], "gated": True,
-         "inputs": {"tool": "gmail.send_draft", "draft_id": "p3.output.draft_id"}},
+         "inputs": {"tool": "gmail.send_draft", "draft_id": "p3.output.draft_id", "to": "p3.output.to",
+                    "subject": "p3.output.subject", "body": "p3.output.body"}},
         {"id": "p5", "title": "Verify the event and the email", "agent": "verification", "type": "verify",
          "capability": "verification", "deps": ["p2", "p4"], "gated": False, "inputs": {},
          "criterion": "Event exists and the invitation was sent"},
@@ -179,31 +180,7 @@ Answer with the JSON object only: no prose, no markdown."""
         start, end = text.find("{"), text.rfind("}")
         if start != -1 and end > start:
             text = text[start:end + 1]
-        return MissionPlan(**wire_send_to_draft(json.loads(text)))
-
-
-def wire_send_to_draft(data: dict) -> dict:
-    """Models often forget to pass the draft into the send step. If a send step depends
-    on a draft step and has no draft_id, wire "<draft>.output.draft_id" in for it."""
-    tasks = data.get("tasks") if isinstance(data, dict) else None
-    if not isinstance(tasks, list):
-        return data
-    by_id = {t.get("id"): t for t in tasks if isinstance(t, dict)}
-
-    def is_draft(t: dict) -> bool:
-        return (t.get("inputs") or {}).get("tool") == "gmail.create_draft" or t.get("type") == "draft" or t.get("capability") == "document"
-
-    for t in tasks:
-        if not isinstance(t, dict):
-            continue
-        inputs = t.get("inputs") or {}
-        sends = inputs.get("tool") == "gmail.send_draft" or t.get("capability") == "communication" or t.get("type") in ("communicate", "send")
-        if not sends or inputs.get("draft_id"):
-            continue
-        draft = next((d for d in t.get("deps") or [] if isinstance(by_id.get(d), dict) and is_draft(by_id[d])), None)
-        if draft:
-            t["inputs"] = {**inputs, "draft_id": f"{draft}.output.draft_id"}
-    return data
+        return MissionPlan(**json.loads(text))
 
 
 class OpenAICompatiblePlanner(AnthropicPlanner):
