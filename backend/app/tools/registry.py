@@ -24,10 +24,14 @@ _REGISTERED_SIMULATED: dict[str, Tool] = {}
 KNOWN_TOOL_OUTPUT_FIELDS: dict[str, set[str]] = {
     "calendar.list_events": {"events", "free_slots", "count", "start", "end"},
     "calendar.create_event": {"event_id", "html_link", "start", "end", "summary", "status", "idempotency_key", "hangout_link", "attendees"},
+    "calendar.update_event": {"event_id", "html_link", "start", "end", "summary", "status", "hangout_link", "attendees"},
+    "calendar.get_event": {"event_id", "html_link", "start", "end", "summary", "status", "hangout_link", "attendees"},
     "gmail.create_draft": {"draft_id", "message_id", "thread_id", "subject", "body", "to", "html_link"},
     "gmail.send_draft": {"message_id", "thread_id", "status", "sent_at", "body", "subject", "to"},
     "drive.create_document": {"file_id", "html_link", "title", "mime_type"},
     "drive.get_file": {"file_id", "html_link", "title", "mime_type", "trashed"},
+    "forms.create_form": {"form_id", "responder_url", "edit_url", "title", "question_count"},
+    "forms.get_form": {"form_id", "title", "question_count", "responder_url"},
     "web.search": {"results", "query", "snippets", "urls"},
     "browser.navigate": {"url", "title", "content", "status"},
 }

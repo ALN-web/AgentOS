@@ -29,7 +29,7 @@ from tests.test_cross_app import _make_cross_app_plan
 
 KEY = Fernet.generate_key().decode()
 GOOGLE = {"google_client_id": "client-123.apps.googleusercontent.com", "google_client_secret": "shh-client-secret", "encryption_key": KEY}
-SCOPES = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/forms.body https://www.googleapis.com/auth/forms.responses.readonly"
+SCOPES = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/forms.body https://www.googleapis.com/auth/userinfo.email"
 
 
 class FakeGoogle:
@@ -97,6 +97,12 @@ class FakeGoogle:
         if path.startswith("/calendar/v3/calendars/primary/events/"):
             ev = self.events.get(path.rsplit("/", 1)[1])
             return httpx.Response(200, json=ev) if ev else httpx.Response(404, json={"error": {"code": 404}})
+        if path == "/gmail/v1/users/me/messages/send" and m == "POST":
+            # gmail.send (#37): the message goes straight out.
+            raw = base64.urlsafe_b64decode(json.loads(req.content)["raw"]).decode()
+            mid = f"s{len(self.sent) + 1}"
+            self.sent.append({"id": mid, "raw": raw})
+            return httpx.Response(200, json={"id": mid, "threadId": f"t{mid}", "labelIds": ["SENT"]})
         if path == "/gmail/v1/users/me/drafts" and m == "POST":
             raw = base64.urlsafe_b64decode(json.loads(req.content)["message"]["raw"]).decode()
             did = f"r{len(self.drafts) + 1}"
@@ -217,7 +223,8 @@ def test_callback_stores_encrypted_tokens_and_reports_the_real_account(live, fak
     integs = client.get("/api/integrations").json()
     assert len(integs) == 1
     assert integs[0]["provider"] == "google" and integs[0]["status"] == "connected" and integs[0]["account_email"] == "me@example.com"
-    assert set(integs[0]["scopes"]) == set(SCOPES.split())
+    # App permissions; userinfo.email only identifies the account.
+    assert set(integs[0]["scopes"]) == set(SCOPES.split()) - {"https://www.googleapis.com/auth/userinfo.email"}
     with app.state.session_factory() as db:
         integ = db.query(Integration).one()
         assert all(t.encode() not in integ.encrypted_token for t in fake.issued)
@@ -285,16 +292,16 @@ def test_incremental_scopes_and_accumulation(live, fake):
     # 2. Incrementally request gmail
     url2 = client.post("/api/v1/integrations/google/connect", json={"apps": ["gmail"]}).json()["authorization_url"]
     q2 = parse_qs(urlparse(url2).query)
-    assert q2["scope"] == ["https://www.googleapis.com/auth/gmail.compose"]
+    assert q2["scope"] == ["https://www.googleapis.com/auth/gmail.send"]
     fake.challenge = q2["code_challenge"][0]
-    fake.scope = "https://www.googleapis.com/auth/gmail.compose"
+    fake.scope = "https://www.googleapis.com/auth/gmail.send"
     res2 = client.get("/api/integrations/google/callback", params={"code": "good-code", "state": q2["state"][0]}, follow_redirects=False)
     assert res2.status_code == 303 and "connected=google" in res2.headers["location"]
 
     integ2 = client.get("/api/v1/integrations").json()[0]
     assert set(integ2["scopes"]) == {
         "https://www.googleapis.com/auth/calendar.events",
-        "https://www.googleapis.com/auth/gmail.compose",
+        "https://www.googleapis.com/auth/gmail.send",
     }
 
 
@@ -340,7 +347,7 @@ def test_birthday_dinner_runs_end_to_end_against_google(live, fake):
     assert first["task_key"] == "p2" and first["simulated"] is False
     assert fake.events == {}  # nothing created before approval
     client.post(f"/api/approvals/{first['approval_id']}/decision", json={"decision": "approve"})
-    assert len(fake.events) == 1 and len(fake.drafts) == 1 and fake.sent == []  # draft runs automatically, send waits
+    assert len(fake.events) == 1 and fake.drafts == {} and fake.sent == []  # the email is prepared in AgentOS; nothing sent before approval
 
     second = pending_approval(client, mid)
     assert second["task_key"] == "p4"
@@ -366,7 +373,6 @@ def test_birthday_dinner_runs_end_to_end_against_google(live, fake):
     # Verification re-read both from Google, not "the agent said so".
     reads = [(r.method, r.url.path) for r in fake.requests]
     assert ("GET", f"/calendar/v3/calendars/primary/events/{event['id']}") in reads
-    assert ("GET", "/gmail/v1/users/me/drafts/r1") in reads
 
 
 def test_rejecting_the_send_leaves_the_draft_unsent_and_the_criterion_open(live, fake):
@@ -378,7 +384,7 @@ def test_rejecting_the_send_leaves_the_draft_unsent_and_the_criterion_open(live,
 
     mission = client.get(f"/api/missions/{mid}").json()
     assert mission["status"] == "completed"
-    assert fake.sent == [] and len(fake.drafts) == 1
+    assert fake.sent == [] and fake.drafts == {}  # rejected: nothing reached Gmail
     tasks = {t["key"]: t["status"] for t in mission["tasks"]}
     assert tasks["p4"] == "skipped"
     evs = events(client, mid)
@@ -555,8 +561,9 @@ def test_without_google_every_google_step_is_marked_simulated(client):
 
 def test_tools_endpoint_says_what_runs_for_real(client, live):
     assert {t["name"]: t["available"] for t in client.get("/api/tools").json()} == {
-        "calendar.create_event": False, "calendar.list_events": False, "gmail.create_draft": False, "gmail.send_draft": False,
-        "drive.create_document": False, "drive.get_file": False,
+        "calendar.create_event": False, "calendar.list_events": False, "calendar.update_event": False, "calendar.get_event": False,
+        "gmail.create_draft": False, "gmail.send_draft": False,
+        "drive.create_document": False, "drive.get_file": False, "forms.create_form": False, "forms.get_form": False,
     }
     tools = {t["name"]: t for t in live[1].get("/api/tools").json()}
     assert tools["gmail.send_draft"]["name"] == "gmail.send_draft"

@@ -5,7 +5,7 @@ their own Google account and run real missions.
 
 ```
 Browser ──► https://<app>.vercel.app          (website, Vercel)
-              └── /api/*  ──rewrite──►  https://agentos-backend.onrender.com/api/*   (backend, Render)
+              └── /api/*  ──rewrite──►  https://agentos-backend-qa0p.onrender.com/api/*   (backend, Render)
                                               └── Postgres (Neon)
 ```
 
@@ -35,14 +35,14 @@ Cost: $0. Never paste secrets into chat, issues, commits or screenshots.
    | `AGENTOS_FRONTEND_URL` | `https://<app>.vercel.app` |
    | `AGENTOS_LLM_API_KEY` | your Gemini key |
 
-   If you don't know the Vercel address yet, put a placeholder and update it in step 4.
+   The two public addresses (`AGENTOS_FRONTEND_URL`, `AGENTOS_GOOGLE_REDIRECT_URI`) are set in `render.yaml`; change them there if the Vercel address changes. Current site: https://agent-os-two-iota.vercel.app
 4. Deploy. Done when `https://<service>.onrender.com/api/health` shows `"database":"ok"`.
    The first deploy runs every database migration on Neon.
 
 ## 3. Website: Vercel (5 minutes)
 1. Open the project in Vercel (or **Add New → Project** → import `ALN-web/AgentOS`).
 2. **Settings → Environment Variables:** `VITE_AGENTOS_API_URL` = `/api` (Production).
-3. If the Render address is not `agentos-backend.onrender.com`, change it in
+3. If the Render address is not `agentos-backend-qa0p.onrender.com`, change it in
    `vercel.json` (the `/api/:path*` rewrite) and merge.
 4. Redeploy. Done when `https://<app>.vercel.app/api/health` returns the backend's JSON.
 

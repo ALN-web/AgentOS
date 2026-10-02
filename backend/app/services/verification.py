@@ -179,28 +179,24 @@ def reverify_mission(
             continue
 
         if ev.type == "gmail_message":
-            # gmail.compose cannot read messages, but it can read drafts: a sent
-            # draft leaves Drafts (and Gmail labelled the message SENT when sending).
-            draft_id = message_drafts.get(ev.id)
-            if not draft_id or g_client is None:
+            # gmail.send cannot read mail back (#37). The proof is Gmail's own SENT
+            # confirmation recorded at send time; it cannot be re-fetched later.
+            sent = next((te for te in sends if te.id == ev.tool_execution_id), None)
+            if sent is not None and (sent.output_json or {}).get("status") == "sent":
+                ev.status = "verified"
+                ev.verified_at = ev.verified_at or utcnow()
+                ev.method = "confirmed by Gmail when sending (gmail.send cannot re-read mail)"
+            else:
                 ev.status = "failed"
                 ev.verified_at = None
-                ev.method = "Gmail unavailable or missing reference"
-                continue
-            try:
-                g_client.get_draft(draft_id)
-                ev.status = "failed"
-                ev.verified_at = None
-                ev.method = "the draft is still in Drafts, so it was not sent"
-            except GoogleError as err:
-                if err.error_class == "not_found":
-                    ev.status = "verified"
-                    ev.verified_at = utcnow()
-                    ev.method = "the draft left Drafts after sending (Gmail labelled it SENT)"
-                else:
-                    ev.status = "failed"
-                    ev.verified_at = None
-                    ev.method = f"check failed: {err.error_class}"
+                ev.method = "Gmail did not confirm this message as sent"
+            continue
+
+        if ev.type == "email_prepared":
+            # Prepared inside AgentOS for approval; nothing to re-read in Gmail.
+            ev.status = "verified"
+            ev.verified_at = ev.verified_at or utcnow()
+            ev.method = "prepared in AgentOS (shown in the approval)"
             continue
 
         if ev.type == "calendar_event" or ev.source in ("google_calendar", "calendar"):

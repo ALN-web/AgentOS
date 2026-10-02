@@ -19,15 +19,15 @@ def test_reverify_keeps_every_real_proof_verified(live, fake):
     _, client = live
     mid = run_dinner(client, fake)
     evidence = {e["type"]: e for e in client.get(f"/api/missions/{mid}/evidence").json()}
-    assert evidence["gmail_draft"]["url"] is None  # the draft was sent; its link would be dead
+    assert evidence["email_prepared"]["url"] is None  # prepared in AgentOS, no Gmail draft (#37)
 
     client.post(f"/api/missions/{mid}/verify")
     after = {e["type"]: e for e in client.get(f"/api/missions/{mid}/evidence").json()}
     assert {t: e["status"] for t, e in after.items()} == {
-        "calendar_availability": "verified", "calendar_event": "verified", "gmail_draft": "verified", "gmail_message": "verified",
+        "calendar_availability": "verified", "calendar_event": "verified", "email_prepared": "verified", "gmail_message": "verified",
     }
-    assert "left Drafts" in after["gmail_message"]["method"]
-    assert "was sent" in after["gmail_draft"]["method"]
+    assert "confirmed by Gmail" in after["gmail_message"]["method"]
+    assert "prepared in AgentOS" in after["email_prepared"]["method"]
 
 
 def test_reverify_catches_a_deleted_event(live, fake):
