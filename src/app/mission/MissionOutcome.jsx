@@ -25,8 +25,12 @@ const KIND_TONE = {
 
 // The payoff: what the mission achieved and how, all derived from its state.
 export default function MissionOutcome({ m, onReplay, replaying }) {
-  const s = missionSummary(m);
+  const base = missionSummary(m);
   const met = m.metric.current >= m.metric.target;
+  // A live mission is only completed by the backend after its verification passed.
+  const s = m.isLive && met
+    ? { ...base, verified: true, counts: { ...base.counts, done: base.counts.total } }
+    : base;
 
   return (
     <motion.section
