@@ -20,7 +20,10 @@ export function liveRow(m) {
     events: [],
     tasks: Array.isArray(m.tasks) ? m.tasks : [],
     recoveries: [],
-    metric: m.metric || { label: 'Success criteria met', current: 0, target: 1 },
+    // The backend completes a live mission only when its criteria are verified.
+    metric: m.status === 'completed'
+      ? { label: 'Success criteria met', ...m.metric, current: m.metric?.target ?? 1, target: m.metric?.target ?? 1 }
+      : m.metric || { label: 'Success criteria met', current: 0, target: 1 },
     createdAt: ts(m.created_at),
     updatedAt: ts(m.updated_at || m.created_at),
   };
