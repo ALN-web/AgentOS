@@ -1,6 +1,7 @@
 import asyncio
 import json
 import time
+from types import SimpleNamespace
 from datetime import datetime
 from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import StreamingResponse
@@ -201,6 +202,13 @@ async def stream_events(
         or request.query_params.get("live", "").lower() in ("true", "1")
     )
 
+    def _poll(after_seq: int):
+        with session_factory() as s_db:
+            m = svc.get_mission(s_db, user, mission_id)
+            evs = svc.list_events(s_db, user, mission_id, after=after_seq, limit=200)
+            return m.status, [SimpleNamespace(seq=e.seq, type=e.type, agent=e.agent, payload_json=e.payload_json,
+                                              created_at=e.created_at) for e in evs]
+
     async def event_generator():
         current_seq = after
         loop = asyncio.get_running_loop()
@@ -214,9 +222,9 @@ async def stream_events(
                 if is_live_stream and await request.is_disconnected():
                     break
 
-                with session_factory() as s_db:
-                    m = svc.get_mission(s_db, user, mission_id)
-                    events = svc.list_events(s_db, user, mission_id, after=current_seq, limit=200)
+                # Database work runs off the event loop: a blocked loop stalls every request,
+                # including Render's 5 s health check, which then restarts the server.
+                status, events = await asyncio.to_thread(_poll, current_seq)
 
                 for e in events:
                     current_seq = max(current_seq, e.seq)
@@ -230,12 +238,13 @@ async def stream_events(
                     yield f"id: {e.seq}\nevent: {e.type}\ndata: {data}\n\n"
 
                 # If non-streaming snapshot request, or mission reached terminal state, stop
-                if not is_live_stream or m.status in (MissionStatus.COMPLETED, MissionStatus.FAILED, MissionStatus.CANCELLED):
+                if not is_live_stream or status in (MissionStatus.COMPLETED, MissionStatus.FAILED, MissionStatus.CANCELLED):
                     break
 
                 notify_event.clear()
                 try:
-                    await asyncio.wait_for(notify_event.wait(), timeout=0.5)
+                    # New events wake the stream at once; the timeout is only a safety net.
+                    await asyncio.wait_for(notify_event.wait(), timeout=2.0)
                 except asyncio.TimeoutError:
                     pass
 
