@@ -42,6 +42,59 @@ function saveLocalApps(apps) {
   }
 }
 
+export function reconcileAppsWithIntegrations(appsList = [], integrationsList = []) {
+  if (!Array.isArray(appsList) || appsList.length === 0) return appsList;
+  const googleInteg = Array.isArray(integrationsList)
+    ? integrationsList.find((i) => i.provider === 'google')
+    : null;
+
+  if (!googleInteg) return appsList;
+
+  const integScopes = new Set(
+    (googleInteg.scopes || []).map((s) => s.split('/').pop())
+  );
+  const isGoogleConnected = googleInteg.status === 'connected';
+  const isGoogleNeedsReconnect = googleInteg.status === 'needs_reconnect';
+
+  const GOOGLE_APP_SCOPES = {
+    'google-calendar': ['calendar.events'],
+    'gmail': ['gmail.send', 'gmail.compose'],
+    'google-drive': ['drive.file'],
+    'google-forms': ['forms.body'],
+  };
+
+  return appsList.map((app) => {
+    const requiredScopes = GOOGLE_APP_SCOPES[app.id];
+    if (!requiredScopes) return app;
+
+    const hasScope = requiredScopes.some((sc) => integScopes.has(sc));
+    let nextStatus = app.status;
+
+    if (app.status === 'connected') {
+      nextStatus = 'connected';
+    } else if (app.status === 'needs_reconnect') {
+      nextStatus = 'needs_reconnect';
+    } else if (isGoogleNeedsReconnect && (integScopes.size === 0 || hasScope)) {
+      nextStatus = 'needs_reconnect';
+    } else if (isGoogleConnected && hasScope) {
+      nextStatus = 'connected';
+    }
+
+    const isConnectedOrReconnect = nextStatus === 'connected' || nextStatus === 'needs_reconnect';
+
+    return {
+      ...app,
+      status: nextStatus,
+      accountEmail: isConnectedOrReconnect
+        ? (app.accountEmail || googleInteg.account_email)
+        : app.accountEmail,
+      grantedScopes: isConnectedOrReconnect
+        ? (app.grantedScopes && app.grantedScopes.length > 0 ? app.grantedScopes : (googleInteg.scopes || []))
+        : app.grantedScopes,
+    };
+  });
+}
+
 export function useConnectedApps() {
   const [apps, setApps] = useState(getStoredLocalApps);
   const [integrations, setIntegrations] = useState([]);
@@ -59,8 +112,11 @@ export function useConnectedApps() {
           api.listApps().catch(() => []),
           api.listIntegrations().catch(() => []),
         ]);
-        if (Array.isArray(liveApps) && liveApps.length > 0) {
-          setApps(liveApps);
+        const finalApps = Array.isArray(liveApps) && liveApps.length > 0
+          ? reconcileAppsWithIntegrations(liveApps, liveIntegrations)
+          : [];
+        if (finalApps.length > 0) {
+          setApps(finalApps);
         }
         if (Array.isArray(liveIntegrations)) {
           setIntegrations(liveIntegrations);
@@ -92,8 +148,11 @@ export function useConnectedApps() {
             api.listIntegrations().catch(() => []),
           ]).then(([liveApps, liveIntegrations]) => {
             if (!active) return;
-            if (Array.isArray(liveApps) && liveApps.length > 0) {
-              setApps(liveApps);
+            const finalApps = Array.isArray(liveApps) && liveApps.length > 0
+              ? reconcileAppsWithIntegrations(liveApps, liveIntegrations)
+              : [];
+            if (finalApps.length > 0) {
+              setApps(finalApps);
             }
             if (Array.isArray(liveIntegrations)) {
               setIntegrations(liveIntegrations);
@@ -108,10 +167,10 @@ export function useConnectedApps() {
         if (active) setLoading(false);
       });
 
-    return () => {
-      active = false;
-    };
-  }, []);
+  return () => {
+    active = false;
+  };
+}, []);
 
   // Update permission for a single action in an app
   const updatePermission = useCallback(
@@ -196,9 +255,10 @@ export function useConnectedApps() {
   // Connect an app (in Live Mode: triggers OAuth for Google apps; in Demo Mode: catalogue stays honest)
   const connect = useCallback(
     async (appId) => {
-      if (isLive && (appId.startsWith('google-') || appId === 'gmail')) {
+      const targetAppId = appId === 'drive' ? 'google-drive' : appId === 'forms' ? 'google-forms' : appId;
+      if (isLive && (targetAppId.startsWith('google-') || targetAppId === 'gmail')) {
         try {
-          const res = await api.connectGoogle([appId]);
+          const res = await api.connectGoogle([targetAppId]);
           if (res?.authorization_url) {
             window.location.href = res.authorization_url;
             return;

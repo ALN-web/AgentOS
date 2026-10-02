@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { APPS_CATALOGUE, RISK_LEVELS, toConnectedStatus, getConnectedServicesStatus } from './apps';
+import { APPS_CATALOGUE, RISK_LEVELS, toConnectedStatus, getConnectedServicesStatus, formatScope } from './apps';
 
 describe('Apps catalogue specification and safety rules', () => {
   it('contains all required everyday apps', () => {
@@ -99,6 +99,54 @@ describe('Apps catalogue specification and safety rules', () => {
       });
     });
 
+    it('derives Connected status for Google Drive and Google Forms when scopes are granted in integration', () => {
+      const integrations = [
+        {
+          provider: 'google',
+          status: 'connected',
+          scopes: [
+            'https://www.googleapis.com/auth/calendar.events',
+            'https://www.googleapis.com/auth/gmail.send',
+            'https://www.googleapis.com/auth/drive.file',
+            'https://www.googleapis.com/auth/forms.body',
+          ],
+          account_email: 'alex@agentos.org',
+        },
+      ];
+      const apps = [
+        { id: 'gmail', status: 'connected' },
+        { id: 'google-calendar', status: 'connected' },
+        { id: 'google-drive', status: 'available' },
+        { id: 'google-forms', status: 'available' },
+      ];
+
+      const statuses = getConnectedServicesStatus(integrations, apps);
+      expect(statuses.drive).toBe('Connected');
+      expect(statuses.forms).toBe('Connected');
+      expect(statuses.google).toBe('Connected');
+      expect(statuses.calendar).toBe('Connected');
+      expect(statuses.gmail).toBe('Connected');
+    });
+
+    it('returns Reconnect for Google Drive and Google Forms when credentials need reconnect', () => {
+      const integrations = [
+        {
+          provider: 'google',
+          status: 'needs_reconnect',
+          scopes: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/forms.body'],
+          account_email: 'alex@agentos.org',
+        },
+      ];
+      const apps = [
+        { id: 'google-drive', status: 'available' },
+        { id: 'google-forms', status: 'available' },
+      ];
+
+      const statuses = getConnectedServicesStatus(integrations, apps);
+      expect(statuses.drive).toBe('Reconnect');
+      expect(statuses.forms).toBe('Reconnect');
+    });
+
     it('returns Not connected for all services when empty or disconnected', () => {
       const statuses = getConnectedServicesStatus([], []);
       expect(statuses).toEqual({
@@ -108,6 +156,23 @@ describe('Apps catalogue specification and safety rules', () => {
         drive: 'Not connected',
         forms: 'Not connected',
       });
+    });
+
+    it('formats Google Drive and Google Forms scopes as plain-language text without tokens', () => {
+      const driveFull = formatScope('https://www.googleapis.com/auth/drive.file');
+      const driveShort = formatScope('drive.file');
+      const formsFull = formatScope('https://www.googleapis.com/auth/forms.body');
+      const formsShort = formatScope('forms.body');
+
+      expect(driveFull).toBe('Create files that AgentOS makes in your Drive');
+      expect(driveShort).toBe('Create files that AgentOS makes in your Drive');
+      expect(formsFull).toBe('Create forms and surveys that AgentOS makes');
+      expect(formsShort).toBe('Create forms and surveys that AgentOS makes');
+
+      // Zero token exposure
+      for (const sc of [driveFull, driveShort, formsFull, formsShort]) {
+        expect(sc).not.toMatch(/token|secret|ya29/i);
+      }
     });
   });
 });

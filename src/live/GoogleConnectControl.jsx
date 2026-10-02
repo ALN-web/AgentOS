@@ -11,6 +11,7 @@ import {
   AlertCircle,
   AlertTriangle,
   RotateCw,
+  Plug,
   Calendar,
   Mail,
   HardDrive,
@@ -18,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useGoogleIntegration } from './useGoogleIntegration';
 import { useAuth } from './auth';
-import { getConnectedServicesStatus } from '../data/apps';
+import { getConnectedServicesStatus, formatScope } from '../data/apps';
 
 function GoogleIcon({ className = 'w-4 h-4' }) {
   return (
@@ -26,31 +27,6 @@ function GoogleIcon({ className = 'w-4 h-4' }) {
       <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" />
     </svg>
   );
-}
-
-export const SCOPE_LABELS = {
-  'https://www.googleapis.com/auth/calendar.events': 'Calendar Events',
-  'calendar.events': 'Calendar Events',
-  'https://www.googleapis.com/auth/gmail.compose': 'Gmail (Draft & Send)',
-  'gmail.compose': 'Gmail (Draft & Send)',
-  'https://www.googleapis.com/auth/gmail.send': 'Gmail (Send after your approval)',
-  'gmail.send': 'Gmail (Send after your approval)',
-  'https://www.googleapis.com/auth/userinfo.email': 'Your email address (to show which account is connected)',
-  'https://www.googleapis.com/auth/drive.file': 'Google Drive Files',
-  'drive.file': 'Google Drive Files',
-  'https://www.googleapis.com/auth/forms.body': 'Google Forms',
-  'forms.body': 'Google Forms',
-  'https://www.googleapis.com/auth/forms.responses.readonly': 'Form Responses',
-  'forms.responses.readonly': 'Form Responses',
-  'openid': 'Account ID',
-  'email': 'Account Email',
-  'https://www.googleapis.com/auth/userinfo.email': 'Account Email',
-};
-
-export function formatScope(scope) {
-  if (SCOPE_LABELS[scope]) return SCOPE_LABELS[scope];
-  const short = scope.split('/').pop();
-  return SCOPE_LABELS[short] || short;
 }
 
 const GOOGLE_APPS_LIST = [
@@ -110,11 +86,11 @@ export default function GoogleConnectControl({ className = '', compact = false, 
   }, [effectiveIntegrations, effectiveApps]);
 
   const serviceItems = [
-    { id: 'google', name: 'Google', icon: GoogleIcon, status: servicesStatus.google },
-    { id: 'gmail', name: 'Gmail', icon: Mail, status: servicesStatus.gmail },
-    { id: 'calendar', name: 'Calendar', icon: Calendar, status: servicesStatus.calendar },
-    { id: 'drive', name: 'Drive', icon: HardDrive, status: servicesStatus.drive },
-    { id: 'forms', name: 'Forms', icon: FileText, status: servicesStatus.forms },
+    { id: 'google', name: 'Google', icon: GoogleIcon, status: servicesStatus.google, appId: null },
+    { id: 'gmail', name: 'Gmail', icon: Mail, status: servicesStatus.gmail, appId: 'gmail' },
+    { id: 'calendar', name: 'Calendar', icon: Calendar, status: servicesStatus.calendar, appId: 'google-calendar' },
+    { id: 'drive', name: 'Drive', icon: HardDrive, status: servicesStatus.drive, appId: 'google-drive' },
+    { id: 'forms', name: 'Forms', icon: FileText, status: servicesStatus.forms, appId: 'google-forms' },
   ];
 
   const [confirmDisconnectOpen, setConfirmDisconnectOpen] = useState(false);
@@ -280,8 +256,30 @@ export default function GoogleConnectControl({ className = '', compact = false, 
                   </div>
                   <span className="text-xs font-semibold text-white truncate">{s.name}</span>
                 </div>
-                <div>
+                <div className="flex items-center justify-between gap-1 flex-wrap">
                   <ServiceStatusBadge status={s.status} />
+                  {s.status === 'Reconnect' && s.appId && (
+                    <button
+                      type="button"
+                      onClick={() => connect([s.appId])}
+                      className="text-[10px] text-amber-400 hover:text-amber-300 font-medium hover:underline flex items-center gap-0.5"
+                      title={`Reconnect ${s.name}`}
+                    >
+                      <RotateCw className="w-2.5 h-2.5" />
+                      <span>Reconnect</span>
+                    </button>
+                  )}
+                  {s.status === 'Not connected' && connected && s.appId && (
+                    <button
+                      type="button"
+                      onClick={() => connect([s.appId])}
+                      className="text-[10px] text-[#eb6920] hover:text-[#ff7d36] font-medium hover:underline flex items-center gap-0.5"
+                      title={`Connect ${s.name}`}
+                    >
+                      <Plug className="w-2.5 h-2.5" />
+                      <span>Connect</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

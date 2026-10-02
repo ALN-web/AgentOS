@@ -57,22 +57,22 @@ export const PERMISSION_MODES = {
 };
 
 export const SCOPE_LABELS = {
-  'https://www.googleapis.com/auth/calendar.events': 'Calendar Events',
-  'calendar.events': 'Calendar Events',
-  'https://www.googleapis.com/auth/gmail.compose': 'Gmail (Draft & Send)',
-  'gmail.compose': 'Gmail (Draft & Send)',
-  'https://www.googleapis.com/auth/gmail.send': 'Gmail (Send after your approval)',
-  'gmail.send': 'Gmail (Send after your approval)',
-  'https://www.googleapis.com/auth/userinfo.email': 'Your email address (to show which account is connected)',
-  'https://www.googleapis.com/auth/drive.file': 'Drive Files',
-  'drive.file': 'Drive Files',
-  'https://www.googleapis.com/auth/forms.body': 'Google Forms',
-  'forms.body': 'Google Forms',
-  'https://www.googleapis.com/auth/forms.responses.readonly': 'Form Responses',
-  'forms.responses.readonly': 'Form Responses',
+  'https://www.googleapis.com/auth/calendar.events': 'Calendar Events (View and schedule events)',
+  'calendar.events': 'Calendar Events (View and schedule events)',
+  'https://www.googleapis.com/auth/gmail.compose': 'Gmail Drafts (Create draft messages)',
+  'gmail.compose': 'Gmail Drafts (Create draft messages)',
+  'https://www.googleapis.com/auth/gmail.send': 'Gmail (Send emails after your approval)',
+  'gmail.send': 'Gmail (Send emails after your approval)',
+  'https://www.googleapis.com/auth/userinfo.email': 'Account Email (Show connected email address)',
+  'userinfo.email': 'Account Email (Show connected email address)',
+  'https://www.googleapis.com/auth/drive.file': 'Create files that AgentOS makes in your Drive',
+  'drive.file': 'Create files that AgentOS makes in your Drive',
+  'https://www.googleapis.com/auth/forms.body': 'Create forms and surveys that AgentOS makes',
+  'forms.body': 'Create forms and surveys that AgentOS makes',
+  'https://www.googleapis.com/auth/forms.responses.readonly': 'Read Google Forms responses',
+  'forms.responses.readonly': 'Read Google Forms responses',
   'openid': 'Account ID',
   'email': 'Account Email',
-  'https://www.googleapis.com/auth/userinfo.email': 'Account Email',
 };
 
 export function formatScope(scope) {
@@ -117,12 +117,44 @@ export function getConnectedServicesStatus(integrations = [], apps = []) {
   const driveApp = findApp('google-drive');
   const formsApp = findApp('google-forms');
 
+  const integScopes = new Set(
+    (googleInteg?.scopes || []).map((s) => s.split('/').pop())
+  );
+  const isGoogleConnected = googleInteg?.status === 'connected';
+  const isGoogleNeedsReconnect = googleInteg?.status === 'needs_reconnect';
+
+  const resolveServiceStatus = (app, scopeKey) => {
+    // 1. Explicit connected or needs_reconnect from /api/apps takes precedence
+    if (app?.status === 'connected') return 'Connected';
+    if (app?.status === 'needs_reconnect') return 'Reconnect';
+
+    // 2. Integration status from /api/integrations
+    if (isGoogleNeedsReconnect) {
+      if (integScopes.size === 0 || integScopes.has(scopeKey)) {
+        return 'Reconnect';
+      }
+    }
+    if (isGoogleConnected && integScopes.has(scopeKey)) {
+      return 'Connected';
+    }
+
+    // 3. Fallback to raw status mapping (available, demo, coming_soon, etc.)
+    return toConnectedStatus(app?.status);
+  };
+
   return {
     google: toConnectedStatus(googleInteg?.status),
-    gmail: toConnectedStatus(gmailApp?.status),
-    calendar: toConnectedStatus(calendarApp?.status),
-    drive: toConnectedStatus(driveApp?.status),
-    forms: toConnectedStatus(formsApp?.status),
+    gmail:
+      resolveServiceStatus(gmailApp, 'gmail.send') === 'Connected' ||
+      resolveServiceStatus(gmailApp, 'gmail.compose') === 'Connected'
+        ? 'Connected'
+        : resolveServiceStatus(gmailApp, 'gmail.send') === 'Reconnect' ||
+          resolveServiceStatus(gmailApp, 'gmail.compose') === 'Reconnect'
+        ? 'Reconnect'
+        : resolveServiceStatus(gmailApp, 'gmail.send'),
+    calendar: resolveServiceStatus(calendarApp, 'calendar.events'),
+    drive: resolveServiceStatus(driveApp, 'drive.file'),
+    forms: resolveServiceStatus(formsApp, 'forms.body'),
   };
 }
 
