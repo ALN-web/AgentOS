@@ -4,33 +4,219 @@
 
 > *"Don't tell AI what to do. Tell it what you want done."*
 
-| | |
-|---|---|
-| **Live site** | **https://agent-os-two-iota.vercel.app**: sign up, connect your Google account, run real missions |
-| **Repository** | https://github.com/ALN-web/AgentOS |
-| **Stack** | React 18 + Vite (Vercel) · FastAPI + SQLAlchemy (Render) · PostgreSQL (Neon) · Gemini / Groq |
-
-AgentOS turns an everyday goal into a **mission**:
-
-1. an **AI planner** writes a plan of tasks;
-2. **agents** carry the plan out with **real tools**: Google Calendar, Gmail, Google Docs, Google Forms and web search;
-3. **you approve** every action that other people will see;
-4. **verification** re-reads the results from Google before AgentOS calls the mission done.
+**Live site: https://agent-os-two-iota.vercel.app**: sign up, connect your Google account and run real missions.
 
 ## Contents
 
-1. [Try it in 2 minutes](#try-it-in-2-minutes)
-2. [What is real](#what-is-real)
-3. [Safety](#safety)
-4. [Architecture](#architecture)
-5. [Setup](#setup):
-   - [A. Demo Mode only](#a-demo-mode-only-2-minutes-no-accounts)
-   - [B. Full Live Mode on your computer](#b-full-live-mode-on-your-computer-about-30-minutes)
-   - [C. Deploy for free](#c-deploy-for-free)
-6. [Troubleshooting](#troubleshooting)
-7. [Testing](#testing)
-8. [Project structure](#project-structure)
-9. [Limitations](#limitations)
+1. [💡 Project overview](#-project-overview)
+2. [🛠️ Technologies used](#️-technologies-used)
+3. [⚙️ Setup & installation](#️-setup--installation)
+4. [🚀 How to run the project](#-how-to-run-the-project)
+5. [Try it in 2 minutes](#try-it-in-2-minutes)
+6. [What is real](#what-is-real) · [Safety](#safety) · [Architecture](#architecture)
+7. [Troubleshooting](#troubleshooting) · [Testing](#testing) · [Project structure](#project-structure) · [Limitations](#limitations)
+
+---
+
+## 💡 Project overview
+
+**The problem.** Everyday work is spread across many apps. Scheduling a meeting means checking the calendar, creating the event, writing the invitation and sending it, all by hand. AI chatbots can describe these steps, but they don't do them, and agents that do act often act without asking.
+
+**The solution.** AgentOS is an autonomous AI agent for everyday apps. You describe the **outcome** in one sentence, and AgentOS turns it into a **mission**:
+
+1. **Plan.** An AI planner turns the goal into a validated plan of tasks, with dependencies, approval points and success criteria.
+2. **Act.** Specialised agents carry the plan out with **real tools**: Google Calendar, Gmail, Google Docs/Drive, Google Forms and live web search.
+3. **Ask.** Every action that other people will see (an event, an email, a document, a form) **waits for your approval**. You can approve, edit or reject it.
+4. **Prove.** Verification re-reads every result from Google before the mission counts as done. You get a proof link for each one.
+
+**Key features**
+
+- Any goal, no fixed workflows: the same engine plans a coffee invite, an internship shortlist or a registration form.
+- Live mission control: a task graph, an agent activity feed streamed in real time, and "Why did the agent do this?" explanations.
+- A human-approval centre with Approve, Edit and Reject.
+- Real Google integration through OAuth, with minimal permissions, and verified proof of every result.
+- Multi-user accounts with private data, plus a public **Demo Mode** that needs no sign-in.
+- Safety by design: approval gates, a policy engine, prompt-injection defence, rate limits and encrypted tokens.
+
+---
+
+## 🛠️ Technologies used
+
+| Area | Technologies |
+|---|---|
+| **Frontend** | React 18, Vite 6, React Router 7, Tailwind CSS 3, React Flow (`@xyflow/react`), Framer Motion, Lucide icons |
+| **Backend** | Python 3.12, FastAPI, Uvicorn, Pydantic v2, SQLAlchemy 2, Alembic, HTTPX |
+| **Database** | PostgreSQL on Neon (production), SQLite (local development) |
+| **AI** | Google Gemini (planning, and web research with Google Search grounding); Groq (Llama) as backup provider; a rule-based planner as last fallback |
+| **Integrations** | Google OAuth 2.0 (PKCE); Google Calendar, Gmail, Drive and Forms APIs |
+| **Live updates** | Server-Sent Events (SSE) and a background mission worker |
+| **Security** | scrypt password hashing, Fernet token encryption, httpOnly SameSite sessions, policy engine, rate limiting |
+| **Testing & CI** | Vitest (219 tests), pytest (310 tests), GitHub Actions with dependency audits |
+| **Hosting (free tiers)** | Vercel (website), Render (backend), Neon (database) |
+
+---
+
+## ⚙️ Setup & installation
+
+### Prerequisites
+
+| Tool | Version | Check with |
+|---|---|---|
+| [Git](https://git-scm.com/downloads) | any | `git --version` |
+| [Node.js](https://nodejs.org/) | 18 or newer (tested on 22) | `node -v` |
+| [Python](https://www.python.org/downloads/) | 3.11 or newer (3.12 recommended); only for Live Mode | `python --version` |
+
+### Step 1: Clone the repository and install the website
+
+```bash
+git clone https://github.com/ALN-web/AgentOS.git
+cd AgentOS
+npm install
+```
+
+That is all **Demo Mode** needs; go straight to [How to run the project](#-how-to-run-the-project). Steps 2–5 set up **Live Mode**: real Google actions and AI planning on your computer, about 30 minutes.
+
+### Step 2: Install the backend
+
+```bash
+cd backend
+python -m venv .venv
+```
+
+Activate the virtual environment:
+
+| OS | Command |
+|---|---|
+| Windows (PowerShell) | `.venv\Scripts\Activate.ps1` |
+| Windows (Git Bash) | `source .venv/Scripts/activate` |
+| macOS / Linux | `source .venv/bin/activate` |
+
+Then install the dependencies:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+### Step 3: Create a Google Cloud OAuth client (free)
+
+This lets AgentOS act in **your** Google account after you sign in with Google.
+
+1. Open **https://console.cloud.google.com** and create a project, e.g. `agentos`.
+2. **APIs & Services → Library**: enable all four APIs:
+   - **Google Calendar API**
+   - **Gmail API**
+   - **Google Drive API**
+   - **Google Forms API**
+3. **Google Auth Platform → Branding** (the OAuth consent screen):
+   - App name `AgentOS`, your support email, your developer email.
+   - **Audience:** *External*. While the app is in *Testing*, add every Google account you will use under **Test users**.
+4. **Data access** (scopes): add these five:
+   - `https://www.googleapis.com/auth/calendar.events`
+   - `https://www.googleapis.com/auth/gmail.send`
+   - `https://www.googleapis.com/auth/drive.file`
+   - `https://www.googleapis.com/auth/forms.body`
+   - `https://www.googleapis.com/auth/userinfo.email`
+5. **Clients → Create client**:
+   - Type: **Web application**.
+   - **Authorised JavaScript origins:** `http://localhost:3000`
+   - **Authorised redirect URIs:** `http://localhost:8000/api/integrations/google/callback`
+   - Click **Create** and copy the **Client ID** and **Client secret**.
+
+### Step 4: Get the keys
+
+1. **Encryption key** (protects stored Google tokens). Run this inside `backend/` with the virtual environment active:
+
+   ```bash
+   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+   ```
+
+2. **Gemini API key** (AI planning and web search, free): https://aistudio.google.com/apikey → **Create API key**.
+3. *Optional:* **Groq API key**, the backup AI provider (free): https://console.groq.com → **API Keys** → **Create API Key**.
+
+### Step 5: Configure `backend/.env`
+
+Create a file named `.env` inside the `backend/` folder. It is git-ignored; never commit it or share it.
+
+```ini
+AGENTOS_ENVIRONMENT=development
+AGENTOS_FRONTEND_URL=http://localhost:3000
+AGENTOS_GOOGLE_CLIENT_ID=<your client id>.apps.googleusercontent.com
+AGENTOS_GOOGLE_CLIENT_SECRET=<your client secret>
+AGENTOS_GOOGLE_REDIRECT_URI=http://localhost:8000/api/integrations/google/callback
+AGENTOS_ENCRYPTION_KEY=<output of the command in step 4>
+AGENTOS_LLM_API_KEY=<your Gemini key>
+# optional backup AI provider
+AGENTOS_LLM_FALLBACK_API_KEY=<your Groq key>
+```
+
+Without a database setting, the backend uses a local SQLite file (`backend/agentos.db`) and creates the tables automatically on first start. All settings are documented in [backend/README.md](backend/README.md#configuration).
+
+---
+
+## 🚀 How to run the project
+
+### Option 1: Use the live site (no installation)
+
+Open **https://agent-os-two-iota.vercel.app** and follow [Try it in 2 minutes](#try-it-in-2-minutes).
+
+### Option 2: Demo Mode on your computer (after step 1)
+
+```bash
+npm run dev
+```
+
+Open **http://localhost:3000** and click **Try Demo Mission**. Everything runs in the browser; no backend or keys are needed.
+
+### Option 3: Full Live Mode on your computer (after steps 1–5)
+
+Run two terminals.
+
+**Terminal 1: backend (port 8000)**
+
+```bash
+cd backend
+# activate the virtual environment (step 2), then:
+uvicorn app.main:create_app --factory --reload --port 8000
+```
+
+Check it works: **http://localhost:8000/api/health** should show `"database": "ok"` and `"live_mode": {"available": true, …}`. The interactive API docs are at http://localhost:8000/api/docs.
+
+**Terminal 2: website in Live Mode (port 3000), from the repository root**
+
+```bash
+npm run dev:live
+```
+
+Open **http://localhost:3000**, then:
+
+1. **Sign up** with any email and password; the account lives in your local database.
+2. On **Apps**, click **Connect Google**, choose one of your test users, and tick every permission.
+3. Click **New mission** (Live Mode) and try a goal, e.g. *"Coffee meeting with `<your email>` tomorrow at 10 am, send them the invite email"*.
+4. Approve the steps, then open the proof links.
+
+> `npm run dev` (without `:live`) is Demo Mode and never contacts the backend.
+
+### Option 4: Deploy your own copy for free
+
+The public site uses:
+
+- **Vercel** for the website, forwarding `/api` to Render;
+- **Render** for the backend (`render.yaml` Blueprint);
+- **Neon** for PostgreSQL.
+
+Follow the step-by-step guide in **[docs/DEPLOY.md](docs/DEPLOY.md)**. In short:
+
+1. **Neon:** create a project and copy its connection string.
+2. **Render:** **New → Blueprint** → this repository. Fill in the secrets it asks for:
+   - the database URL;
+   - a **new** encryption key;
+   - the Google client ID and secret;
+   - your Gemini key, and optionally your Groq key.
+3. **Vercel:** import the repository and set `VITE_AGENTOS_API_URL=/api`. If your Render address differs, update the `/api` rewrite in `vercel.json`.
+4. **Google Cloud:**
+   - add `https://<your-app>.vercel.app/api/integrations/google/callback` as a redirect URI and your Vercel domain as an authorised domain;
+   - **Publish app**, so anyone can connect (up to 100 users before Google verification).
+5. Keep the free backend awake: ping `https://<your-service>.onrender.com/api/health` every 5 minutes (e.g. with cron-job.org).
 
 ---
 
@@ -133,176 +319,6 @@ flowchart LR
   - Vercel serves the website and forwards `/api` to Render, so cookies stay first-party;
   - Render runs the backend;
   - Neon hosts PostgreSQL.
-
----
-
-## Setup
-
-Pick one:
-
-| Option | You get | Time | Accounts needed |
-|---|---|---|---|
-| **A. Demo Mode only** | The full UI with a simulated mission | 2 min | none |
-| **B. Full Live Mode locally** | Real Calendar, Gmail, Docs, Forms and AI planning on your computer | ~30 min | Google Cloud (free), Gemini key (free) |
-| **C. Deploy for free** | Your own public site like the live link | ~45 min | Vercel, Render, Neon (all free) |
-
-### Prerequisites
-
-| Tool | Version | Check with |
-|---|---|---|
-| [Git](https://git-scm.com/downloads) | any | `git --version` |
-| [Node.js](https://nodejs.org/) | 18 or newer (tested on 22) | `node -v` |
-| [Python](https://www.python.org/downloads/) | 3.11 or newer (3.12 recommended); only for options B and C | `python --version` |
-
-### A. Demo Mode only (2 minutes, no accounts)
-
-```bash
-git clone https://github.com/ALN-web/AgentOS.git
-cd AgentOS
-npm install
-npm run dev
-```
-
-Open **http://localhost:3000** and click **Try Demo Mission**. Everything runs in the browser; nothing is sent anywhere.
-
-### B. Full Live Mode on your computer (about 30 minutes)
-
-You will run two programs side by side:
-
-- the **backend** on port **8000**;
-- the **website** on port **3000**, which forwards `/api` to the backend.
-
-#### Step 1: Get the code and install the website
-
-```bash
-git clone https://github.com/ALN-web/AgentOS.git
-cd AgentOS
-npm install
-```
-
-#### Step 2: Install the backend
-
-```bash
-cd backend
-python -m venv .venv
-```
-
-Activate the virtual environment:
-
-| OS | Command |
-|---|---|
-| Windows (PowerShell) | `.venv\Scripts\Activate.ps1` |
-| Windows (Git Bash) | `source .venv/Scripts/activate` |
-| macOS / Linux | `source .venv/bin/activate` |
-
-Then install the dependencies:
-
-```bash
-pip install -r requirements-dev.txt
-```
-
-#### Step 3: Create a Google Cloud OAuth client (free)
-
-This lets AgentOS act in **your** Google account after you sign in with Google.
-
-1. Open **https://console.cloud.google.com** and create a project, e.g. `agentos`.
-2. **APIs & Services → Library**: enable all four APIs:
-   - **Google Calendar API**
-   - **Gmail API**
-   - **Google Drive API**
-   - **Google Forms API**
-3. **Google Auth Platform → Branding** (the OAuth consent screen):
-   - App name `AgentOS`, your support email, your developer email.
-   - **Audience:** *External*. While the app is in *Testing*, add every Google account you will use under **Test users**.
-4. **Data access** (scopes): add these five:
-   - `https://www.googleapis.com/auth/calendar.events`
-   - `https://www.googleapis.com/auth/gmail.send`
-   - `https://www.googleapis.com/auth/drive.file`
-   - `https://www.googleapis.com/auth/forms.body`
-   - `https://www.googleapis.com/auth/userinfo.email`
-5. **Clients → Create client**:
-   - Type: **Web application**.
-   - **Authorised JavaScript origins:** `http://localhost:3000`
-   - **Authorised redirect URIs:** `http://localhost:8000/api/integrations/google/callback`
-   - Click **Create** and copy the **Client ID** and **Client secret**.
-
-#### Step 4: Get the keys
-
-1. **Encryption key** (protects stored Google tokens). Run this inside `backend/` with the virtual environment active:
-
-   ```bash
-   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-   ```
-
-2. **Gemini API key** (AI planning and web search, free): https://aistudio.google.com/apikey → **Create API key**.
-3. *Optional:* **Groq API key**, the backup AI provider (free): https://console.groq.com → **API Keys** → **Create API Key**.
-
-#### Step 5: Create `backend/.env`
-
-Create a file named `.env` inside the `backend/` folder. It is git-ignored; never commit it or share it.
-
-```ini
-AGENTOS_ENVIRONMENT=development
-AGENTOS_FRONTEND_URL=http://localhost:3000
-AGENTOS_GOOGLE_CLIENT_ID=<your client id>.apps.googleusercontent.com
-AGENTOS_GOOGLE_CLIENT_SECRET=<your client secret>
-AGENTOS_GOOGLE_REDIRECT_URI=http://localhost:8000/api/integrations/google/callback
-AGENTOS_ENCRYPTION_KEY=<output of the command in step 4>
-AGENTOS_LLM_API_KEY=<your Gemini key>
-# optional backup AI provider
-AGENTOS_LLM_FALLBACK_API_KEY=<your Groq key>
-```
-
-Without a database setting, the backend uses a local SQLite file (`backend/agentos.db`) and creates the tables automatically.
-
-#### Step 6: Start the backend (terminal 1)
-
-```bash
-cd backend
-# activate the virtual environment as in step 2, then:
-uvicorn app.main:create_app --factory --reload --port 8000
-```
-
-Check it works: open **http://localhost:8000/api/health**. You should see `"database": "ok"` and `"live_mode": {"available": true, …}`. The interactive API docs are at http://localhost:8000/api/docs.
-
-#### Step 7: Start the website in Live Mode (terminal 2)
-
-From the repository root:
-
-```bash
-npm run dev:live
-```
-
-Open **http://localhost:3000**, then:
-
-1. **Sign up** with any email and password; the account lives in your local database.
-2. On **Apps**, click **Connect Google**, choose one of the test users from step 3, and tick every permission.
-3. Click **New mission** (Live Mode) and try a goal, e.g. *"Coffee meeting with `<your email>` tomorrow at 10 am, send them the invite email"*.
-4. Approve the steps, then open the proof links.
-
-> `npm run dev` (without `:live`) is Demo Mode and never contacts the backend.
-
-### C. Deploy for free
-
-The public site uses:
-
-- **Vercel** for the website, forwarding `/api` to Render;
-- **Render** for the backend (`render.yaml` Blueprint);
-- **Neon** for PostgreSQL.
-
-Follow the step-by-step guide in **[docs/DEPLOY.md](docs/DEPLOY.md)**. In short:
-
-1. **Neon:** create a project and copy its connection string.
-2. **Render:** **New → Blueprint** → this repository. Fill in the secrets it asks for:
-   - the database URL;
-   - a **new** encryption key;
-   - the Google client ID and secret;
-   - your Gemini key, and optionally your Groq key.
-3. **Vercel:** import the repository and set `VITE_AGENTOS_API_URL=/api`. If your Render address differs, update the `/api` rewrite in `vercel.json`.
-4. **Google Cloud:**
-   - add `https://<your-app>.vercel.app/api/integrations/google/callback` as a redirect URI and your Vercel domain as an authorised domain;
-   - **Publish app**, so anyone can connect (up to 100 users before Google verification).
-5. Keep the free backend awake: ping `https://<your-service>.onrender.com/api/health` every 5 minutes (e.g. with cron-job.org).
 
 ---
 
