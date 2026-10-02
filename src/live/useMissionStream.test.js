@@ -223,3 +223,18 @@ describe('useMissionStream event reduction & ops integration', () => {
     expect(state.tasks.find((t) => t.id === 'p2').deps).not.toContain('p1');
   });
 });
+
+describe('formatEventText for real research and Google outputs', () => {
+  it('names the web search provider and the number of sources', () => {
+    const ev = (output) => ({ type: 'TOOL_COMPLETED', payload: { tool: 'web.search', output } });
+    expect(formatEventText(ev({ provider: 'google_search', urls: ['a', 'b'] }))).toBe('Searched the web (Google Search): 2 sources found');
+    expect(formatEventText(ev({ provider: 'wikipedia', urls: ['a'] }))).toBe('Searched the web (Wikipedia): 1 source found');
+  });
+
+  it('describes created documents and forms', () => {
+    expect(formatEventText({ type: 'TOOL_COMPLETED', payload: { tool: 'drive.create_document', output: { title: 'Shortlist' } } }))
+      .toBe('Created Google Doc: "Shortlist"');
+    expect(formatEventText({ type: 'TOOL_COMPLETED', payload: { tool: 'forms.create_form', output: { title: 'RSVP' } } }))
+      .toBe('Created Google Form: "RSVP"');
+  });
+});

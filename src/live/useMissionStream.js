@@ -26,6 +26,17 @@ export function formatEventText(e) {
       if (p.tool === 'gmail.send_draft') {
         return `Dispatched emails via Gmail to ${p.output?.to || 'attendees'}`;
       }
+      if (p.tool === 'web.search') {
+        const n = p.output?.urls?.length || 0;
+        const via = { wikipedia: 'Wikipedia', groq_search: 'Groq web search' }[p.output?.provider] || 'Google Search';
+        return `Searched the web (${via}): ${n} source${n === 1 ? '' : 's'} found`;
+      }
+      if (p.tool === 'drive.create_document') {
+        return `Created Google Doc: "${p.output?.title || 'Document'}"`;
+      }
+      if (p.tool === 'forms.create_form') {
+        return `Created Google Form: "${p.output?.title || 'Form'}"`;
+      }
       return `Completed ${p.tool || 'action'} successfully`;
     }
     case 'APPROVAL_REQUESTED':

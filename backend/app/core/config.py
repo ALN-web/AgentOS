@@ -86,6 +86,16 @@ class Settings(BaseSettings):
     # Run missions on a background worker (#44). Unset means: everywhere except tests,
     # which run missions inside the request so they can assert on the result directly.
     background_runs: bool | None = None
+    # Real web research (#53). Unset means: on outside tests (tests never touch the network).
+    web_search: bool | None = None
+    search_models: str = "gemini-2.5-flash,gemini-3-flash-preview,gemini-flash-latest"
+    search_groq_model: str = "groq/compound-mini"  # Groq's built-in web search, with the fallback key
+    search_timeout_seconds: float = 25.0  # per attempt
+    search_total_seconds: float = 30.0  # for Gemini, then Groq, then Wikipedia
+
+    @property
+    def web_search_enabled(self) -> bool:
+        return self.environment != "test" if self.web_search is None else self.web_search
 
     @property
     def runs_in_background(self) -> bool:

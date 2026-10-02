@@ -4,6 +4,12 @@ from app.tools.registry import get_tool
 from app.capabilities import TASK_TYPES
 from .base import Agent, AgentContext
 
+def _is_email(task: Task) -> bool:
+    inputs = task.inputs if isinstance(task.inputs, dict) else {}
+    words = ("email", "mail", "invit", "message", "letter", "reply")
+    return any(k in inputs for k in ("to", "to_group", "subject")) or any(w in task.title.lower() for w in words)
+
+
 def find_tool_name_for_task(task: Task) -> str | None:
     if task.inputs and isinstance(task.inputs, dict) and "tool" in task.inputs:
         return str(task.inputs["tool"])
@@ -19,10 +25,14 @@ def find_tool_name_for_task(task: Task) -> str | None:
         title_lower = task.title.lower()
         if "time" in title_lower or "slot" in title_lower or "calendar" in title_lower or "availab" in title_lower or "saturday" in str(task.inputs).lower():
             tool_name = "calendar.list_events"
+    elif cap == "document" and get_tool("drive.create_document") and not _is_email(task):
+        tool_name = "drive.create_document"  # a shortlist, report or notes: a Google Doc (#53)
     elif cap in ("document", "email") and (task.type in ("draft", "create") or "draft" in task.title.lower()):
         tool_name = "gmail.create_draft"
     elif cap in ("communication", "email") and (task.type in ("communicate", "send") or "send" in task.title.lower()):
         tool_name = "gmail.send_draft"
+    elif cap in ("research", "search") and get_tool("web.search"):
+        tool_name = "web.search"  # real web research (#53)
     if tool_name:
         return tool_name
     if task.capability and get_tool(task.capability):
@@ -43,6 +53,20 @@ class GenericCapabilityAgent:
 
     def run(self, ctx: AgentContext) -> ToolResult:
         tool_name = find_tool_name_for_task(ctx.task)
+        inputs = ctx.resolved_inputs
+        if tool_name == "web.search" and not inputs.get("query"):
+            # Plans without an explicit query research the step in the context of the goal.
+            inputs = {**inputs, "query": f"{ctx.task.title}: {ctx.mission.goal}"[:300]}
+            return ctx.execute_tool(tool_name, inputs)
+        if tool_name == "drive.create_document":
+            inputs = {**inputs}
+            inputs.setdefault("title", ctx.task.title)
+            if "content" not in inputs:
+                # Plans without explicit content: what the earlier steps found.
+                found = [d.depends_on.output.get("summary") for d in ctx.task.dependencies
+                         if d.depends_on.output and d.depends_on.output.get("summary")]
+                inputs["content"] = "\n\n".join(found) or ctx.mission.goal
+            return ctx.execute_tool(tool_name, inputs)
         # No real tool for this capability: the runtime runs it as a marked simulation.
         return ctx.execute_tool(tool_name or "", ctx.resolved_inputs)
 

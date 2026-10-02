@@ -8,7 +8,7 @@ return a clearly marked simulation: `simulated=True`, and the evidence carries n
 import uuid
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 from app.domain import RiskLevel
 from app.integrations.google import GoogleError
@@ -19,9 +19,28 @@ def _simulated_evidence(ev: dict[str, Any]) -> list[dict[str, Any]]:
     return [{**ev, "source": "simulated", "label": f"Simulated: {ev['label']}", "url": None}]
 
 
+def as_text(value: Any) -> str:
+    """Plans may pass structured results (e.g. web sources) as a document's content."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        if value.get("url"):
+            line = f"- {value.get('title') or value['url']}: {value['url']}"
+            return line + (f"\n  {value['snippet']}" if value.get("snippet") else "")
+        return "\n".join(f"{k}: {as_text(v)}" for k, v in value.items())
+    if isinstance(value, (list, tuple)):
+        return "\n".join(as_text(v) for v in value)
+    return "" if value is None else str(value)
+
+
 class DriveCreateDocumentInput(BaseModel):
-    title: str
+    title: str = Field(min_length=1, max_length=200)
     content: str
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def _text(cls, v: Any) -> str:
+        return as_text(v)
 
 
 class DriveCreateDocumentTool(Tool):
@@ -38,7 +57,7 @@ class DriveCreateDocumentTool(Tool):
 
     def execute(self, ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
         title = args["title"]
-        content = args["content"]
+        content = as_text(args["content"])
 
         if ctx.idempotency_key:
             q = f"appProperties has {{ key='agentos_key' and value='{ctx.idempotency_key}' }} and trashed=false"
