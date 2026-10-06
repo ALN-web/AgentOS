@@ -21,10 +21,11 @@ export function recipientsLabel(p) {
 }
 
 // Field-level differences between what the agent proposed and what was approved.
-function diffs(original, next) {
+export function diffs(original, next) {
   if (!original) return [];
   const out = [];
   if (original.recipients !== next.recipients) out.push({ field: 'Recipients', from: recipientsLabel(original), to: recipientsLabel(next) });
+  if (original.to !== next.to && original.recipients == null && next.recipients == null) out.push({ field: 'To', from: original.to, to: next.to });
   if (original.subject !== next.subject) out.push({ field: 'Subject', from: original.subject, to: next.subject });
   if (original.body !== next.body) out.push({ field: 'Message', from: 'Original draft', to: 'Edited by you' });
   const origSummary = original.summary || original.title;
@@ -109,6 +110,7 @@ export default function ApprovalCard({ approval, showMission = false, readOnly =
   const [editing, setEditing] = useState(false);
   const [subject, setSubject] = useState(p.subject || '');
   const [body, setBody] = useState(p.body || '');
+  const [to, setTo] = useState(p.to || '');
   const [recipients, setRecipients] = useState(p.recipients);
   const [summary, setSummary] = useState(p.summary || p.title || '');
   const [start, setStart] = useState(p.start || '');
@@ -123,6 +125,7 @@ export default function ApprovalCard({ approval, showMission = false, readOnly =
   const edits = {
     ...(p.subject !== undefined ? { subject } : {}),
     ...(p.body !== undefined ? { body } : {}),
+    ...(p.to !== undefined && p.recipients == null ? { to } : {}),
     ...(p.recipients != null ? { recipients } : {}),
     ...(p.summary !== undefined ? { summary } : {}),
     ...(p.title !== undefined ? { title: summary } : {}),
@@ -237,6 +240,8 @@ export default function ApprovalCard({ approval, showMission = false, readOnly =
                   <span className="text-gray-400">{p.audience}</span>
                   <span className="text-[10px] text-gray-600">max {max}</span>
                 </span>
+              ) : editing && p.to !== undefined ? (
+                <input value={to} onChange={(e) => setTo(e.target.value)} aria-label="To" className={`${input} w-full`} />
               ) : (
                 <span className="text-gray-300 truncate block">{recipientsLabel(p)}</span>
               )}

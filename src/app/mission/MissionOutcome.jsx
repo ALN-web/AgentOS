@@ -24,7 +24,7 @@ const KIND_TONE = {
 };
 
 // The payoff: what the mission achieved and how, all derived from its state.
-export default function MissionOutcome({ m, onReplay, replaying }) {
+export default function MissionOutcome({ m, evidence, onReplay, replaying }) {
   const base = missionSummary(m);
   const met = m.metric.current >= m.metric.target;
   // A live mission is only completed by the backend after its verification passed.
@@ -84,6 +84,39 @@ export default function MissionOutcome({ m, onReplay, replaying }) {
 
         <div className="mt-6 pt-5 border-t border-white/5">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-3">What AgentOS accomplished · {m.isLive ? 'real' : 'simulated'}</div>
+          
+          {m.isLive && evidence && evidence.length > 0 && (
+            <ul className="mb-4 space-y-2">
+              {evidence.map((ev, i) => {
+                let linkText = 'View proof';
+                if (ev.source?.includes('calendar')) linkText = 'Open in Calendar';
+                else if (ev.source?.includes('gmail')) linkText = 'Open in Gmail';
+                else if (ev.source?.includes('drive')) linkText = 'Open in Drive';
+                else if (ev.source?.includes('form')) linkText = 'Open form';
+                
+                return (
+                  <motion.li
+                    key={`ev-${i}`}
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.15 + i * 0.05 }}
+                    className="flex items-start gap-2.5 text-sm text-emerald-300 break-inside-avoid"
+                  >
+                    <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>
+                      <span className="text-gray-200 mr-2">{ev.label}</span>
+                      {ev.url && (
+                        <a href={ev.url} target="_blank" rel="noopener noreferrer" className="text-[#eb6920] hover:text-[#ff9a5c] transition-colors">
+                          [{linkText}]
+                        </a>
+                      )}
+                    </span>
+                  </motion.li>
+                );
+              })}
+            </ul>
+          )}
+
           <ol className="md:columns-2 gap-x-6">
             {s.items.map((item, i) => (
               <motion.li
