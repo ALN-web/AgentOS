@@ -65,13 +65,13 @@ class Settings(BaseSettings):
     # Without a key, the deterministic planner is used.
     llm_api_key: SecretStr | None = None
     llm_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
-    llm_model: str = "gemini-3.1-flash-lite"
+    llm_model: str = "gemini-flash-lite-latest"
     # Tried in order when a model is rate-limited, overloaded or too slow (free tiers).
-    llm_fallback_models: str = "gemini-2.5-flash,gemini-3-flash-preview,gemini-flash-latest"
+    llm_fallback_models: str = "gemini-3.1-flash-lite,gemini-2.5-flash,gemini-flash-latest"
     # Optional second provider (#101), tried after the primary's models; Groq by default.
     llm_fallback_api_key: SecretStr | None = None
     llm_fallback_base_url: str = "https://api.groq.com/openai/v1"
-    llm_fallback_provider_models: str = "llama-3.3-70b-versatile,openai/gpt-oss-120b,llama-3.1-8b-instant"
+    llm_fallback_provider_models: str = "openai/gpt-oss-120b,llama-3.3-70b-versatile,meta-llama/llama-4-scout-17b-16e-instruct"
     llm_timeout_seconds: float = 20.0  # per model attempt
     # Per-user limits (#50): AI planning uses a shared free quota, and every mission can act in Google.
     plans_per_hour: int = 30
