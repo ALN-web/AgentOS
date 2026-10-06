@@ -57,3 +57,31 @@ describe('ApprovalCard - Presentation & Fallback Model', () => {
     expect(pm.subject).toBe('Secret Token inside');
   });
 });
+
+import { diffs } from './ApprovalCard';
+
+describe('ApprovalCard - Editable Edits (diffs)', () => {
+  it('identifies an edited "to" field', () => {
+    const original = { to: 'old@example.com', recipients: null };
+    const next = { to: 'new@example.com', recipients: null };
+    const result = diffs(original, next);
+    expect(result).toEqual(
+      expect.arrayContaining([
+        { field: 'To', from: 'old@example.com', to: 'new@example.com' }
+      ])
+    );
+  });
+
+  it('preserves subject and body edit diffs', () => {
+    const original = { subject: 'Old Sub', body: 'Old Body', recipients: null };
+    const next = { subject: 'New Sub', body: 'New Body', recipients: null };
+    const result = diffs(original, next);
+    
+    expect(result).toEqual(
+      expect.arrayContaining([
+        { field: 'Subject', from: 'Old Sub', to: 'New Sub' },
+        { field: 'Message', from: 'Original draft', to: 'Edited by you' }
+      ])
+    );
+  });
+});

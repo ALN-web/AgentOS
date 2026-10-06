@@ -41,7 +41,7 @@ function Panel({ icon: Icon, title, right, children, className = '' }) {
 export default function MissionDetail() {
   const { id } = useParams();
   const localMission = useMission(id);
-  const { mission: liveMission, decideApproval: decideLiveApproval, loading: liveLoading } = useLiveMission(id);
+  const { mission: liveMission, evidence: liveEvidence, decideApproval: decideLiveApproval, loading: liveLoading } = useLiveMission(id);
   const m = liveMission || localMission;
   const { setSpeed, togglePause, restart, startDemo } = useMissions();
   const navigate = useNavigate();
@@ -233,7 +233,7 @@ export default function MissionDetail() {
         }
       />
 
-      {done && <MissionOutcome m={view} onReplay={completed ? startReplay : null} replaying={replaying} />}
+      {done && <MissionOutcome m={view} evidence={liveEvidence || []} onReplay={completed ? startReplay : null} replaying={replaying} />}
 
       {(pending.length > 0 || recoveries.length > 0 || decided.length > 0) && (
         <div className="xl:hidden flex flex-col gap-4 mb-4">{attention}</div>
