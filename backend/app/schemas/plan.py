@@ -207,7 +207,9 @@ class MissionPlan(BaseModel):
                 dep_task = tasks_by_id.get(dep_id)
                 if dep_task:
                     cap = dep_task.capability or TASK_TYPES.get(dep_task.type or "")
-                    known_fields = get_known_output_fields(cap)
+                    tool = dep_task.inputs.get("tool") if isinstance(dep_task.inputs.get("tool"), str) else None
+                    # A step that names its tool also offers that tool's outputs (e.g. web.search → summary).
+                    known_fields = get_known_output_fields(cap, tool_name=tool)
                     if known_fields and field not in known_fields:
                         raise ValueError(f"task '{t.id}' references unknown output field '{field}' of task '{dep_id}' (capability '{cap}')")
 

@@ -54,7 +54,7 @@ def test_a_valid_plan_comes_back_from_the_provider(user):
     assert str(req.url) == "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
     assert req.headers["authorization"] == f"Bearer {KEY}"
     body = json.loads(req.content)
-    assert body["model"] == "gemini-3.1-flash-lite" and body["response_format"] == {"type": "json_object"}
+    assert body["model"] == "gemini-flash-lite-latest" and body["response_format"] == {"type": "json_object"}
     assert "untrusted data" in body["messages"][0]["content"]  # the safety rules are in the system prompt
     assert json.loads(body["messages"][1]["content"]) == {"goal": "dinner on Saturday", "answers": {}}
 

@@ -237,3 +237,22 @@ def test_an_old_connection_without_drive_pauses_with_a_reconnect_message(tmp_pat
     assert mission["status"] == "paused" and failed["error_class"] == "missing_scope"
     assert "access to Google Drive" in failed["message"] and "connect Google again" in failed["message"]
     assert fake.files == {}
+
+
+@pytest.mark.parametrize("capability", ["search", "research"])
+def test_a_document_can_use_the_research_summary_whatever_the_step_is_called(capability):
+    from app.schemas.plan import MissionPlan
+    from app.tools.registry import register_tool, unregister_tool
+
+    register_tool(WebSearchTool(make_settings_obj()))
+    try:
+        plan = _research_plan()["plan"]
+        plan["tasks"][0].update({"capability": capability, "inputs": {"tool": "web.search", "query": "internships India"}})
+        plan["tasks"].insert(1, {"id": "d1", "title": "Save the shortlist", "agent": "execution", "type": "create",
+                                 "capability": "document", "deps": ["r1"], "gated": True,
+                                 "inputs": {"tool": "drive.create_document", "title": "Shortlist", "content": "r1.output.summary"}})
+        plan["tasks"][2]["deps"] = ["d1"]
+        plan["approvalPoints"] = 1
+        assert MissionPlan(**plan).tasks[1].inputs["content"] == "r1.output.summary"
+    finally:
+        unregister_tool("web.search")
