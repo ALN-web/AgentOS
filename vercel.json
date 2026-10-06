@@ -3,6 +3,19 @@
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "missing": [
+        {
+          "type": "host",
+          "value": "agent-os-two-iota.vercel.app"
+        }
+      ],
+      "destination": "https://agent-os-two-iota.vercel.app/$1",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",
