@@ -10,6 +10,7 @@ import {
   PhoneCall,
   Globe,
   AppWindow,
+  ListChecks,
 } from 'lucide-react';
 
 export const APP_METAS = {
@@ -45,6 +46,17 @@ export const APP_METAS = {
     bg: 'bg-emerald-500/10',
     border: 'border-emerald-500/25',
     text: 'text-emerald-400',
+  },
+  'google-forms': {
+    id: 'google-forms',
+    name: 'Google Forms',
+    shortName: 'Forms',
+    provider: 'Google Workspace',
+    icon: ListChecks,
+    color: '#7248b9',
+    bg: 'bg-[#7248b9]/10',
+    border: 'border-[#7248b9]/25',
+    text: 'text-[#d0b3ff]',
   },
   'slack': {
     id: 'slack',
@@ -98,6 +110,7 @@ export function normalizeAppId(rawId) {
   if (s === 'google_calendar' || s === 'google-calendar' || s === 'calendar') return 'google-calendar';
   if (s === 'gmail' || s === 'email' || s === 'inbox') return 'gmail';
   if (s === 'google_drive' || s === 'google-drive' || s === 'drive') return 'google-drive';
+  if (s === 'google_forms' || s === 'google-forms' || s === 'forms') return 'google-forms';
   if (s === 'slack') return 'slack';
   if (s === 'notion') return 'notion';
   if (s === 'github') return 'github';
@@ -118,6 +131,7 @@ export function appForTask(task) {
     if (task.tool.startsWith('calendar')) return 'google-calendar';
     if (task.tool.startsWith('gmail')) return 'gmail';
     if (task.tool.startsWith('drive')) return 'google-drive';
+    if (task.tool.startsWith('forms')) return 'google-forms';
     if (task.tool.startsWith('slack')) return 'slack';
     if (task.tool.startsWith('notion')) return 'notion';
   }

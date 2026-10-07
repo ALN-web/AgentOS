@@ -19,6 +19,8 @@ describe('Cross-App Data Flow', () => {
       expect(normalizeAppId('calendar')).toBe('google-calendar');
       expect(normalizeAppId('GMAIL')).toBe('gmail');
       expect(normalizeAppId('drive')).toBe('google-drive');
+      expect(normalizeAppId('google_forms')).toBe('google-forms');
+      expect(normalizeAppId('forms')).toBe('google-forms');
       expect(normalizeAppId('slack')).toBe('slack');
       expect(normalizeAppId(null)).toBeNull();
     });
@@ -36,6 +38,10 @@ describe('Cross-App Data Flow', () => {
       const drive = getAppMeta('google-drive');
       expect(drive).toBeDefined();
       expect(drive.name).toBe('Google Drive');
+
+      const forms = getAppMeta('google-forms');
+      expect(forms).toBeDefined();
+      expect(forms.name).toBe('Google Forms');
     });
 
     it('infers app from task metadata and content', () => {
@@ -45,6 +51,7 @@ describe('Cross-App Data Flow', () => {
       expect(appForTask({ title: 'Find suitable time slot' })).toBe('google-calendar');
       expect(appForTask({ title: 'Draft invitation email to friends' })).toBe('gmail');
       expect(appForTask({ title: 'Build weekly plan in Google Drive' })).toBe('google-drive');
+      expect(appForTask({ tool: 'forms.create_form' })).toBe('google-forms');
     });
 
     it('resolves app for timeline events', () => {
