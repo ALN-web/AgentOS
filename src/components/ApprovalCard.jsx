@@ -159,7 +159,7 @@ export default function ApprovalCard({ approval, showMission = false, readOnly =
 
   return (
     <div
-      className={`rounded-2xl border p-5 ${
+      className={`rounded-2xl border p-4 ${
         pending ? 'border-amber-400/40 bg-[#15120a]/80 shadow-[0_0_30px_rgba(251,191,36,0.08)]' : 'border-white/10 bg-white/[0.02]'
       }`}
     >

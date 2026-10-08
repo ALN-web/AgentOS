@@ -9,7 +9,7 @@ export default function MissionBrief({ plan }) {
   const { intent } = plan;
 
   return (
-    <div className="glass-card rounded-2xl p-5">
+    <div className="glass-card rounded-2xl p-4">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -29,7 +29,7 @@ export default function MissionBrief({ plan }) {
       </button>
 
       {open && (
-        <div className="mt-4 space-y-3 text-xs">
+        <div className="mt-3 space-y-2 text-xs">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="px-2 py-0.5 rounded-full border border-white/10 text-[10px] font-semibold text-gray-300">{intent.domainLabel}</span>
             <span className="px-2 py-0.5 rounded-full border border-white/10 text-[10px] text-gray-400">
@@ -43,18 +43,18 @@ export default function MissionBrief({ plan }) {
               {intent.desiredOutcome}
             </span>
           </div>
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Capabilities used</div>
+          <div className="mt-2">
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Capabilities used</div>
             <div className="flex flex-wrap gap-1">
               {(plan.capabilities || []).map((c) => (
-                <span key={c} className="px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/5 text-[10px] text-gray-300">
+                <span key={c} className="px-1.5 py-0.5 rounded-md bg-white/[0.04] border border-white/5 text-[10px] text-gray-300">
                   {CAPABILITY_BY_ID[c]?.name || c}
                 </span>
               ))}
             </div>
           </div>
           {plan.assumptions?.length > 0 && (
-            <div className="flex items-start gap-1.5 text-gray-400">
+            <div className="flex items-start gap-1.5 text-gray-400 mt-2">
               <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-gray-500" />
               <span>
                 <span className="text-gray-500">Assumed: </span>
@@ -62,7 +62,7 @@ export default function MissionBrief({ plan }) {
               </span>
             </div>
           )}
-          <p className="text-[10px] text-gray-600">
+          <p className="text-[10px] text-gray-600 mt-2">
             {plan.kind === 'hero'
               ? 'Curated demo plan for the hero mission. Actions are simulated.'
               : plan.plannerSource === 'llm' || plan.planner === 'llm'
