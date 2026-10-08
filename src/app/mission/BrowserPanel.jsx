@@ -63,7 +63,7 @@ export default function BrowserPanel({ browser, task, paused, recovering }) {
         </div>
 
         {/* History */}
-        <div className="p-3 min-h-[110px] max-h-[220px] overflow-y-auto">
+        <div className="p-3 max-h-[220px] overflow-y-auto">
           {steps.length === 0 ? (
             <EmptyState title="No browser actions yet" className="!py-4">
               Steps appear here when a task needs a website.
